@@ -1,10 +1,9 @@
 import React from 'react'
-import { View } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import { SvgProps } from 'react-native-svg'
 
 interface TabBarIconProps {
   focused: boolean
-  name: keyof typeof Ionicons.glyphMap
+  Icon: React.FC<SvgProps>
   activeColor?: string
   inactiveColor?: string
   size?: number
@@ -12,11 +11,11 @@ interface TabBarIconProps {
 
 export const TabBarIcon = ({
   focused,
-  name,
+  Icon,
   activeColor = '#2463EB',
   inactiveColor = '#6B7280',
   size = 24,
 }: TabBarIconProps) => {
   const color = focused ? activeColor : inactiveColor
-  return <Ionicons name={name} size={size} color={color} />
+  return <Icon width={size} height={size} color={color} />
 }

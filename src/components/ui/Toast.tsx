@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     paddingRight: 12,
     borderRadius: 16,
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center', // fix: đổi từ 'flex-start' → 'center'
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -151,7 +151,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12
+    marginRight: 12,
+    flexShrink: 0,
   },
   errorDot: {
     position: 'absolute',
@@ -164,14 +165,15 @@ const styles = StyleSheet.create({
     borderWidth: 1.2,
     borderColor: '#1E293B'
   },
-  content: { flex: 1, alignSelf: 'stretch', justifyContent: 'center' },
+  content: { flex: 1 },
   sub: { color: '#FFFFFF', fontSize: 14, fontWeight: '500', lineHeight: 20 },
   closeBtn: {
     width: 24,
     height: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 8
+    marginLeft: 8,
+    flexShrink: 0,
   },
   pressed: { opacity: 0.5 }
 })

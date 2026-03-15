@@ -8,15 +8,13 @@ export default {
   extra: {
     apiUrl: API_URL,
     env: APP_ENV,
-    eas: {
-      projectId: ''
-    }
+    eas: { projectId: '' }
   },
   name: IS_DEV ? 'FarmOS (Dev)' : 'FarmOS',
   slug: 'doan-mobile',
   version: APP_VERSION,
   orientation: 'portrait',
-  icon: './assets/icon.png',
+  icon: './assets/images/icon.png',
   scheme: IS_DEV ? 'com.doan.farmos.dev' : 'com.doan.farmos',
   userInterfaceStyle: 'light',
   newArchEnabled: true,
@@ -28,16 +26,14 @@ export default {
     versionCode: parseInt(APP_BUILDCODE) || 1,
     adaptiveIcon: {
       backgroundColor: '#2463EB',
-      foregroundImage: './assets/android-icon-foreground.png',
-      backgroundImage: './assets/android-icon-background.png',
-      monochromeImage: './assets/android-icon-monochrome.png'
+      foregroundImage: './assets/images/android-icon-foreground.png',
+      backgroundImage: './assets/images/android-icon-background.png',
+      monochromeImage: './assets/images/android-icon-monochrome.png'
     },
     edgeToEdgeEnabled: true,
     package: IS_DEV ? 'com.doan.farmos.dev' : 'com.doan.farmos'
   },
-  web: {
-    favicon: './assets/favicon.png'
-  },
+  web: { favicon: './assets/images/favicon.png' },
   plugins: [
     'expo-router',
     'expo-secure-store',
@@ -45,24 +41,18 @@ export default {
     [
       'expo-build-properties',
       {
-        ios: {
-          useFrameworks: 'static',
-          buildReactNativeFromSource: true
-        }
+        ios: { useFrameworks: 'static', buildReactNativeFromSource: true }
       }
     ],
     [
       'expo-splash-screen',
       {
-        image: './assets/splash-icon.png',
-        imageWidth: 200,
+        image: './assets/images/farmos-splash.jpg',
+        imageWidth: 400,
         resizeMode: 'contain',
-        backgroundColor: '#2463EB'
+        backgroundColor: '#FFFFFF'
       }
     ]
   ],
-  experiments: {
-    typedRoutes: true,
-    reactCompiler: true
-  }
+  experiments: { typedRoutes: true, reactCompiler: true }
 }
