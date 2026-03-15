@@ -10,26 +10,22 @@ export function registerUnauthorizedHandler(handler: () => void) {
 export const apiClient = axios.create({
   baseURL: CONFIG.API_URL,
   timeout: CONFIG.API_TIMEOUT,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
 })
 
-// Request interceptor: attach access token
+// Request: đính kèm access token
 apiClient.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   const token = await tokenStorage.getAccessToken()
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
+  if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
 
-// Response interceptor: auto refresh token on 401
+// Response: tự động refresh token khi 401
 let isRefreshing = false
 let refreshQueue: Array<(token: string) => void> = []
 
 apiClient.interceptors.response.use(
-  response => response,
+  (response) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
 
@@ -38,7 +34,7 @@ apiClient.interceptors.response.use(
     }
 
     if (isRefreshing) {
-      return new Promise(resolve => {
+      return new Promise((resolve) => {
         refreshQueue.push((token: string) => {
           originalRequest.headers.Authorization = `Bearer ${token}`
           resolve(apiClient(originalRequest))
@@ -53,12 +49,17 @@ apiClient.interceptors.response.use(
       const refreshToken = await tokenStorage.getRefreshToken()
       if (!refreshToken) throw new Error('No refresh token')
 
-      const { data } = await axios.post(`${CONFIG.API_URL}/auth/refresh`, { refreshToken })
-      const { accessToken, refreshToken: newRefreshToken } = data
+      // Dùng axios trực tiếp để tránh interceptor loop
+      const { data } = await axios.post(
+        `${CONFIG.API_URL}/auth/refresh-token`,
+        { refreshToken },
+        { headers: { 'Content-Type': 'application/json' } }
+      )
+      const { accessToken, refreshToken: newRefreshToken } = data.data
 
       await tokenStorage.setTokens(accessToken, newRefreshToken)
 
-      refreshQueue.forEach(callback => callback(accessToken))
+      refreshQueue.forEach((cb) => cb(accessToken))
       refreshQueue = []
 
       originalRequest.headers.Authorization = `Bearer ${accessToken}`
@@ -70,5 +71,5 @@ apiClient.interceptors.response.use(
     } finally {
       isRefreshing = false
     }
-  },
+  }
 )
