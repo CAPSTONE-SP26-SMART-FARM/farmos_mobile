@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router'
-import { TabBarIcon } from '@/components/ui/TabBarIcon'
 import { HapticTab } from '@/components/HapticTab'
+import { TabBarIcon } from '@/components/ui/TabBarIcon'
+import { icons } from '@/constants/icon'
 
 export default function TabsLayout() {
   return (
@@ -34,7 +35,7 @@ export default function TabsLayout() {
         options={{
           title: 'Trang chủ',
           tabBarIcon: ({ focused }) => (
-            <TabBarIcon focused={focused} name={focused ? 'home' : 'home-outline'} />
+            <TabBarIcon focused={focused} Icon={icons.houseSvg} />
           ),
         }}
       />
@@ -43,16 +44,7 @@ export default function TabsLayout() {
         options={{
           title: 'Khám phá',
           tabBarIcon: ({ focused }) => (
-            <TabBarIcon focused={focused} name={focused ? 'compass' : 'compass-outline'} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name='notifications'
-        options={{
-          title: 'Thông báo',
-          tabBarIcon: ({ focused }) => (
-            <TabBarIcon focused={focused} name={focused ? 'notifications' : 'notifications-outline'} />
+            <TabBarIcon focused={focused} Icon={icons.magnifierSvg} />
           ),
         }}
       />
@@ -61,7 +53,7 @@ export default function TabsLayout() {
         options={{
           title: 'Hồ sơ',
           tabBarIcon: ({ focused }) => (
-            <TabBarIcon focused={focused} name={focused ? 'person' : 'person-outline'} />
+            <TabBarIcon focused={focused} Icon={icons.userSvg} />
           ),
         }}
       />
