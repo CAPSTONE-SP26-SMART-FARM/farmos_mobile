@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import { authApi } from '@/services/api/auth'
+import { profileApi, UpdateProfileRequest } from '@/services/api/profile'
 import { tokenStorage } from '@/services/storage/tokenStorage'
-import type { User, LoginRequest, RegisterRequest } from '@/types/auth'
+import type { ForgotPasswordRequest, LoginRequest, RegisterRequest, User } from '@/types/auth'
 
 interface AuthState {
   user: User | null
@@ -9,9 +10,11 @@ interface AuthState {
   isLoading: boolean
 
   login: (credentials: LoginRequest) => Promise<void>
-  register: (data: RegisterRequest) => Promise<void>
+  register: (data: RegisterRequest) => Promise<User>
   logout: () => Promise<void>
   fetchMe: () => Promise<void>
+  forgotPassword: (data: ForgotPasswordRequest) => Promise<void>
+  updateProfile: (data: UpdateProfileRequest) => Promise<void>
   setUser: (user: User) => void
 }
 
@@ -23,8 +26,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: async (credentials) => {
     set({ isLoading: true })
     try {
-      const { user, tokens } = await authApi.login(credentials)
+      const tokens = await authApi.login(credentials)
       await tokenStorage.setTokens(tokens.accessToken, tokens.refreshToken)
+      const user = await authApi.me()
       set({ user, isAuthenticated: true })
     } finally {
       set({ isLoading: false })
@@ -34,19 +38,19 @@ export const useAuthStore = create<AuthState>((set) => ({
   register: async (data) => {
     set({ isLoading: true })
     try {
-      const { user, tokens } = await authApi.register(data)
-      await tokenStorage.setTokens(tokens.accessToken, tokens.refreshToken)
-      set({ user, isAuthenticated: true })
+      const user = await authApi.register(data)
+      return user
     } finally {
       set({ isLoading: false })
     }
   },
 
   logout: async () => {
+    const refreshToken = await tokenStorage.getRefreshToken()
     try {
-      await authApi.logout()
+      if (refreshToken) await authApi.logout(refreshToken)
     } catch {
-      // ignore logout API error
+      // ignore
     } finally {
       await tokenStorage.clearTokens()
       set({ user: null, isAuthenticated: false })
@@ -54,12 +58,33 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   fetchMe: async () => {
+    const token = await tokenStorage.getAccessToken()
+    if (!token) { set({ user: null, isAuthenticated: false }); return }
     try {
       const user = await authApi.me()
       set({ user, isAuthenticated: true })
     } catch {
       await tokenStorage.clearTokens()
       set({ user: null, isAuthenticated: false })
+    }
+  },
+
+  forgotPassword: async (data) => {
+    set({ isLoading: true })
+    try {
+      await authApi.forgotPassword(data)
+    } finally {
+      set({ isLoading: false })
+    }
+  },
+
+  updateProfile: async (data) => {
+    set({ isLoading: true })
+    try {
+      const user = await profileApi.update(data)
+      set({ user })
+    } finally {
+      set({ isLoading: false })
     }
   },
 

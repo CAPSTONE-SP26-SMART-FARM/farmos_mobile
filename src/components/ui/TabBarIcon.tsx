@@ -1,27 +1,22 @@
 import React from 'react'
-import { View, StyleSheet } from 'react-native'
+import { View } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
 
 interface TabBarIconProps {
   focused: boolean
-  Icon: React.FC<{ width: number; height: number; color: string }>
+  name: keyof typeof Ionicons.glyphMap
+  activeColor?: string
+  inactiveColor?: string
   size?: number
 }
 
-export const TabBarIcon = ({ focused, Icon, size = 24 }: TabBarIconProps) => {
-  return (
-    <View style={styles.container}>
-      <Icon
-        width={size}
-        height={size}
-        color={focused ? '#2463EB' : '#6B7280'}
-      />
-    </View>
-  )
+export const TabBarIcon = ({
+  focused,
+  name,
+  activeColor = '#2463EB',
+  inactiveColor = '#6B7280',
+  size = 24,
+}: TabBarIconProps) => {
+  const color = focused ? activeColor : inactiveColor
+  return <Ionicons name={name} size={size} color={color} />
 }
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    justifyContent: 'center'
-  }
-})

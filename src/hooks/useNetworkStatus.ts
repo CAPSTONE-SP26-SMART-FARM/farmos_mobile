@@ -1,16 +1,26 @@
-import { useEffect } from 'react'
-import NetInfo from '@react-native-community/netinfo'
-import { useAppStore } from '@/stores/appStore'
+import { useEffect, useRef } from 'react'
+import { useNetInfo } from '@react-native-community/netinfo'
+import { useToast } from './useToast'
 
 export function useNetworkStatus() {
-  const { isOnline, setOnline } = useAppStore()
+  const { isConnected } = useNetInfo()
+  const { showToast } = useToast()
+  const isInitialMount = useRef(true)
+  const lastState = useRef<boolean | null>(null)
 
   useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener(state => {
-      setOnline(state.isConnected ?? true)
-    })
-    return unsubscribe
-  }, [setOnline])
+    if (isInitialMount.current) {
+      if (isConnected === false) showToast.networkOffline({ duration: 6000 })
+      isInitialMount.current = false
+    } else {
+      if (isConnected === false) {
+        showToast.networkOffline({ duration: 6000 })
+      } else if (isConnected === true && lastState.current === false) {
+        showToast.networkOnline({})
+      }
+    }
+    lastState.current = isConnected
+  }, [isConnected, showToast])
 
-  return { isOnline }
+  return { isConnected }
 }

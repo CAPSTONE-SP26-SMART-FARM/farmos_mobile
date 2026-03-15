@@ -1,27 +1,25 @@
-import { MMKV } from 'react-native-mmkv'
-
-export const storage = new MMKV({ id: 'app-storage' })
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 export const appStorage = {
-  get: <T>(key: string): T | undefined => {
-    const value = storage.getString(key)
-    if (!value) return undefined
+  get: async <T>(key: string): Promise<T | undefined> => {
     try {
+      const value = await AsyncStorage.getItem(key)
+      if (!value) return undefined
       return JSON.parse(value) as T
     } catch {
-      return value as unknown as T
+      return undefined
     }
   },
 
-  set: <T>(key: string, value: T): void => {
-    storage.set(key, JSON.stringify(value))
+  set: async <T>(key: string, value: T): Promise<void> => {
+    await AsyncStorage.setItem(key, JSON.stringify(value))
   },
 
-  delete: (key: string): void => {
-    storage.delete(key)
+  delete: async (key: string): Promise<void> => {
+    await AsyncStorage.removeItem(key)
   },
 
-  clear: (): void => {
-    storage.clearAll()
+  clear: async (): Promise<void> => {
+    await AsyncStorage.clear()
   },
 }
