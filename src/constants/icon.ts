@@ -1,3 +1,4 @@
+import motionSensorSvg from '@/assets/icons/motion_sensor_urgent.svg'
 import houseSvg from '@/assets/icons/icon-house.svg'
 import userSvg from '@/assets/icons/icon-user.svg'
 import magnifierSvg from '@/assets/icons/icon-magnifier.svg'
@@ -35,6 +36,7 @@ export const icons = {
   notiBgSvg,
   moreSvg,
   storefrontSvg,
+  motionSensorSvg,
 
   // Navigation
   backSvg,

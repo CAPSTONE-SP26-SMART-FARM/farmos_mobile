@@ -1,75 +1,150 @@
-import { View, TouchableOpacity, StyleSheet } from 'react-native'
+import { useState, useEffect, useRef } from 'react'
+import {
+  View,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+  StyleSheet,
+  RefreshControl,
+  Animated,
+} from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useRouter } from 'expo-router'
-import { FlashList } from '@shopify/flash-list'
+import { useQueryClient } from '@tanstack/react-query'
 import { Text } from '@/components/ui'
+import { SensorCard } from '@/components/features/sensor/SensorCard'
+import { useSensorReadings } from '@/hooks/useSensorReadings'
+import { socketService } from '@/services/socket/socketService'
+import { queryKeys } from '@/constants/queryKeys'
 
-const ITEMS = Array.from({ length: 30 }, (_, i) => ({
-  id: String(i + 1),
-  title: `Item #${String(i + 1).padStart(2, '0')}`,
-  subtitle: `Mô tả ngắn cho item số ${i + 1}`,
-  tag: (['Hot', 'New', 'Sale', 'Featured'] as const)[i % 4],
-}))
+export default function SensorScreen() {
+  const [assignmentId, setAssignmentId] = useState('')
+  const [activeId, setActiveId] = useState('')
+  const [socketStatus, setSocketStatus] = useState<'idle' | 'connecting' | 'connected'>('idle')
+  const qc = useQueryClient()
 
-const TAG_COLORS: Record<string, { bg: string; text: string }> = {
-  Hot: { bg: '#FEE2E2', text: '#DC2626' },
-  New: { bg: '#DCFCE7', text: '#16A34A' },
-  Sale: { bg: '#FEF9C3', text: '#CA8A04' },
-  Featured: { bg: '#EFF6FF', text: '#2463EB' },
-}
+  const { data, isLoading, isError } = useSensorReadings(activeId)
+  const pulseAnim = useRef(new Animated.Value(1)).current
 
-export default function ExploreScreen() {
-  const router = useRouter()
+  useEffect(() => {
+    if (socketStatus !== 'connected') {
+      pulseAnim.setValue(1)
+      return
+    }
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 0.6, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+      ])
+    )
+    pulse.start()
+    return () => pulse.stop()
+  }, [socketStatus, pulseAnim])
+
+  const handleConnect = async () => {
+    if (!assignmentId.trim()) return
+    setSocketStatus('connecting')
+    setActiveId(assignmentId.trim())
+    await socketService.connect()
+    setSocketStatus('connected')
+  }
+
+  const handleRefresh = () => {
+    if (!activeId) return
+    qc.invalidateQueries({ queryKey: queryKeys.sensorReading.latestByAssignment(activeId) })
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Khám phá</Text>
-        <Text style={styles.subtitle}>Bấm vào item để xem chi tiết</Text>
-      </View>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={isLoading && !!activeId} onRefresh={handleRefresh} />
+        }
+      >
+        <Text style={styles.title}>Sensor Readings</Text>
+        <Text style={styles.subtitle}>Dữ liệu cảm biến theo thời gian thực</Text>
 
-      <FlashList
-        data={ITEMS}
-        estimatedItemSize={76}
-        contentContainerStyle={styles.list}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
-        renderItem={({ item }) => {
-          const tag = TAG_COLORS[item.tag]
-          return (
-            <TouchableOpacity
-              style={styles.card}
-              activeOpacity={0.7}
-              onPress={() => router.push(`/(app)/detail?id=${item.id}&title=${item.title}`)}
-            >
-              <View style={styles.cardContent}>
-                <Text style={styles.cardTitle}>{item.title}</Text>
-                <Text style={styles.cardSub}>{item.subtitle}</Text>
-              </View>
-              <View style={[styles.tag, { backgroundColor: tag.bg }]}>
-                <Text style={[styles.tagText, { color: tag.text }]}>{item.tag}</Text>
-              </View>
-            </TouchableOpacity>
-          )
-        }}
-      />
+        <View style={styles.inputRow}>
+          <TextInput
+            style={styles.input}
+            placeholder="Assignment ID..."
+            placeholderTextColor="#9CA3AF"
+            value={assignmentId}
+            onChangeText={setAssignmentId}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          <TouchableOpacity
+            style={[styles.connectBtn, socketStatus === 'connected' && styles.connectBtnActive]}
+            onPress={handleConnect}
+            disabled={socketStatus === 'connecting'}
+          >
+            {socketStatus === 'connecting' ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.connectBtnText}>
+                {socketStatus === 'connected' ? 'Đã kết nối' : 'Xem'}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {socketStatus !== 'idle' && (
+          <View style={styles.statusRow}>
+            <Animated.View style={[styles.statusDot, {
+              backgroundColor: socketStatus === 'connected' ? '#16A34A' : '#F59E0B',
+              opacity: socketStatus === 'connected' ? pulseAnim : 1,
+            }]} />
+            <Text style={styles.statusText}>
+              Socket: {socketStatus === 'connected' ? 'Đang lắng nghe thay đổi' : 'Đang kết nối...'}
+            </Text>
+          </View>
+        )}
+
+        {isLoading && activeId ? (
+          <ActivityIndicator style={{ marginTop: 40 }} color="#2463EB" />
+        ) : isError ? (
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyText}>Không thể tải dữ liệu. Kiểm tra lại Assignment ID.</Text>
+          </View>
+        ) : data?.data.length === 0 ? (
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyText}>Chưa có dữ liệu cảm biến.</Text>
+          </View>
+        ) : (
+          <View style={styles.list}>
+            {data?.data.map((item) => (
+              <SensorCard key={item.sensorId} item={item} />
+            ))}
+          </View>
+        )}
+      </ScrollView>
     </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F9FAFB' },
-  header: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 12, gap: 4 },
+  content: { padding: 20, paddingBottom: 40 },
   title: { fontSize: 24, color: '#111827', fontFamily: 'Inter_700Bold' },
-  subtitle: { fontSize: 13, color: '#9CA3AF', fontFamily: 'Inter_400Regular' },
-  list: { paddingHorizontal: 16, paddingBottom: 32 },
-  separator: { height: 8 },
-  card: {
-    backgroundColor: '#FFFFFF', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+  subtitle: { fontSize: 13, color: '#9CA3AF', fontFamily: 'Inter_400Regular', marginTop: 4, marginBottom: 20 },
+  inputRow: { flexDirection: 'row', gap: 10 },
+  input: {
+    flex: 1, height: 44, borderRadius: 10, borderWidth: 1, borderColor: '#E5E7EB',
+    backgroundColor: '#fff', paddingHorizontal: 14, fontSize: 13,
+    color: '#111827', fontFamily: 'Inter_400Regular',
   },
-  cardContent: { flex: 1, gap: 2 },
-  cardTitle: { fontSize: 15, color: '#111827', fontFamily: 'Inter_500Medium' },
-  cardSub: { fontSize: 13, color: '#6B7280', fontFamily: 'Inter_400Regular' },
-  tag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, marginLeft: 12 },
-  tagText: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
+  connectBtn: {
+    height: 44, paddingHorizontal: 18, borderRadius: 10,
+    backgroundColor: '#2463EB', justifyContent: 'center', alignItems: 'center',
+  },
+  connectBtnActive: { backgroundColor: '#16A34A' },
+  connectBtnText: { color: '#fff', fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
+  statusDot: { width: 8, height: 8, borderRadius: 4 },
+  statusText: { fontSize: 12, color: '#6B7280', fontFamily: 'Inter_400Regular' },
+  list: { marginTop: 20, gap: 12 },
+  emptyBox: { marginTop: 40, alignItems: 'center' },
+  emptyText: { fontSize: 14, color: '#9CA3AF', fontFamily: 'Inter_400Regular', textAlign: 'center' },
 })
