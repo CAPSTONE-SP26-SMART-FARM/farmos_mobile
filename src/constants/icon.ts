@@ -26,6 +26,7 @@ import arrowRightSvg from '@/assets/icons/icon-arrowright.svg'
 import arrowDownSvg from '@/assets/icons/icon-arrowdown.svg'
 import actionSvg from '@/assets/icons/icon-action.svg'
 import bulbSvg from '@/assets/icons/icon-bulb.svg'
+import incidentSvg from '@/assets/icons/icon-incident.svg'
 
 export const icons = {
   // Tab icons
@@ -37,6 +38,7 @@ export const icons = {
   moreSvg,
   storefrontSvg,
   motionSensorSvg,
+  incidentSvg,
 
   // Navigation
   backSvg,

@@ -49,6 +49,15 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name='incident'
+        options={{
+          title: 'Sự cố',
+          tabBarIcon: ({ focused }) => (
+            <TabBarIcon focused={focused} Icon={icons.incidentSvg} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name='profile'
         options={{
           title: 'Hồ sơ',
