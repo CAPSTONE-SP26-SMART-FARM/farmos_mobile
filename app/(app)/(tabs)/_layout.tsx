@@ -42,9 +42,9 @@ export default function TabsLayout() {
       <Tabs.Screen
         name='explore'
         options={{
-          title: 'Khám phá',
+          title: 'Cảm biến',
           tabBarIcon: ({ focused }) => (
-            <TabBarIcon focused={focused} Icon={icons.magnifierSvg} />
+            <TabBarIcon focused={focused} Icon={icons.motionSensorSvg} />
           ),
         }}
       />

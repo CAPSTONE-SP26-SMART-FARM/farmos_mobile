@@ -6,5 +6,8 @@ export const queryKeys = {
     all: ['users'] as const,
     detail: (id: string) => ['users', id] as const,
   },
-  // Thêm keys theo từng feature
+  sensorReading: {
+    latestByAssignment: (assignmentId: string) =>
+      ['sensor-reading', 'latest', assignmentId] as const,
+  },
 } as const
