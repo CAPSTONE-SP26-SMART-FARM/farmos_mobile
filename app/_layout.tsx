@@ -19,10 +19,14 @@ import { useAuthStore } from '@/stores/authStore'
 import { registerUnauthorizedHandler } from '@/services/api/client'
 import { Toast, useToastState } from '@/components/ui/Toast'
 import { AppContext } from '@/hooks/useToast'
+import { socketService } from '@/services/socket/socketService'
 
 LogBox.ignoreLogs(['SafeAreaView has been deprecated'])
 SplashScreen.preventAutoHideAsync()
-registerUnauthorizedHandler(() => useAuthStore.getState().logout())
+registerUnauthorizedHandler(() => {
+  socketService.disconnect()
+  useAuthStore.getState().logout()
+})
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -42,6 +46,15 @@ export default function RootLayout() {
   useEffect(() => {
     fetchMe().finally(() => setAuthChecked(true))
   }, [fetchMe])
+
+  // Connect / disconnect socket theo auth state
+  useEffect(() => {
+    if (isAuthenticated) {
+      socketService.connect()
+    } else {
+      socketService.disconnect()
+    }
+  }, [isAuthenticated])
 
   const onLayoutRootView = useCallback(async () => {
     if (fontsLoaded && authChecked) await SplashScreen.hideAsync()

@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ticketMessageApi } from '@/services/api/ticketMessage'
 import { socketService } from '@/services/socket/socketService'
 import { queryKeys } from '@/constants/queryKeys'
-import type { TicketMessage } from '@/types/ticketMessage'
+import type { ListTicketMessagesRes, TicketMessage } from '@/types/ticketMessage'
 
 export function useTicketMessages(ticketId: string) {
   const qc = useQueryClient()
@@ -19,12 +19,11 @@ export function useTicketMessages(ticketId: string) {
     socketService.subscribeTicket(ticketId)
 
     const handler = (msg: TicketMessage) => {
-      qc.setQueryData(
+      qc.setQueryData<ListTicketMessagesRes>(
         queryKeys.ticketMessages.list(ticketId),
-        (old: typeof query.data) => {
+        (old) => {
           if (!old) return old
-          const exists = old.data.some((m) => m.id === msg.id)
-          if (exists) return old
+          if (old.data.some((m) => m.id === msg.id)) return old
           return { ...old, data: [...old.data, msg] }
         }
       )
@@ -46,12 +45,11 @@ export function useSendMessage(ticketId: string) {
         clientMessageId: `${ticketId}-${Date.now()}`,
       }),
     onSuccess: (newMsg) => {
-      qc.setQueryData(
+      qc.setQueryData<ListTicketMessagesRes>(
         queryKeys.ticketMessages.list(ticketId),
-        (old: Awaited<ReturnType<typeof ticketMessageApi.list>> | undefined) => {
+        (old) => {
           if (!old) return old
-          const exists = old.data.some((m) => m.id === newMsg.id)
-          if (exists) return old
+          if (old.data.some((m) => m.id === newMsg.id)) return old
           return { ...old, data: [...old.data, newMsg] }
         }
       )
