@@ -14,4 +14,7 @@ export const queryKeys = {
     latestByAssignment: (assignmentId: string) =>
       ['sensor-reading', 'latest', assignmentId] as const,
   },
+  ticketMessages: {
+    list: (ticketId: string) => ['ticket-messages', ticketId] as const,
+  },
 } as const
