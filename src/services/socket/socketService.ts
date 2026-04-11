@@ -41,11 +41,18 @@ class SocketService {
 
   subscribeZone(zoneId: string): Promise<boolean> {
     return new Promise((resolve) => {
-      if (!this.socket?.connected) {
-        resolve(false)
-        return
-      }
+      if (!this.socket?.connected) { resolve(false); return }
       this.socket.emit('zone.subscribe', { zoneId }, (res: { ok: boolean }) => {
+        resolve(res?.ok ?? false)
+      })
+    })
+  }
+
+  subscribeTicket(ticketId: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      if (!this.socket?.connected) { resolve(false); return }
+      this.socket.emit('ticket.subscribe', { ticketId }, (res: { ok: boolean }) => {
+        if (IS_DEV) console.log('[Socket] ticket.subscribe', ticketId, res)
         resolve(res?.ok ?? false)
       })
     })
