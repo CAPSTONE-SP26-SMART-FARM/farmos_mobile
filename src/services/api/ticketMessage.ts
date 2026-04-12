@@ -2,7 +2,8 @@ import { apiClient } from './client'
 import type { CreateTicketMessageBody, ListTicketMessagesRes, TicketMessage } from '@/types/ticketMessage'
 
 export const ticketMessageApi = {
-  list: (ticketId: string, page = 1, limit = 50) =>
+  // limit=100 để lấy hết messages trong 1 request — chat ticket thường không quá 100 tin
+  list: (ticketId: string, page = 1, limit = 100) =>
     apiClient
       .get<{ data: ListTicketMessagesRes }>(`/ticket/${ticketId}/messages?page=${page}&limit=${limit}`)
       .then((r) => r.data.data),

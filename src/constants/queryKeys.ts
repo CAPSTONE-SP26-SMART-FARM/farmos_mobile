@@ -17,4 +17,9 @@ export const queryKeys = {
   ticketMessages: {
     list: (ticketId: string) => ['ticket-messages', ticketId] as const,
   },
+  prescriptions: {
+    list: (ticketId: string) => ['prescriptions', ticketId] as const,
+    detail: (ticketId: string, prescriptionId: string) =>
+      ['prescriptions', ticketId, prescriptionId] as const,
+  },
 } as const
