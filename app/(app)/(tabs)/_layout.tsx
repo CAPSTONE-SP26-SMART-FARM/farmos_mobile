@@ -66,6 +66,13 @@ export default function TabsLayout() {
           ),
         }}
       />
+      {/* notifications không hiện trên tab bar — chỉ navigate từ home */}
+      <Tabs.Screen
+        name='notifications'
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   )
 }

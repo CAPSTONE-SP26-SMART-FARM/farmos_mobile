@@ -23,7 +23,8 @@ export function useCreateIncident() {
   return useMutation({
     mutationFn: (body: CreateIncidentBody) => incidentApi.create(body),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.incident.list() })
+      // Invalidate toàn bộ incident list (dùng prefix ['incident', 'list'])
+      qc.invalidateQueries({ queryKey: ['incident', 'list'] })
     },
   })
 }

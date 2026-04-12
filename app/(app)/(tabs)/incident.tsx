@@ -7,7 +7,7 @@ import { useIncidentList } from '@/hooks/useIncident'
 
 export default function IncidentScreen() {
   const router = useRouter()
-  const { data, isLoading, isError, refetch } = useIncidentList()
+  const { data, isLoading, isError, refetch, isFetching } = useIncidentList()
   const tickets = data?.data ?? []
 
   return (
@@ -44,6 +44,8 @@ export default function IncidentScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+          onRefresh={refetch}
+          refreshing={isFetching}
           renderItem={({ item }) => (
             <IncidentCard
               item={item}

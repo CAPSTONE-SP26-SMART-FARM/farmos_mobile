@@ -22,4 +22,7 @@ export const queryKeys = {
     detail: (ticketId: string, prescriptionId: string) =>
       ['prescriptions', ticketId, prescriptionId] as const,
   },
+  notifications: {
+    list: (page?: number) => ['notifications', 'list', page] as const,
+  },
 } as const
