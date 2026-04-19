@@ -2,7 +2,6 @@ import { View, TouchableOpacity, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Text } from '@/components/ui'
-import { pickerCallback } from '@/utils/pickerCallback'
 import { SEVERITY_META } from '@/constants/incident'
 import type { IncidentSeverity } from '@/types/incident'
 
@@ -16,8 +15,9 @@ export default function SeverityPickerScreen() {
   const { current } = useLocalSearchParams<{ current: IncidentSeverity }>()
 
   const handleSelect = (value: IncidentSeverity) => {
-    pickerCallback.call(value)
+    // Trả giá trị về create screen qua search params thay vì pickerCallback
     router.back()
+    router.setParams({ severity: value })
   }
 
   return (

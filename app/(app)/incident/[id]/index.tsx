@@ -1,9 +1,11 @@
 import {
   View, ScrollView, TouchableOpacity,
-  ActivityIndicator, StyleSheet,
+  ActivityIndicator, StyleSheet, RefreshControl,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useFocusEffect } from '@react-navigation/native'
+import { useCallback } from 'react'
 import { Text } from '@/components/ui'
 import { useIncidentDetail } from '@/hooks/useIncident'
 import { usePrescriptions } from '@/hooks/usePrescription'
@@ -32,9 +34,16 @@ function TopBar({ onBack }: { onBack: () => void }) {
 export default function IncidentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
-  const { data, isLoading, isError } = useIncidentDetail(id)
-  const { data: rxData, isLoading: rxLoading } = usePrescriptions(id)
+  const { data, isLoading, isError, refetch, isFetching } = useIncidentDetail(id)
+  const { data: rxData, isLoading: rxLoading, refetch: refetchRx } = usePrescriptions(id)
   const prescriptions = rxData?.data ?? []
+
+  useFocusEffect(
+    useCallback(() => {
+      refetch()
+      refetchRx()
+    }, [refetch, refetchRx])
+  )
 
   if (isLoading) {
     return (
@@ -60,7 +69,12 @@ export default function IncidentDetailScreen() {
     <SafeAreaView style={styles.safe}>
       <TopBar onBack={() => router.back()} />
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor="#2463EB" />
+        }
+      >
         <Text style={styles.ticketNum}>{data.ticketNumber}</Text>
         <Text style={styles.title}>{data.title}</Text>
 

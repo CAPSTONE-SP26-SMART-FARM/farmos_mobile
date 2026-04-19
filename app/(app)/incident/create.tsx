@@ -1,13 +1,12 @@
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import {
   View, ScrollView, TextInput, TouchableOpacity,
   ActivityIndicator, StyleSheet, KeyboardAvoidingView, Platform,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useRouter, useFocusEffect } from 'expo-router'
+import { useRouter, useLocalSearchParams } from 'expo-router'
 import { Text } from '@/components/ui'
 import { useCreateIncident } from '@/hooks/useIncident'
-import { pickerCallback } from '@/utils/pickerCallback'
 import { SEVERITY_META } from '@/constants/incident'
 import type { IncidentSeverity } from '@/types/incident'
 
@@ -15,22 +14,17 @@ export default function CreateIncidentScreen() {
   const router = useRouter()
   const { mutate, isPending } = useCreateIncident()
 
+  // Nhận severity từ picker qua search params
+  const params = useLocalSearchParams<{ severity?: IncidentSeverity }>()
+  const severity: IncidentSeverity = params.severity ?? 'medium'
+
   const [milestoneId, setMilestoneId] = useState('')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [severity, setSeverity] = useState<IncidentSeverity>('medium')
   const [error, setError] = useState('')
 
-  // Nhận giá trị từ severity-picker sheet khi quay lại
-  useFocusEffect(
-    useCallback(() => {
-      pickerCallback.register((v) => setSeverity(v as IncidentSeverity))
-      return () => pickerCallback.register(() => {})
-    }, [])
-  )
-
   const openSeverityPicker = () => {
-    router.push(`/(app)/incident/severity-picker?current=${severity}`)
+    router.push(`/(app)/incident/severity-picker?current=${severity}&returnTo=create`)
   }
 
   const handleSubmit = () => {
