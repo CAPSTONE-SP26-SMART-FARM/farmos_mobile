@@ -58,6 +58,15 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name='alerts'
+        options={{
+          title: 'Cảnh báo',
+          tabBarIcon: ({ focused }) => (
+            <TabBarIcon focused={focused} Icon={icons.alertSvg} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name='profile'
         options={{
           title: 'Hồ sơ',
