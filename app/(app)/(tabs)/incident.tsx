@@ -1,6 +1,8 @@
 import { View, FlatList, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
+import { useFocusEffect } from '@react-navigation/native'
+import { useCallback } from 'react'
 import { Text } from '@/components/ui'
 import { IncidentCard } from '@/components/features/incident/IncidentCard'
 import { useIncidentList } from '@/hooks/useIncident'
@@ -9,6 +11,10 @@ export default function IncidentScreen() {
   const router = useRouter()
   const { data, isLoading, isError, refetch, isFetching } = useIncidentList()
   const tickets = data?.data ?? []
+
+  useFocusEffect(
+    useCallback(() => { refetch() }, [refetch])
+  )
 
   return (
     <SafeAreaView style={styles.safe}>
