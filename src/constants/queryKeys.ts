@@ -10,9 +10,13 @@ export const queryKeys = {
     list: (page?: number) => ['incident', 'list', page] as const,
     detail: (id: string) => ['incident', id] as const,
   },
+  productionMilestone: {
+    myMilestones: ['production-milestone', 'my-milestones'] as const,
+  },
   sensorReading: {
     latestByAssignment: (assignmentId: string) =>
       ['sensor-reading', 'latest', assignmentId] as const,
+    myAssignments: ['sensor-reading', 'my-assignments'] as const,
   },
   ticketMessages: {
     list: (ticketId: string) => ['ticket-messages', ticketId] as const,
