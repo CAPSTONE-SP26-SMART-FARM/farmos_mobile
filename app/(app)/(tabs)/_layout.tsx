@@ -2,8 +2,12 @@ import { Tabs } from 'expo-router'
 import { HapticTab } from '@/components/HapticTab'
 import { TabBarIcon } from '@/components/ui/TabBarIcon'
 import { icons } from '@/constants/icon'
+import { useAuth } from '@/hooks/useAuth'
 
 export default function TabsLayout() {
+  const { user } = useAuth()
+  const isDoctor = user?.role === 'doctor'
+
   return (
     <Tabs
       screenOptions={{
@@ -30,6 +34,7 @@ export default function TabsLayout() {
         },
       }}
     >
+      {/* ── Shared ── */}
       <Tabs.Screen
         name='index'
         options={{
@@ -39,17 +44,22 @@ export default function TabsLayout() {
           ),
         }}
       />
+
+      {/* ── Farmer-only tabs ── */}
       <Tabs.Screen
-        name='explore'
+        name='farm'
         options={{
-          title: 'Cảm biến',
+          href: isDoctor ? null : undefined,
+          title: 'Trang trại',
           tabBarIcon: ({ focused }) => (
             <TabBarIcon focused={focused} Icon={icons.motionSensorSvg} />
           ),
         }}
       />
+
+      {/* ── Shared: Incidents ── */}
       <Tabs.Screen
-        name='incident'
+        name='incidents'
         options={{
           title: 'Sự cố',
           tabBarIcon: ({ focused }) => (
@@ -57,15 +67,20 @@ export default function TabsLayout() {
           ),
         }}
       />
+
+      {/* ── Farmer-only: Alerts ── */}
       <Tabs.Screen
         name='alerts'
         options={{
+          href: isDoctor ? null : undefined,
           title: 'Cảnh báo',
           tabBarIcon: ({ focused }) => (
             <TabBarIcon focused={focused} Icon={icons.alertSvg} />
           ),
         }}
       />
+
+      {/* ── Shared: Profile ── */}
       <Tabs.Screen
         name='profile'
         options={{
@@ -75,13 +90,11 @@ export default function TabsLayout() {
           ),
         }}
       />
-      {/* notifications không hiện trên tab bar — chỉ navigate từ home */}
-      <Tabs.Screen
-        name='notifications'
-        options={{
-          href: null,
-        }}
-      />
+
+      {/* ── Hidden helper screens ── */}
+      <Tabs.Screen name='notifications' options={{ href: null }} />
+      <Tabs.Screen name='doctor-profile' options={{ href: null }} />
+      <Tabs.Screen name='farmer-profile' options={{ href: null }} />
     </Tabs>
   )
 }

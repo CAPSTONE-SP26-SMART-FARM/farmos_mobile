@@ -10,108 +10,196 @@ import { authApi } from '@/services/api/auth'
 import { useToast } from '@/hooks/useToast'
 import { FormTextField } from '@/components/react-hook-form/FormTextField'
 import { PrimaryButton, SecondaryButton, Text } from '@/components/ui'
+import { getErrorMessage } from '@/utils/error'
 
-const step1Schema = z.object({ email: z.string().email('Email không hợp lệ') })
-const step2Schema = z.object({ code: z.string().length(6, 'Mã OTP gồm 6 chữ số') })
-const step3Schema = z.object({
-  fullName: z.string().min(2, 'Họ tên ít nhất 2 ký tự'),
-  phone: z.string().max(20).optional(),
-  password: z.string().min(6, 'Mật khẩu ít nhất 6 ký tự'),
-  confirmPassword: z.string().min(6, 'Mật khẩu ít nhất 6 ký tự'),
-  role: z.enum(['owner', 'doctor']),
-}).refine((d) => d.password === d.confirmPassword, { message: 'Mật khẩu không khớp', path: ['confirmPassword'] })
+// ── Schemas ──
+const emailSchema = z.object({ email: z.string().email('Email không hợp lệ') })
+const otpSchema = z.object({ code: z.string().length(6, 'Mã OTP gồm 6 chữ số') })
+const accountSchema = z
+  .object({
+    fullName: z.string().min(2, 'Họ tên ít nhất 2 ký tự'),
+    phone: z.string().max(20).optional(),
+    password: z.string().min(6, 'Mật khẩu ít nhất 6 ký tự'),
+    confirmPassword: z.string().min(6, 'Mật khẩu ít nhất 6 ký tự'),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    message: 'Mật khẩu không khớp',
+    path: ['confirmPassword'],
+  })
 
-type Step1Form = z.infer<typeof step1Schema>
-type Step2Form = z.infer<typeof step2Schema>
-type Step3Form = z.infer<typeof step3Schema>
+type EmailForm = z.infer<typeof emailSchema>
+type OtpForm = z.infer<typeof otpSchema>
+type AccountForm = z.infer<typeof accountSchema>
 
+type Step = 1 | 2 | 3
+
+// ── Header ──
+function StepHeader({ step, email, onBack }: { step: Step; email: string; onBack: () => void }) {
+  const subtitles: Record<Step, string> = {
+    1: 'Nhập email để nhận mã xác thực',
+    2: `Nhập mã OTP đã gửi đến ${email}`,
+    3: 'Hoàn tất thông tin tài khoản',
+  }
+  return (
+    <View style={styles.header}>
+      {step > 1 && (
+        <TouchableOpacity
+          onPress={onBack}
+          style={styles.backBtn}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <Ionicons name='arrow-back' size={22} color='#111827' />
+        </TouchableOpacity>
+      )}
+      <Text style={styles.title}>Đăng ký</Text>
+      <Text style={styles.subtitle}>{subtitles[step]}</Text>
+      <View style={styles.stepRow}>
+        {[1, 2, 3].map((s) => (
+          <View key={s} style={[styles.stepDot, s <= step && styles.stepDotActive]} />
+        ))}
+      </View>
+    </View>
+  )
+}
+
+// ── Screen ──
 export default function RegisterScreen() {
   const { register: registerUser, isLoading } = useAuthStore()
   const { showToast } = useToast()
-  const [step, setStep] = useState<1 | 2 | 3>(1)
+  const [step, setStep] = useState<Step>(1)
   const [email, setEmail] = useState('')
   const [otpCode, setOtpCode] = useState('')
   const [isSendingOtp, setIsSendingOtp] = useState(false)
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false)
 
-  const step1Form = useForm<Step1Form>({ resolver: zodResolver(step1Schema), defaultValues: { email: '' } })
-  const step2Form = useForm<Step2Form>({ resolver: zodResolver(step2Schema), defaultValues: { code: '' } })
-  const step3Form = useForm<Step3Form>({
-    resolver: zodResolver(step3Schema),
-    defaultValues: { fullName: '', phone: '', password: '', confirmPassword: '', role: 'owner' },
+  const emailForm = useForm<EmailForm>({
+    resolver: zodResolver(emailSchema),
+    defaultValues: { email: '' },
+  })
+  const otpForm = useForm<OtpForm>({
+    resolver: zodResolver(otpSchema),
+    defaultValues: { code: '' },
+  })
+  const accountForm = useForm<AccountForm>({
+    resolver: zodResolver(accountSchema),
+    defaultValues: { fullName: '', phone: '', password: '', confirmPassword: '' },
   })
 
-  const handleSendOtp = async (data: Step1Form) => {
+  const handleSendOtp = async (data: EmailForm) => {
     setIsSendingOtp(true)
     try {
       await authApi.sendOtp({ email: data.email, type: 'REGISTER' })
       setEmail(data.email)
       setStep(2)
       showToast.success({ message: 'Mã OTP đã được gửi đến email của bạn' })
-    } catch (err: any) {
-      showToast.error({ message: err?.response?.data?.message ?? 'Gửi OTP thất bại' })
-    } finally { setIsSendingOtp(false) }
+    } catch (err) {
+      showToast.error({ message: getErrorMessage(err, 'Gửi OTP thất bại') })
+    } finally {
+      setIsSendingOtp(false)
+    }
   }
 
-  const handleVerifyOtp = (data: Step2Form) => { setOtpCode(data.code); setStep(3) }
-
-  const handleRegister = async (data: Step3Form) => {
+  const handleVerifyOtp = async (data: OtpForm) => {
+    setIsVerifyingOtp(true)
     try {
-      await registerUser({ email, code: otpCode, fullName: data.fullName, phone: data.phone || null, password: data.password, confirmPassword: data.confirmPassword, role: data.role })
+      await authApi.verifyOtp({ email, type: 'REGISTER', code: data.code })
+      setOtpCode(data.code)
+      setStep(3)
+    } catch (err) {
+      otpForm.setError('code', { message: getErrorMessage(err, 'Mã OTP không hợp lệ') })
+    } finally {
+      setIsVerifyingOtp(false)
+    }
+  }
+
+  const handleRegister = async (data: AccountForm) => {
+    try {
+      await registerUser({
+        email,
+        code: otpCode,
+        fullName: data.fullName,
+        phone: data.phone || null,
+        password: data.password,
+        confirmPassword: data.confirmPassword,
+        role: 'doctor',
+      })
       showToast.success({ message: 'Đăng ký thành công! Vui lòng đăng nhập.' })
       router.replace('/(auth)/login')
-    } catch (err: any) {
-      showToast.error({ message: err?.response?.data?.message ?? 'Đăng ký thất bại' })
+    } catch (err) {
+      showToast.error({ message: getErrorMessage(err, 'Đăng ký thất bại') })
     }
   }
 
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps='handled' showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          {step > 1 && (
-            <TouchableOpacity onPress={() => setStep((step - 1) as 1 | 2 | 3)} style={styles.backBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-              <Ionicons name='arrow-back' size={22} color='#111827' />
-            </TouchableOpacity>
-          )}
-          <Text style={styles.title}>Đăng ký</Text>
-          <Text style={styles.subtitle}>
-            {step === 1 && 'Nhập email để nhận mã xác thực'}
-            {step === 2 && `Nhập mã OTP đã gửi đến ${email}`}
-            {step === 3 && 'Hoàn tất thông tin tài khoản'}
-          </Text>
-          <View style={styles.stepRow}>
-            {[1, 2, 3].map((s) => <View key={s} style={[styles.stepDot, s <= step && styles.stepDotActive]} />)}
-          </View>
-        </View>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps='handled'
+        showsVerticalScrollIndicator={false}
+      >
+        <StepHeader step={step} email={email} onBack={() => setStep((step - 1) as Step)} />
 
         {step === 1 && (
           <View style={styles.form}>
-            <FormTextField control={step1Form.control} name='email' label='Email' keyboardType='email-address' autoCapitalize='none' autoComplete='email' />
-            <PrimaryButton title='Gửi mã OTP' loading={isSendingOtp} onPress={step1Form.handleSubmit(handleSendOtp)} />
+            <FormTextField
+              control={emailForm.control}
+              name='email'
+              label='Email'
+              keyboardType='email-address'
+              autoCapitalize='none'
+              autoComplete='email'
+            />
+            <PrimaryButton
+              title='Gửi mã OTP'
+              loading={isSendingOtp}
+              onPress={emailForm.handleSubmit(handleSendOtp)}
+            />
           </View>
         )}
 
         {step === 2 && (
           <View style={styles.form}>
-            <FormTextField control={step2Form.control} name='code' label='Mã OTP (6 chữ số)' keyboardType='number-pad' maxLength={6} autoFocus />
-            <PrimaryButton title='Xác nhận OTP' onPress={step2Form.handleSubmit(handleVerifyOtp)} />
-            <SecondaryButton title='Gửi lại OTP' loading={isSendingOtp} onPress={step1Form.handleSubmit(handleSendOtp)} size='small' />
+            <FormTextField
+              control={otpForm.control}
+              name='code'
+              label='Mã OTP (6 chữ số)'
+              keyboardType='number-pad'
+              maxLength={6}
+              autoFocus
+            />
+            <PrimaryButton
+              title='Xác nhận OTP'
+              loading={isVerifyingOtp}
+              onPress={otpForm.handleSubmit(handleVerifyOtp)}
+            />
+            <SecondaryButton
+              title='Gửi lại OTP'
+              loading={isSendingOtp}
+              onPress={emailForm.handleSubmit(handleSendOtp)}
+              size='small'
+            />
           </View>
         )}
 
         {step === 3 && (
           <View style={styles.form}>
-            <FormTextField control={step3Form.control} name='fullName' label='Họ và tên' autoCapitalize='words' />
-            <FormTextField control={step3Form.control} name='phone' label='Số điện thoại (tuỳ chọn)' keyboardType='phone-pad' />
-            <FormTextField control={step3Form.control} name='password' label='Mật khẩu' secureTextEntry showClear={false} />
-            <FormTextField control={step3Form.control} name='confirmPassword' label='Xác nhận mật khẩu' secureTextEntry showClear={false} />
-            <PrimaryButton title='Tạo tài khoản' loading={isLoading} onPress={step3Form.handleSubmit(handleRegister)} />
+            <FormTextField control={accountForm.control} name='fullName' label='Họ và tên' autoCapitalize='words' />
+            <FormTextField control={accountForm.control} name='phone' label='Số điện thoại (tuỳ chọn)' keyboardType='phone-pad' />
+            <FormTextField control={accountForm.control} name='password' label='Mật khẩu' secureTextEntry showClear={false} />
+            <FormTextField control={accountForm.control} name='confirmPassword' label='Xác nhận mật khẩu' secureTextEntry showClear={false} />
+            <PrimaryButton
+              title='Tạo tài khoản'
+              loading={isLoading}
+              onPress={accountForm.handleSubmit(handleRegister)}
+            />
           </View>
         )}
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Đã có tài khoản? </Text>
-          <Link href='/(auth)/login'><Text style={styles.footerLink}>Đăng nhập</Text></Link>
+          <Link href='/(auth)/login'>
+            <Text style={styles.footerLink}>Đăng nhập</Text>
+          </Link>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

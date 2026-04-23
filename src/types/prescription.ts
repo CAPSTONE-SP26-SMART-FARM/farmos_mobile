@@ -1,12 +1,13 @@
+export type CreatePrescriptionBody = {
+  medicineName: string
+  dosage: string
+}
+
 export type Prescription = {
   id: string
   ticketId: string
   medicineName: string
   dosage: string
-  frequency: string
-  durationDays: number
-  withdrawalPeriodDays: number | null
-  instructions: string | null
   createdAt: string
 }
 

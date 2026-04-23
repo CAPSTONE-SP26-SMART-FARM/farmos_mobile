@@ -16,6 +16,8 @@ export interface User {
   createdAt: string
   updatedAt: string
   deletedAt: string | null
+  // Optional doctor-specific fields
+  isOnline?: boolean
 }
 
 // POST /auth/otp

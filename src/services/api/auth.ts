@@ -15,6 +15,12 @@ export const authApi = {
       .post<{ data: { message: string } }>('/auth/otp', body)
       .then((r) => r.data.data),
 
+  // Xác thực OTP (không consume — dùng để validate trước khi qua step tiếp theo)
+  verifyOtp: (body: SendOtpRequest & { code: string }) =>
+    apiClient
+      .post<{ data: { message: string } }>('/auth/otp/verify', body)
+      .then((r) => r.data.data),
+
   // Đăng ký — cần OTP code
   register: (body: RegisterRequest) =>
     apiClient

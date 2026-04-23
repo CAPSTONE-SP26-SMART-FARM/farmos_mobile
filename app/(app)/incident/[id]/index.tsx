@@ -1,55 +1,65 @@
 import {
-  View, ScrollView, TouchableOpacity,
-  ActivityIndicator, StyleSheet, RefreshControl,
+  View, ScrollView, ActivityIndicator, StyleSheet, RefreshControl, Alert,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useFocusEffect } from '@react-navigation/native'
-import { useCallback } from 'react'
-import { Text } from '@/components/ui'
-import { useIncidentDetail } from '@/hooks/useIncident'
-import { usePrescriptions } from '@/hooks/usePrescription'
+import { useCallback, useState } from 'react'
+import { Text, TopBar, EmptyState } from '@/components/ui'
+import { usePrescriptions, useCreatePrescription } from '@/hooks/usePrescription'
+import { useAcceptIncident, useDoctorIncidentDetail } from '@/hooks/useDoctor'
+import { useIncidentDetail, useEndIncident } from '@/hooks/useIncident'
+import { useAuth } from '@/hooks/useAuth'
+import { useToast } from '@/hooks/useToast'
 import { SEVERITY_META, STATUS_META } from '@/constants/incident'
-import { PrescriptionCard } from '@/components/features/incident/PrescriptionCard'
+import { PrescriptionModal } from '@/components/features/incident/PrescriptionModal'
+import { PrescriptionSection } from '@/components/features/incident/PrescriptionSection'
+import { IncidentInfoList } from '@/components/features/incident/IncidentInfoList'
+import { IncidentFooterActions } from '@/components/features/incident/IncidentFooterActions'
+import { getErrorMessage } from '@/utils/error'
+import type { CreatePrescriptionBody } from '@/types/prescription'
 
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.row}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={styles.rowValue}>{value}</Text>
-    </View>
-  )
-}
-
-function TopBar({ onBack }: { onBack: () => void }) {
-  return (
-    <View style={styles.topBar}>
-      <TouchableOpacity onPress={onBack}>
-        <Text style={styles.back}>← Quay lại</Text>
-      </TouchableOpacity>
-    </View>
-  )
-}
+const CLOSED_STATUSES = ['resolved', 'closed', 'cancelled'] as const
+const PRESCRIBABLE_STATUSES = ['assigned', 'in_progress'] as const
 
 export default function IncidentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
-  const { data, isLoading, isError, refetch, isFetching } = useIncidentDetail(id)
+  const { user } = useAuth()
+  const { showToast } = useToast()
+  const isDoctor = user?.role === 'doctor'
+  const [rxModalVisible, setRxModalVisible] = useState(false)
+
+  const farmerQuery = useIncidentDetail(id)
+  const doctorQuery = useDoctorIncidentDetail(id)
+  const { data, isLoading, isError, refetch, isFetching } = isDoctor ? doctorQuery : farmerQuery
+
   const { data: rxData, isLoading: rxLoading, refetch: refetchRx } = usePrescriptions(id)
+  const { mutate: acceptIncident, isPending: isAccepting } = useAcceptIncident()
+  const { mutate: createPrescription, isPending: isCreatingRx } = useCreatePrescription(id)
+  const { mutate: endIncident, isPending: isEnding } = useEndIncident()
   const prescriptions = rxData?.data ?? []
 
-  useFocusEffect(
-    useCallback(() => {
-      refetch()
-      refetchRx()
-    }, [refetch, refetchRx])
-  )
+  const refreshAll = useCallback(() => {
+    refetch()
+    refetchRx()
+  }, [refetch, refetchRx])
+
+  useFocusEffect(refreshAll)
+
+  const status = data?.status ?? ''
+  const isAssignee = isDoctor && data?.assignee?.id === user?.id
+  const isFarmerCreator = !isDoctor && data?.creator?.id === user?.id
+  const canAccept = isDoctor && status === 'open' && !data?.assignee
+  const canPrescribe = isAssignee && PRESCRIBABLE_STATUSES.includes(status as any)
+  const canResolve = isFarmerCreator && PRESCRIBABLE_STATUSES.includes(status as any)
+  const isClosed = CLOSED_STATUSES.includes(status as any)
 
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safe}>
-        <TopBar onBack={() => router.back()} />
-        <ActivityIndicator style={{ marginTop: 40 }} color="#2463EB" />
+        <TopBar />
+        <ActivityIndicator style={{ marginTop: 40 }} color='#2463EB' />
       </SafeAreaView>
     )
   }
@@ -57,23 +67,61 @@ export default function IncidentDetailScreen() {
   if (isError || !data) {
     return (
       <SafeAreaView style={styles.safe}>
-        <TopBar onBack={() => router.back()} />
-        <View style={styles.emptyBox}>
-          <Text style={styles.emptyText}>Không thể tải thông tin sự cố.</Text>
-        </View>
+        <TopBar />
+        <EmptyState message='Không thể tải thông tin sự cố.' />
       </SafeAreaView>
     )
   }
 
+  const handleAcceptIncident = () => {
+    acceptIncident(id, {
+      onSuccess: () => {
+        showToast.success({ message: 'Tiếp nhận sự cố thành công!' })
+        refetch()
+      },
+      onError: (err) => showToast.error({ message: getErrorMessage(err, 'Tiếp nhận thất bại') }),
+    })
+  }
+
+  const handleResolveIncident = () => {
+    Alert.alert(
+      'Đánh dấu đã giải quyết?',
+      'Sự cố sẽ được đóng. Bạn không thể trao đổi thêm với bác sĩ sau khi đóng.',
+      [
+        { text: 'Huỷ', style: 'cancel' },
+        {
+          text: 'Xác nhận',
+          style: 'destructive',
+          onPress: () => endIncident(id, {
+            onSuccess: () => {
+              showToast.success({ message: 'Đã đánh dấu sự cố là đã giải quyết.' })
+              refetch()
+            },
+            onError: (err) => showToast.error({ message: getErrorMessage(err, 'Không thể đóng sự cố') }),
+          }),
+        },
+      ]
+    )
+  }
+
+  const handleCreatePrescription = (body: CreatePrescriptionBody) => {
+    createPrescription(body, {
+      onSuccess: () => {
+        setRxModalVisible(false)
+        showToast.success({ message: 'Đã kê đơn thuốc thành công!' })
+        refetchRx()
+      },
+      onError: (err) => showToast.error({ message: getErrorMessage(err, 'Kê đơn thất bại') }),
+    })
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
-      <TopBar onBack={() => router.back()} />
+      <TopBar />
 
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={
-          <RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor="#2463EB" />
-        }
+        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refreshAll} tintColor='#2463EB' />}
       >
         <Text style={styles.ticketNum}>{data.ticketNumber}</Text>
         <Text style={styles.title}>{data.title}</Text>
@@ -90,51 +138,41 @@ export default function IncidentDetailScreen() {
         <Text style={styles.description}>{data.description}</Text>
 
         <Text style={styles.sectionTitle}>Thông tin</Text>
-        <View style={styles.infoBox}>
-          <Row label="Ưu tiên" value={data.priority} />
-          {data.zone && <Row label="Khu vực" value={data.zone.name} />}
-          {data.assignee && <Row label="Bác sĩ phụ trách" value={data.assignee.fullName} />}
-          <Row label="Ngày tạo" value={new Date(data.createdAt).toLocaleString('vi-VN')} />
-          <Row label="Cập nhật" value={new Date(data.updatedAt).toLocaleString('vi-VN')} />
-        </View>
+        <IncidentInfoList ticket={data} isDoctor={isDoctor} />
 
-        <Text style={styles.sectionTitle}>Đơn thuốc</Text>
-        {rxLoading ? (
-          <ActivityIndicator size="small" color="#2463EB" style={{ marginVertical: 12 }} />
-        ) : prescriptions.length === 0 ? (
-          <View style={styles.emptyRx}>
-            <Text style={styles.emptyRxText}>Chưa có đơn thuốc.</Text>
-          </View>
-        ) : (
-          <View style={styles.rxList}>
-            {prescriptions.map((rx) => (
-              <PrescriptionCard key={rx.id} item={rx} />
-            ))}
-          </View>
-        )}
+        <PrescriptionSection
+          prescriptions={prescriptions}
+          isLoading={rxLoading}
+          canPrescribe={canPrescribe}
+          onAdd={() => setRxModalVisible(true)}
+        />
       </ScrollView>
 
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.chatBtn, !data.assignee && styles.chatBtnDisabled]}
-          onPress={() => router.push(`/(app)/incident/${id}/chat`)}
-          disabled={!data.assignee}
-        >
-          <Text style={styles.chatBtnText}>
-            {data.assignee ? '💬 Trao đổi với bác sĩ' : '⏳ Chờ bác sĩ tiếp nhận...'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <IncidentFooterActions
+        isClosed={isClosed}
+        canAccept={canAccept}
+        canChat={isAssignee || !isDoctor}
+        canResolve={canResolve}
+        waitingForDoctor={!isDoctor && !data.assignee}
+        isAccepting={isAccepting}
+        isEnding={isEnding}
+        onAccept={handleAcceptIncident}
+        onOpenChat={() => router.push(`/(app)/incident/${id}/chat`)}
+        onResolve={handleResolveIncident}
+      />
+
+      <PrescriptionModal
+        visible={rxModalVisible}
+        onClose={() => setRxModalVisible(false)}
+        onSubmit={handleCreatePrescription}
+        isPending={isCreatingRx}
+      />
     </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F9FAFB' },
-  topBar: { paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F3F4F6', backgroundColor: '#fff' },
-  back: { fontSize: 15, color: '#2463EB', fontFamily: 'Inter_500Medium' },
-  emptyBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyText: { fontSize: 14, color: '#9CA3AF', fontFamily: 'Inter_400Regular' },
   content: { padding: 20, paddingBottom: 32 },
   ticketNum: { fontSize: 12, color: '#9CA3AF', fontFamily: 'Inter_400Regular', marginBottom: 6 },
   title: { fontSize: 20, color: '#111827', fontFamily: 'Inter_700Bold', marginBottom: 12 },
@@ -143,15 +181,4 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 12, fontFamily: 'Inter_500Medium' },
   sectionTitle: { fontSize: 13, color: '#6B7280', fontFamily: 'Inter_600SemiBold', marginBottom: 8, marginTop: 20 },
   description: { fontSize: 15, color: '#374151', fontFamily: 'Inter_400Regular', lineHeight: 22 },
-  infoBox: { backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden' },
-  row: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  rowLabel: { fontSize: 13, color: '#6B7280', fontFamily: 'Inter_400Regular' },
-  rowValue: { fontSize: 13, color: '#111827', fontFamily: 'Inter_500Medium', flex: 1, textAlign: 'right' },
-  rxList: { gap: 10 },
-  emptyRx: { paddingVertical: 16, alignItems: 'center', backgroundColor: '#F9FAFB', borderRadius: 10, borderWidth: 1, borderColor: '#E5E7EB' },
-  emptyRxText: { fontSize: 13, color: '#9CA3AF', fontFamily: 'Inter_400Regular' },
-  footer: { padding: 16, borderTopWidth: 1, borderTopColor: '#E5E7EB', backgroundColor: '#fff' },
-  chatBtn: { backgroundColor: '#2463EB', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
-  chatBtnDisabled: { backgroundColor: '#E5E7EB' },
-  chatBtnText: { color: '#fff', fontSize: 15, fontFamily: 'Inter_600SemiBold' },
 })

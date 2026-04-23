@@ -9,6 +9,16 @@ export const queryKeys = {
   incident: {
     list: (page?: number) => ['incident', 'list', page] as const,
     detail: (id: string) => ['incident', id] as const,
+    doctorDetail: (id: string) => ['incident', 'doctor-detail', id] as const,
+    doctorList: (page?: number, ended?: boolean) =>
+      ['incident', 'doctor-list', page, ended === undefined ? 'all' : ended ? 'ended' : 'active'] as const,
+  },
+  doctor: {
+    myProfile: ['doctor', 'my-profile'] as const,
+    myRequests: (page?: number) => ['doctor', 'my-requests', page] as const,
+    requestDetail: (id: string) => ['doctor', 'request', id] as const,
+    myAssignments: (page?: number) => ['doctor', 'my-assignments', page] as const,
+    assignmentDetail: (id: string) => ['doctor', 'assignment', id] as const,
   },
   productionMilestone: {
     myMilestones: ['production-milestone', 'my-milestones'] as const,
@@ -31,5 +41,10 @@ export const queryKeys = {
   },
   alerts: {
     list: (page?: number) => ['alerts', 'list', page] as const,
+  },
+  doctorWallet: {
+    summary: ['doctor-wallet', 'summary'] as const,
+    transactions: (page?: number, type?: string) =>
+      ['doctor-wallet', 'transactions', page, type ?? 'all'] as const,
   },
 } as const

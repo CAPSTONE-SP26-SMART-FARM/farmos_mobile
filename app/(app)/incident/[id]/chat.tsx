@@ -7,6 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Text } from '@/components/ui'
 import { useIncidentDetail } from '@/hooks/useIncident'
+import { useDoctorIncidentDetail } from '@/hooks/useDoctor'
+import { useAuth } from '@/hooks/useAuth'
 import { useTicketMessages, useSendMessage } from '@/hooks/useTicketMessages'
 import { useAuthStore } from '@/stores/authStore'
 import { MessageBubble } from '@/components/features/incident/MessageBubble'
@@ -15,7 +17,11 @@ import type { TicketMessage } from '@/types/ticketMessage'
 export default function IncidentChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
-  const { data } = useIncidentDetail(id)
+  const { user } = useAuth()
+  const isDoctor = user?.role === 'doctor'
+  const farmerQuery = useIncidentDetail(id)
+  const doctorQuery = useDoctorIncidentDetail(id)
+  const { data } = isDoctor ? doctorQuery : farmerQuery
   const { data: messagesData, isLoading } = useTicketMessages(id)
   const { mutate: sendMessage, isPending: isSending } = useSendMessage(id)
   const currentUserId = useAuthStore((s) => s.user?.id)
@@ -55,29 +61,32 @@ export default function IncidentChatScreen() {
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
       >
-        {isLoading ? (
-          <ActivityIndicator style={{ marginTop: 40 }} color="#2463EB" />
-        ) : (
-          <FlatList<TicketMessage>
-            ref={flatListRef}
-            data={messages}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <MessageBubble msg={item} isMe={item.senderId === currentUserId} />
-            )}
-            ListEmptyComponent={() => (
-              <View style={styles.emptyBox}>
-                <Text style={styles.emptyText}>Chưa có tin nhắn nào.{'\n'}Hãy bắt đầu cuộc trò chuyện!</Text>
-              </View>
-            )}
-            contentContainerStyle={styles.messagesList}
-            style={styles.flex}
-            onContentSizeChange={() =>
-              messages.length > 0 && flatListRef.current?.scrollToEnd({ animated: false })
-            }
-          />
-        )}
+        <View style={styles.flex}>
+          {isLoading ? (
+            <ActivityIndicator style={{ marginTop: 40 }} color="#2463EB" />
+          ) : (
+            <FlatList<TicketMessage>
+              ref={flatListRef}
+              data={messages}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <MessageBubble msg={item} isMe={item.senderId === currentUserId} />
+              )}
+              ListEmptyComponent={() => (
+                <View style={styles.emptyBox}>
+                  <Text style={styles.emptyText}>Chưa có tin nhắn nào.{'\n'}Hãy bắt đầu cuộc trò chuyện!</Text>
+                </View>
+              )}
+              contentContainerStyle={styles.messagesList}
+              style={styles.flex}
+              onContentSizeChange={() =>
+                messages.length > 0 && flatListRef.current?.scrollToEnd({ animated: false })
+              }
+            />
+          )}
+        </View>
 
         <View style={styles.inputRow}>
           <TextInput
@@ -106,6 +115,7 @@ export default function IncidentChatScreen() {
     </SafeAreaView>
   )
 }
+
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F9FAFB' },
