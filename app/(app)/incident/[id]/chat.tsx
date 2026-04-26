@@ -4,8 +4,8 @@ import {
   ActivityIndicator, StyleSheet, Platform, KeyboardAvoidingView,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useLocalSearchParams, useRouter } from 'expo-router'
-import { Text } from '@/components/ui'
+import { useLocalSearchParams } from 'expo-router'
+import { Text, TopBar } from '@/components/ui'
 import { useIncidentDetail } from '@/hooks/useIncident'
 import { useDoctorIncidentDetail } from '@/hooks/useDoctor'
 import { useAuth } from '@/hooks/useAuth'
@@ -16,7 +16,6 @@ import type { TicketMessage } from '@/types/ticketMessage'
 
 export default function IncidentChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
-  const router = useRouter()
   const { user } = useAuth()
   const isDoctor = user?.role === 'doctor'
   const farmerQuery = useIncidentDetail(id)
@@ -44,22 +43,10 @@ export default function IncidentChatScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      {/* Top bar */}
-      <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.back}>← Quay lại</Text>
-        </TouchableOpacity>
-        <View style={styles.topBarCenter}>
-          <Text style={styles.topBarTitle}>Trao đổi</Text>
-          {data?.assignee && (
-            <Text style={styles.topBarSub}>{data.assignee.fullName}</Text>
-          )}
-        </View>
-        <View style={{ width: 60 }} />
-      </View>
+      <TopBar title='Trao đổi' subtitle={data?.assignee?.fullName} />
 
       <KeyboardAvoidingView
-        style={styles.flex}
+        style={styles.body}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
       >
@@ -104,6 +91,7 @@ export default function IncidentChatScreen() {
             style={[styles.sendBtn, (!input.trim() || isSending) && styles.sendBtnDisabled]}
             onPress={handleSend}
             disabled={!input.trim() || isSending}
+            activeOpacity={0.85}
           >
             {isSending
               ? <ActivityIndicator size="small" color="#fff" />
@@ -118,31 +106,28 @@ export default function IncidentChatScreen() {
 
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F9FAFB' },
+  safe: { flex: 1, backgroundColor: '#FFFFFF' },
+  body: { flex: 1, backgroundColor: '#F9FAFB' },
   flex: { flex: 1 },
-  topBar: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 20, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: '#F3F4F6', backgroundColor: '#fff',
-  },
-  back: { fontSize: 15, color: '#2463EB', fontFamily: 'Inter_500Medium', width: 60 },
-  topBarCenter: { flex: 1, alignItems: 'center' },
-  topBarTitle: { fontSize: 15, color: '#111827', fontFamily: 'Inter_600SemiBold' },
-  topBarSub: { fontSize: 12, color: '#6B7280', fontFamily: 'Inter_400Regular', marginTop: 1 },
   emptyBox: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 80 },
   emptyText: { fontSize: 14, color: '#9CA3AF', fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 22 },
   messagesList: { paddingHorizontal: 16, paddingVertical: 12, gap: 8, flexGrow: 1 },
   inputRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 12, paddingVertical: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 16,
     borderTopWidth: 1, borderTopColor: '#E5E7EB', backgroundColor: '#fff',
   },
   chatInput: {
-    flex: 1, borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 20,
-    paddingHorizontal: 14, paddingVertical: 8, fontSize: 14,
+    flex: 1, minHeight: 48,
+    borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 24,
+    paddingHorizontal: 18, paddingVertical: 14, fontSize: 15,
     color: '#111827', fontFamily: 'Inter_400Regular', backgroundColor: '#FAFAFA',
   },
-  sendBtn: { backgroundColor: '#2463EB', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 9, minWidth: 52, alignItems: 'center' },
+  sendBtn: {
+    backgroundColor: '#2463EB', borderRadius: 24,
+    paddingHorizontal: 22, height: 48, minWidth: 72,
+    alignItems: 'center', justifyContent: 'center',
+  },
   sendBtnDisabled: { backgroundColor: '#93C5FD' },
-  sendBtnText: { color: '#fff', fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  sendBtnText: { color: '#fff', fontSize: 15, fontFamily: 'Inter_600SemiBold' },
 })

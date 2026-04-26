@@ -1,5 +1,5 @@
 import { apiClient } from './client'
-import type { CreateIncidentBody, IncidentTicket, ListIncidentTicketsRes } from '@/types/incident'
+import type { CreateIncidentBody, IncidentTicket, ListIncidentTicketsRes, TicketStatus } from '@/types/incident'
 import type { FarmerMyMilestone, FarmerAssignment } from '@/types/production'
 
 export const incidentApi = {
@@ -32,6 +32,11 @@ export const incidentApi = {
   endIncident: (ticketId: string) =>
     apiClient
       .put<{ data: IncidentTicket }>(`/ticket/incident/${ticketId}/end`, {})
+      .then((r) => r.data.data),
+
+  updateStatus: (ticketId: string, status: TicketStatus) =>
+    apiClient
+      .put<{ data: IncidentTicket }>(`/ticket/incident/farmer/${ticketId}/status`, { status })
       .then((r) => r.data.data),
 
   // Doctor endpoints

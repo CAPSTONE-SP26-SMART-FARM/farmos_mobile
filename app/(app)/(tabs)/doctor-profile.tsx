@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
-import { View, ScrollView, StyleSheet, TouchableOpacity, Switch, ActivityIndicator } from 'react-native'
+import { View, ScrollView, StyleSheet, Switch, ActivityIndicator } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useRouter } from 'expo-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -17,7 +16,6 @@ import {
   useDoctorRequestsList,
   useUpdateDoctorOnlineStatus,
 } from '@/hooks/useDoctor'
-import { useDoctorWalletSummary } from '@/hooks/useDoctorWallet'
 import type { DoctorType } from '@/types/doctor'
 
 const DOCTOR_TYPES: { label: string; value: DoctorType }[] = [
@@ -53,11 +51,9 @@ const STATUS_CONFIG = {
 export default function DoctorProfileScreen() {
   const { user, logout } = useAuth()
   const { showToast } = useToast()
-  const router = useRouter()
 
   const { data: profile, isLoading: profileLoading } = useDoctorProfile()
   const { data: requestsData } = useDoctorRequestsList()
-  const { data: walletSummary } = useDoctorWalletSummary()
   const { mutate: upsertProfile, isPending: isUpserting } = useUpsertDoctorProfile()
   const { mutate: submitRequest, isPending: isSubmitting } = useSubmitDoctorRequest()
   const { mutate: updateOnlineStatus, isPending: isTogglingOnline } = useUpdateDoctorOnlineStatus()
@@ -68,8 +64,8 @@ export default function DoctorProfileScreen() {
   const isPending = registrationStatus === 'pending'
   const statusConfig = registrationStatus ? STATUS_CONFIG[registrationStatus] : null
 
-  // Online state — ưu tiên từ profile BE, fallback user.isOnline
   const isOnline = profile?.isOnline ?? user?.isOnline ?? false
+  const hasProfile = !!profile?.licenseNumber
 
   const profileForm = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
@@ -88,15 +84,12 @@ export default function DoctorProfileScreen() {
     defaultValues: { title: '', description: '' },
   })
 
-  // Prefill form khi profile load xong
   useEffect(() => {
     if (!profile) return
     profileForm.reset({
       doctorType: profile.doctorType,
       licenseNumber: profile.licenseNumber,
-      licenseExpiryDate: profile.licenseExpiryDate
-        ? profile.licenseExpiryDate.slice(0, 10)
-        : '',
+      licenseExpiryDate: profile.licenseExpiryDate ? profile.licenseExpiryDate.slice(0, 10) : '',
       specialization: profile.specialization,
       bio: profile.bio ?? '',
       yearsOfExperience: profile.yearsOfExperience?.toString() ?? '',
@@ -107,15 +100,13 @@ export default function DoctorProfileScreen() {
     upsertProfile(
       {
         ...data,
-        yearsOfExperience: data.yearsOfExperience
-          ? parseInt(data.yearsOfExperience, 10)
-          : undefined,
+        yearsOfExperience: data.yearsOfExperience ? parseInt(data.yearsOfExperience, 10) : undefined,
       },
       {
         onSuccess: () => showToast.success({ message: 'Cập nhật hồ sơ thành công!' }),
         onError: (err: any) =>
           showToast.error({ message: err?.response?.data?.message ?? 'Cập nhật thất bại' }),
-      }
+      },
     )
   }
 
@@ -139,41 +130,37 @@ export default function DoctorProfileScreen() {
       { isOnline: !isOnline },
       {
         onSuccess: () =>
-          showToast.success({
-            message: `Đã chuyển sang ${!isOnline ? 'Online 🟢' : 'Offline 🔴'}`,
-          }),
+          showToast.success({ message: `Đã chuyển sang ${!isOnline ? 'Online' : 'Offline'}` }),
         onError: (err: any) =>
           showToast.error({ message: err?.response?.data?.message ?? 'Cập nhật thất bại' }),
-      }
+      },
     )
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <Text style={styles.headerTitle}>Hồ sơ Bác sĩ</Text>
+          <Text style={styles.headerSub}>{user?.email ?? ''}</Text>
+        </View>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{user?.fullName?.charAt(0)?.toUpperCase() ?? 'D'}</Text>
+        </View>
+      </View>
+
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps='handled'
       >
-        {/* ── Header ── */}
-        <View style={styles.headerRow}>
-          <View>
-            <Text style={styles.title}>Hồ sơ Bác sĩ</Text>
-            <Text style={styles.subtitle}>{user?.email ?? ''}</Text>
-          </View>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {user?.fullName?.charAt(0)?.toUpperCase() ?? 'D'}
-            </Text>
-          </View>
-        </View>
-
-        {/* ── Online Status Card ── */}
-        <View style={styles.card}>
-          <View style={styles.cardRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardTitle}>Trạng thái nhận sự cố</Text>
-              <Text style={styles.cardSub}>
+        {/* Online Status */}
+        <View style={styles.section}>
+          <View style={styles.rowBetween}>
+            <View style={styles.flex1}>
+              <Text style={styles.sectionTitle}>Trạng thái nhận sự cố</Text>
+              <Text style={styles.helperText}>
                 {isApproved
                   ? isOnline
                     ? 'Đang nhận sự cố từ farmer'
@@ -189,83 +176,29 @@ export default function DoctorProfileScreen() {
               thumbColor={isOnline ? '#059669' : '#9CA3AF'}
             />
           </View>
-          {isTogglingOnline && (
-            <ActivityIndicator size='small' color='#059669' style={{ alignSelf: 'flex-end' }} />
-          )}
         </View>
 
-        {/* ── Wallet Card ── */}
-        <TouchableOpacity
-          style={styles.walletCard}
-          onPress={() => router.push('/(app)/wallet')}
-          activeOpacity={0.85}
-        >
-          <View style={{ flex: 1 }}>
-            <Text style={styles.walletLabel}>💰 Ví của tôi</Text>
-            <Text style={styles.walletBalance}>
-              {(walletSummary?.balance ?? 0).toLocaleString('vi-VN')} ₫
+        {/* Registration Status */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Trạng thái đăng ký</Text>
+          <View style={[styles.statusBadge, { backgroundColor: statusConfig?.bg ?? '#F3F4F6' }]}>
+            <Text style={[styles.statusText, { color: statusConfig?.color ?? '#6B7280' }]}>
+              {statusConfig?.label ?? 'Chưa gửi yêu cầu'}
             </Text>
           </View>
-          <Text style={styles.walletArrow}>›</Text>
-        </TouchableOpacity>
-
-        {/* ── Registration Status ── */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Trạng thái đăng ký</Text>
-          <View style={styles.cardRow}>
-            <View
-              style={[
-                styles.statusBadge,
-                { backgroundColor: statusConfig?.bg ?? '#F3F4F6' },
-              ]}
-            >
-              <Text style={[styles.statusText, { color: statusConfig?.color ?? '#6B7280' }]}>
-                {statusConfig?.label ?? 'Chưa gửi yêu cầu'}
-              </Text>
-            </View>
-            {latestRequest?.reason ? (
-              <Text style={styles.reasonText}>Lý do: {latestRequest.reason}</Text>
-            ) : null}
-          </View>
-
-          {/* Bước hướng dẫn theo trạng thái */}
-          {!registrationStatus && (
-            <View style={styles.stepHint}>
-              <Text style={styles.stepHintText}>
-                💡 Điền thông tin hồ sơ bên dưới rồi gửi yêu cầu đăng ký để được admin phê duyệt.
-              </Text>
-            </View>
-          )}
-          {isPending && (
-            <View style={[styles.stepHint, { backgroundColor: '#FEF3C7' }]}>
-              <Text style={[styles.stepHintText, { color: '#92400E' }]}>
-                ⏳ Yêu cầu đang chờ admin xét duyệt. Bạn sẽ nhận email khi có kết quả.
-              </Text>
-            </View>
-          )}
-          {isApproved && (
-            <View style={[styles.stepHint, { backgroundColor: '#D1FAE5' }]}>
-              <Text style={[styles.stepHintText, { color: '#065F46' }]}>
-                ✅ Đã phê duyệt! Bật Online ở trên để bắt đầu nhận sự cố.
-              </Text>
-            </View>
-          )}
-          {registrationStatus === 'rejected' && (
-            <View style={[styles.stepHint, { backgroundColor: '#FEE2E2' }]}>
-              <Text style={[styles.stepHintText, { color: '#991B1B' }]}>
-                ❌ Yêu cầu bị từ chối. Cập nhật hồ sơ và gửi lại yêu cầu mới.
-              </Text>
-            </View>
-          )}
+          {latestRequest?.reason ? (
+            <Text style={styles.reasonText}>Lý do: {latestRequest.reason}</Text>
+          ) : null}
         </View>
 
-        {/* ── Profile Form ── */}
+        {/* Thông tin chuyên môn */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Thông tin chuyên môn</Text>
+
           {profileLoading ? (
             <ActivityIndicator color='#2463EB' style={{ marginVertical: 16 }} />
           ) : (
-            <>
+            <View style={styles.formFields}>
               <FormSelectField
                 control={profileForm.control}
                 name='doctorType'
@@ -273,73 +206,82 @@ export default function DoctorProfileScreen() {
                 options={DOCTOR_TYPES}
                 labelExtractor={(o) => o.label}
                 valueExtractor={(o) => o.value}
+                readOnly={hasProfile}
+                showError={false}
               />
               <FormTextField
                 control={profileForm.control}
                 name='licenseNumber'
                 label='Số giấy phép hành nghề'
+                readOnly={hasProfile}
+                showError={false}
               />
               <FormTextField
                 control={profileForm.control}
                 name='licenseExpiryDate'
                 label='Ngày hết hạn'
                 placeholder='2026-12-31'
+                readOnly={hasProfile}
+                showError={false}
               />
               <FormTextField
                 control={profileForm.control}
                 name='specialization'
                 label='Chuyên ngành'
+                readOnly={hasProfile}
+                showError={false}
               />
               <FormTextField
                 control={profileForm.control}
                 name='yearsOfExperience'
                 label='Năm kinh nghiệm'
                 keyboardType='number-pad'
+                readOnly={hasProfile}
+                showError={false}
               />
               <FormTextField
                 control={profileForm.control}
                 name='bio'
                 label='Tiểu sử (tùy chọn)'
-                multiline
+                showError={false}
               />
               <PrimaryButton
                 title='Lưu hồ sơ'
                 loading={isUpserting}
                 onPress={profileForm.handleSubmit(handleUpsertProfile)}
               />
-            </>
+            </View>
           )}
         </View>
 
-        {/* ── Request Form — chỉ show nếu chưa pending/approved ── */}
+        {/* Registration Form */}
         {!isPending && !isApproved && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Gửi yêu cầu đăng ký</Text>
-            <Text style={styles.sectionSub}>
+            <Text style={styles.helperText}>
               Sau khi lưu hồ sơ, gửi yêu cầu để admin xem xét và phê duyệt tài khoản.
             </Text>
-            <FormTextField
-              control={requestForm.control}
-              name='title'
-              label='Tiêu đề yêu cầu'
-              placeholder='VD: Đăng ký tư vấn nông nghiệp'
-            />
-            <FormTextField
-              control={requestForm.control}
-              name='description'
-              label='Mô tả kinh nghiệm & mục đích'
-              multiline
-              numberOfLines={4}
-            />
-            <PrimaryButton
-              title='Gửi yêu cầu đăng ký'
-              loading={isSubmitting}
-              onPress={requestForm.handleSubmit(handleSubmitRequest)}
-            />
+            <View style={styles.formFields}>
+              <FormTextField
+                control={requestForm.control}
+                name='title'
+                label='Tiêu đề yêu cầu'
+                placeholder='VD: Đăng ký tư vấn nông nghiệp'
+              />
+              <FormTextField
+                control={requestForm.control}
+                name='description'
+                label='Mô tả kinh nghiệm & mục đích'
+              />
+              <PrimaryButton
+                title='Gửi yêu cầu đăng ký'
+                loading={isSubmitting}
+                onPress={requestForm.handleSubmit(handleSubmitRequest)}
+              />
+            </View>
           </View>
         )}
 
-        {/* ── Logout ── */}
         <SecondaryButton
           title='Đăng xuất'
           onPress={async () => {
@@ -354,59 +296,54 @@ export default function DoctorProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F3F4F6' },
-  scroll: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 24, gap: 16 },
-  headerRow: {
+  safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
+  header: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 12,
+    backgroundColor: '#FFFFFF',
   },
-  title: { fontSize: 24, color: '#111827', fontFamily: 'Inter_600SemiBold' },
-  subtitle: { fontSize: 13, color: '#9CA3AF', fontFamily: 'Inter_400Regular', marginTop: 2 },
+  headerLeft: { flex: 1 },
+  headerTitle: { fontSize: 24, lineHeight: 32, color: '#111827', fontFamily: 'Inter_600SemiBold' },
+  headerSub: { fontSize: 13, color: '#9CA3AF', fontFamily: 'Inter_400Regular', marginTop: 2 },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#2463EB',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: '#2463EB', alignItems: 'center', justifyContent: 'center',
   },
-  avatarText: { fontSize: 20, color: '#fff', fontFamily: 'Inter_600SemiBold' },
-  card: {
-    backgroundColor: '#fff',
+  avatarText: { fontSize: 18, color: '#fff', fontFamily: 'Inter_600SemiBold' },
+
+  scrollContainer: { flex: 1, backgroundColor: '#F3F4F6' },
+  scrollContent: { padding: 16, paddingBottom: 32, gap: 12 },
+
+  section: {
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 16,
-    gap: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 2,
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 14,
+    gap: 8,
   },
-  cardRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  walletCard: {
-    backgroundColor: '#2463EB',
-    borderRadius: 16,
-    padding: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
+  sectionTitle: {
+    fontSize: 16, lineHeight: 24,
+    color: '#111827', fontFamily: 'Inter_600SemiBold',
+    marginBottom: 4,
   },
-  walletLabel: { color: '#DBEAFE', fontSize: 13, fontFamily: 'Inter_500Medium' },
-  walletBalance: { color: '#fff', fontSize: 22, fontFamily: 'Inter_700Bold', marginTop: 4 },
-  walletArrow: { color: '#fff', fontSize: 28, fontFamily: 'Inter_400Regular' },
-  cardTitle: { fontSize: 15, color: '#111827', fontFamily: 'Inter_600SemiBold' },
-  cardSub: { fontSize: 12, color: '#9CA3AF', fontFamily: 'Inter_400Regular', marginTop: 2 },
-  statusBadge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 },
+  helperText: { fontSize: 13, color: '#6B7280', fontFamily: 'Inter_400Regular', lineHeight: 18 },
+
+  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  flex1: { flex: 1 },
+
+  statusBadge: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 },
   statusText: { fontSize: 13, fontFamily: 'Inter_500Medium' },
-  reasonText: { fontSize: 12, color: '#6B7280', fontFamily: 'Inter_400Regular', flex: 1 },
-  stepHint: {
-    backgroundColor: '#F0F6FF',
-    borderRadius: 8,
-    padding: 12,
+  reasonText: { fontSize: 12, color: '#6B7280', fontFamily: 'Inter_400Regular' },
+
+  formFields: { gap: 8, marginTop: 4 },
+
+  logoutBtn: {
+    borderWidth: 1, borderColor: '#FCA5A5', backgroundColor: '#FFF5F5',
+    marginTop: 8,
   },
-  stepHintText: { fontSize: 13, color: '#1E40AF', fontFamily: 'Inter_400Regular', lineHeight: 20 },
-  section: { gap: 12 },
-  sectionTitle: { fontSize: 16, color: '#111827', fontFamily: 'Inter_600SemiBold' },
-  sectionSub: { fontSize: 13, color: '#6B7280', fontFamily: 'Inter_400Regular' },
-  logoutBtn: { borderWidth: 1, borderColor: '#FCA5A5', backgroundColor: '#FFF5F5' },
 })

@@ -1,211 +1,178 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
-  View, ScrollView, TextInput, TouchableOpacity,
-  ActivityIndicator, StyleSheet, KeyboardAvoidingView, Platform, FlatList, Modal,
+  View, ScrollView, StyleSheet, KeyboardAvoidingView, Platform,
+  Keyboard, TouchableWithoutFeedback,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useRouter, useLocalSearchParams } from 'expo-router'
-import { Text } from '@/components/ui'
+import { useRouter } from 'expo-router'
+import { Text, TextField, SelectField, PrimaryButton, TopBar } from '@/components/ui'
 import { useCreateIncident, useMyMilestones } from '@/hooks/useIncident'
+import { useToast } from '@/hooks/useToast'
+import { getErrorMessage } from '@/utils/error'
 import { SEVERITY_META } from '@/constants/incident'
 import type { IncidentSeverity } from '@/types/incident'
 import type { FarmerMyMilestone } from '@/types/production'
 
+const SEVERITY_OPTIONS = (Object.keys(SEVERITY_META) as IncidentSeverity[]).map((value) => ({
+  value,
+  label: SEVERITY_META[value].label,
+  desc: SEVERITY_META[value].desc,
+  color: SEVERITY_META[value].color,
+}))
+
 export default function CreateIncidentScreen() {
   const router = useRouter()
+  const { showToast } = useToast()
   const { mutate, isPending } = useCreateIncident()
   const { data: milestones = [], isLoading: isLoadingMilestones } = useMyMilestones()
 
-  // Nhận severity từ picker qua search params
-  const params = useLocalSearchParams<{ severity?: IncidentSeverity }>()
-  const severity: IncidentSeverity = params.severity ?? 'medium'
-
-  const [milestoneId, setMilestoneId] = useState('')
-  const [selectedMilestone, setSelectedMilestone] = useState<FarmerMyMilestone | null>(null)
-  const [milestoneModalVisible, setMilestoneModalVisible] = useState(false)
+  const [milestone, setMilestone] = useState<FarmerMyMilestone | null>(null)
+  const [severity, setSeverity] = useState<IncidentSeverity>('medium')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [error, setError] = useState('')
 
-  const openSeverityPicker = () => {
-    router.push(`/(app)/incident/severity-picker?current=${severity}&returnTo=create`)
-  }
+  const milestoneOptions = useMemo(
+    () => milestones.map((m) => ({
+      ...m,
+      label: m.stageName,
+      subtitle: m.zoneName,
+    })),
+    [milestones],
+  )
 
-  const handleSelectMilestone = (milestone: FarmerMyMilestone) => {
-    setMilestoneId(milestone.id)
-    setSelectedMilestone(milestone)
-    setMilestoneModalVisible(false)
-  }
+  const severityMeta = SEVERITY_META[severity]
+  const canSubmit = !!milestone && title.trim().length > 0 && description.trim().length > 0
 
   const handleSubmit = () => {
-    if (!milestoneId.trim() || !title.trim() || !description.trim()) {
-      setError('Vui lòng điền đầy đủ thông tin.')
-      return
-    }
-    setError('')
+    if (!canSubmit) return
     mutate(
-      { milestoneId: milestoneId.trim(), title: title.trim(), description: description.trim(), severity },
-      { onSuccess: () => router.back() }
+      {
+        milestoneId: milestone!.id,
+        title: title.trim(),
+        description: description.trim(),
+        severity,
+      },
+      {
+        onSuccess: () => {
+          showToast.success({ message: 'Đã gửi báo cáo sự cố' })
+          router.back()
+        },
+        onError: (err) => showToast.error({ message: getErrorMessage(err, 'Gửi báo cáo thất bại') }),
+      },
     )
   }
 
-  const meta = SEVERITY_META[severity]
-
   return (
-    <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={styles.topBar}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Text style={styles.cancel}>Huỷ</Text>
-          </TouchableOpacity>
-          <Text style={styles.topTitle}>Báo cáo sự cố</Text>
-          <TouchableOpacity onPress={handleSubmit} disabled={isPending}>
-            {isPending
-              ? <ActivityIndicator size="small" color="#2463EB" />
-              : <Text style={styles.submit}>Gửi</Text>}
-          </TouchableOpacity>
-        </View>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
+      <TopBar title='Báo cáo sự cố' />
 
-        <ScrollView contentContainerStyle={styles.content}>
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-
-          <Text style={styles.label}>Milestone *</Text>
-          <TouchableOpacity
-            style={styles.pickerRow}
-            onPress={() => setMilestoneModalVisible(true)}
-            activeOpacity={0.7}
-            disabled={isLoadingMilestones}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.flex}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps='handled'
           >
-            <Text style={[
-              styles.pickerValue,
-              { color: selectedMilestone ? '#111827' : '#9CA3AF' }
-            ]}>
-              {isLoadingMilestones ? 'Đang tải...' : (selectedMilestone ? `${selectedMilestone.stageName} (${selectedMilestone.zoneName})` : 'Chọn milestone...')}
-            </Text>
-            <Text style={styles.pickerArrow}>›</Text>
-          </TouchableOpacity>
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Thông tin sự cố</Text>
 
-          <Modal
-            visible={milestoneModalVisible}
-            transparent
-            animationType="slide"
-            onRequestClose={() => setMilestoneModalVisible(false)}
-          >
-            <View style={styles.modalOverlay}>
-              <SafeAreaView style={styles.modalSafe}>
-                <View style={styles.modalHeader}>
-                  <TouchableOpacity onPress={() => setMilestoneModalVisible(false)} style={styles.modalCloseBtn}>
-                    <Text style={styles.modalClose}>✕</Text>
-                  </TouchableOpacity>
-                  <Text style={styles.modalTitle}>Chọn Milestone</Text>
-                  <View style={{ width: 40 }} />
-                </View>
-              <FlatList
-                data={milestones}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.milestoneList}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.milestoneItem}
-                    onPress={() => handleSelectMilestone(item)}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.milestoneName}>{item.stageName}</Text>
-                      <Text style={styles.milestoneZone}>{item.zoneName}</Text>
-                    </View>
-                    <Text style={[styles.milestoneStatus, { color: item.status === 'in_progress' ? '#059669' : '#9CA3AF' }]}>
-                      {item.status === 'in_progress' ? '●' : '○'}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-                ListEmptyComponent={
-                  <View style={styles.emptyList}>
-                    <Text style={styles.emptyText}>Không có milestone nào</Text>
-                  </View>
-                }
-              />
-            </SafeAreaView>
+              <View style={styles.fields}>
+                <SelectField
+                  label='Milestone'
+                  value={milestone ? `${milestone.stageName} · ${milestone.zoneName}` : ''}
+                  options={milestoneOptions}
+                  bottomSheetTitle='Chọn milestone'
+                  disabled={isLoadingMilestones}
+                  labelExtractor={(item) => item.stageName}
+                  subtitleExtractor={(item) => item.zoneName}
+                  valueExtractor={(item) => item.id}
+                  selectedValue={milestone?.id ?? null}
+                  onSelect={(item) => setMilestone(item)}
+                  showError={false}
+                />
+
+                <TextField
+                  label='Tiêu đề'
+                  value={title}
+                  onChangeText={setTitle}
+                  autoCapitalize='sentences'
+                  showError={false}
+                />
+
+                <SelectField
+                  label='Mức độ nghiêm trọng'
+                  value={severityMeta.label}
+                  options={SEVERITY_OPTIONS}
+                  bottomSheetTitle='Chọn mức độ nghiêm trọng'
+                  labelExtractor={(item) => item.label}
+                  subtitleExtractor={(item) => item.desc}
+                  valueExtractor={(item) => item.value}
+                  selectedValue={severity}
+                  onSelect={(item) => setSeverity(item.value)}
+                  showError={false}
+                />
+
+                <TextField
+                  label='Mô tả chi tiết'
+                  value={description}
+                  onChangeText={setDescription}
+                  multiline
+                  numberOfLines={5}
+                  inputStyle={styles.textarea}
+                  showError={false}
+                />
+              </View>
             </View>
-          </Modal>
+          </ScrollView>
+        </TouchableWithoutFeedback>
 
-          <Text style={styles.label}>Tiêu đề *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Mô tả ngắn về sự cố..."
-            placeholderTextColor="#9CA3AF"
-            value={title}
-            onChangeText={setTitle}
+        <View style={styles.footer}>
+          <PrimaryButton
+            title='Hoàn thành'
+            loading={isPending}
+            disabled={!canSubmit}
+            onPress={handleSubmit}
           />
-
-          <Text style={styles.label}>Mức độ nghiêm trọng *</Text>
-          <TouchableOpacity style={styles.pickerRow} onPress={openSeverityPicker} activeOpacity={0.7}>
-            <View style={[styles.dot, { backgroundColor: meta.color }]} />
-            <Text style={[styles.pickerValue, { color: meta.color }]}>{meta.label}</Text>
-            <Text style={styles.pickerArrow}>›</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.label}>Mô tả chi tiết *</Text>
-          <TextInput
-            style={[styles.input, styles.textarea]}
-            placeholder="Diễn giải chi tiết về sự cố xảy ra..."
-            placeholderTextColor="#9CA3AF"
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            numberOfLines={5}
-            textAlignVertical="top"
-          />
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#fff' },
-  topBar: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  flex: { flex: 1 },
+  scrollView: { flex: 1, backgroundColor: '#F3F4F6' },
+  scrollContent: { padding: 16, paddingBottom: 24 },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
   },
-  topTitle: { fontSize: 16, color: '#111827', fontFamily: 'Inter_600SemiBold' },
-  cancel: { fontSize: 15, color: '#6B7280', fontFamily: 'Inter_400Regular' },
-  submit: { fontSize: 15, color: '#2463EB', fontFamily: 'Inter_600SemiBold' },
-  content: { padding: 16, gap: 6 },
-  error: { color: '#DC2626', fontSize: 13, fontFamily: 'Inter_400Regular', marginBottom: 8 },
-  label: { fontSize: 13, color: '#374151', fontFamily: 'Inter_600SemiBold', marginTop: 12, marginBottom: 4 },
-  input: {
-    borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12,
-    paddingHorizontal: 14, paddingVertical: 12, fontSize: 14,
-    color: '#111827', fontFamily: 'Inter_400Regular', backgroundColor: '#FAFAFA',
+  cardTitle: {
+    fontSize: 16,
+    lineHeight: 24,
+    fontFamily: 'Inter_600SemiBold',
+    color: '#111827',
+    marginBottom: 16,
   },
-  textarea: { height: 120 },
-  pickerRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12,
-    paddingHorizontal: 14, paddingVertical: 14, backgroundColor: '#FAFAFA',
+  fields: { gap: 12 },
+  textarea: { minHeight: 120 },
+  footer: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 24,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
   },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)' },
-  dot: { width: 10, height: 10, borderRadius: 5 },
-  pickerValue: { flex: 1, fontSize: 14, fontFamily: 'Inter_500Medium' },
-  pickerArrow: { fontSize: 20, color: '#9CA3AF', lineHeight: 22 },
-  modalSafe: { flex: 1, backgroundColor: '#fff' },
-  modalHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
-  },
-  modalTitle: { fontSize: 16, color: '#111827', fontFamily: 'Inter_600SemiBold', flex: 1, textAlign: 'center' },
-  modalCloseBtn: { padding: 8, marginLeft: -8 },
-  modalClose: { fontSize: 24, color: '#6B7280', fontFamily: 'Inter_400Regular', lineHeight: 28 },
-  milestoneList: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 24 },
-  milestoneItem: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12,
-    paddingHorizontal: 14, paddingVertical: 14, marginBottom: 10,
-    backgroundColor: '#FAFAFA',
-  },
-  milestoneName: { fontSize: 14, color: '#111827', fontFamily: 'Inter_600SemiBold' },
-  milestoneZone: { fontSize: 12, color: '#9CA3AF', fontFamily: 'Inter_400Regular', marginTop: 2 },
-  milestoneStatus: { fontSize: 12, fontFamily: 'Inter_500Medium' },
-  emptyList: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyText: { fontSize: 14, color: '#9CA3AF', fontFamily: 'Inter_400Regular' },
 })
