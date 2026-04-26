@@ -51,16 +51,21 @@ export default function AssignmentDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F9FAFB' },
-  content: { padding: 20, paddingBottom: 32 },
+  safe: { flex: 1, backgroundColor: '#F3F4F6' },
+  content: { padding: 16, paddingBottom: 24 },
   summary: {
-    backgroundColor: '#fff', borderRadius: 12, padding: 16,
-    borderWidth: 1, borderColor: '#E5E7EB', gap: 4,
+    backgroundColor: '#fff', borderRadius: 16, padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
+    gap: 4,
   },
   summaryLabel: { fontSize: 12, color: '#9CA3AF', fontFamily: 'Inter_400Regular', marginTop: 4 },
   summaryValue: { fontSize: 15, color: '#111827', fontFamily: 'Inter_600SemiBold' },
   sectionTitle: {
-    fontSize: 13, color: '#6B7280', fontFamily: 'Inter_600SemiBold',
+    fontSize: 16, color: '#111827', fontFamily: 'Inter_600SemiBold',
     marginTop: 20, marginBottom: 10,
   },
   list: { gap: 10 },

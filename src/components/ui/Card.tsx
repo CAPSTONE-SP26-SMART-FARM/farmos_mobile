@@ -21,8 +21,12 @@ export const Card = ({ title, children, contentStyle }: CardProps) => {
 const styles = StyleSheet.create({
   section: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    overflow: 'hidden'
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
   },
   sectionHeader: {
     flexDirection: 'row',

@@ -121,9 +121,9 @@ const styles = StyleSheet.create({
     fontSize: 16, color: '#111827', fontFamily: 'Inter_600SemiBold',
   },
   spacer: { width: 36 },
-  scroll: { padding: 20, gap: 16 },
+  scroll: { padding: 16, gap: 16 },
   readOnlyField: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F0F2F5',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E5E7EB',

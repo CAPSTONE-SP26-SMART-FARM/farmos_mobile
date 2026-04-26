@@ -172,13 +172,13 @@ export default function IncidentDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F9FAFB' },
-  content: { padding: 20, paddingBottom: 32 },
+  safe: { flex: 1, backgroundColor: '#F3F4F6' },
+  content: { padding: 16, paddingBottom: 24 },
   ticketNum: { fontSize: 12, color: '#9CA3AF', fontFamily: 'Inter_400Regular', marginBottom: 6 },
-  title: { fontSize: 20, color: '#111827', fontFamily: 'Inter_700Bold', marginBottom: 12 },
+  title: { fontSize: 20, color: '#111827', fontFamily: 'Inter_600SemiBold', marginBottom: 12 },
   badges: { flexDirection: 'row', gap: 8, marginBottom: 20 },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   badgeText: { fontSize: 12, fontFamily: 'Inter_500Medium' },
-  sectionTitle: { fontSize: 13, color: '#6B7280', fontFamily: 'Inter_600SemiBold', marginBottom: 8, marginTop: 20 },
+  sectionTitle: { fontSize: 16, color: '#111827', fontFamily: 'Inter_600SemiBold', marginBottom: 8, marginTop: 20 },
   description: { fontSize: 15, color: '#374151', fontFamily: 'Inter_400Regular', lineHeight: 22 },
 })

@@ -26,6 +26,8 @@ import arrowRightSvg from '@/assets/icons/icon-arrowright.svg'
 import arrowDownSvg from '@/assets/icons/icon-arrowdown.svg'
 import actionSvg from '@/assets/icons/icon-action.svg'
 import bulbSvg from '@/assets/icons/icon-bulb.svg'
+import bulkBgSvg from '@/assets/icons/icon-bulkBg.svg'
+import editProfileBgSvg from '@/assets/icons/icon-edit-profileBg.svg'
 import incidentSvg from '@/assets/icons/icon-incident.svg'
 
 export const icons = {
@@ -65,4 +67,6 @@ export const icons = {
   completeSvg,
   doneTaskSvg,
   bulbSvg,
+  bulkBgSvg,
+  editProfileBgSvg,
 }

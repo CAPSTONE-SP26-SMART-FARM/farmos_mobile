@@ -354,14 +354,14 @@ export default function DoctorProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F9FAFB' },
-  scroll: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 40, gap: 16 },
+  safe: { flex: 1, backgroundColor: '#F3F4F6' },
+  scroll: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 24, gap: 16 },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  title: { fontSize: 24, color: '#111827', fontFamily: 'Inter_700Bold' },
+  title: { fontSize: 24, color: '#111827', fontFamily: 'Inter_600SemiBold' },
   subtitle: { fontSize: 13, color: '#9CA3AF', fontFamily: 'Inter_400Regular', marginTop: 2 },
   avatar: {
     width: 48,
@@ -371,24 +371,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { fontSize: 20, color: '#fff', fontFamily: 'Inter_700Bold' },
+  avatarText: { fontSize: 20, color: '#fff', fontFamily: 'Inter_600SemiBold' },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     gap: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
+    shadowRadius: 10,
+    elevation: 2,
   },
   cardRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   walletCard: {
     backgroundColor: '#2463EB',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 18,
-    marginBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
   },

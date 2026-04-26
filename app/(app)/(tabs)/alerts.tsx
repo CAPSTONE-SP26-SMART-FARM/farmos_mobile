@@ -39,14 +39,21 @@ export default function AlertsScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F9FAFB' },
-  content: { padding: 20, paddingBottom: 40 },
-  title: { fontSize: 24, color: '#111827', fontFamily: 'Inter_700Bold' },
+  safe: { flex: 1, backgroundColor: '#F3F4F6' },
+  content: { padding: 16, paddingBottom: 24 },
+  title: { fontSize: 24, color: '#111827', fontFamily: 'Inter_600SemiBold' },
   subtitle: { fontSize: 13, color: '#9CA3AF', fontFamily: 'Inter_400Regular', marginBottom: 20 },
   empty: { marginTop: 40, alignItems: 'center' },
   emptyText: { fontSize: 14, color: '#9CA3AF', fontFamily: 'Inter_400Regular' },
   list: { gap: 12 },
-  card: { padding: 16, backgroundColor: '#fff', borderRadius: 10, borderWidth: 1, borderColor: '#E5E7EB' },
+  card: {
+    padding: 16, backgroundColor: '#fff', borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
+  },
   cardTitle: { fontSize: 14, color: '#111827', fontFamily: 'Inter_600SemiBold' },
   cardTime: { fontSize: 12, color: '#9CA3AF', fontFamily: 'Inter_400Regular', marginTop: 4 },
 })
