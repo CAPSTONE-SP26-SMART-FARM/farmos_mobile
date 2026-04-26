@@ -1,59 +1,55 @@
-import { useFocusEffect } from 'expo-router'
-import { useCallback } from 'react'
-import { View, ScrollView, ActivityIndicator, StyleSheet } from 'react-native'
+import { useCallback, useState } from 'react'
+import { View, FlatList, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Text } from '@/components/ui'
+import { Text, EmptyState } from '@/components/ui'
+import { AlertCard } from '@/components/features/alert/AlertCard'
 import { useAlertList } from '@/hooks/useAlert'
 
 export default function AlertsScreen() {
-  const { data, isLoading } = useAlertList()
+  const { data, isLoading, refetch } = useAlertList()
   const alerts = data?.data ?? []
 
-  useFocusEffect(useCallback(() => {}, []))
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true)
+    try { await refetch() } finally { setIsRefreshing(false) }
+  }, [refetch])
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.content}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
+      <View style={styles.header}>
         <Text style={styles.title}>Cảnh báo</Text>
         <Text style={styles.subtitle}>Thông báo từ cảm biến</Text>
+      </View>
 
+      <View style={styles.body}>
         {isLoading ? (
-          <ActivityIndicator style={{ marginTop: 20 }} color="#2463EB" />
+          <ActivityIndicator style={{ marginTop: 24 }} color='#2463EB' />
         ) : alerts.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyText}>Không có cảnh báo nào</Text>
-          </View>
+          <EmptyState message='Không có cảnh báo nào' />
         ) : (
-          <View style={styles.list}>
-            {alerts.map((a) => (
-              <View key={a.id} style={styles.card}>
-                <Text style={styles.cardTitle}>{a.message}</Text>
-                <Text style={styles.cardTime}>{new Date(a.createdAt).toLocaleString('vi-VN')}</Text>
-              </View>
-            ))}
-          </View>
+          <FlatList
+            data={alerts}
+            keyExtractor={(a) => a.id}
+            renderItem={({ item }) => <AlertCard item={item} />}
+            ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+            contentContainerStyle={styles.list}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor='#2463EB' />
+            }
+          />
         )}
-      </ScrollView>
+      </View>
     </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F3F4F6' },
-  content: { padding: 16, paddingBottom: 24 },
-  title: { fontSize: 24, color: '#111827', fontFamily: 'Inter_600SemiBold' },
-  subtitle: { fontSize: 13, color: '#9CA3AF', fontFamily: 'Inter_400Regular', marginBottom: 20 },
-  empty: { marginTop: 40, alignItems: 'center' },
-  emptyText: { fontSize: 14, color: '#9CA3AF', fontFamily: 'Inter_400Regular' },
-  list: { gap: 12 },
-  card: {
-    padding: 16, backgroundColor: '#fff', borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  cardTitle: { fontSize: 14, color: '#111827', fontFamily: 'Inter_600SemiBold' },
-  cardTime: { fontSize: 12, color: '#9CA3AF', fontFamily: 'Inter_400Regular', marginTop: 4 },
+  safe: { flex: 1, backgroundColor: '#FFFFFF' },
+  header: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12, backgroundColor: '#FFFFFF' },
+  title: { fontSize: 24, lineHeight: 32, color: '#111827', fontFamily: 'Inter_600SemiBold' },
+  subtitle: { fontSize: 13, color: '#9CA3AF', fontFamily: 'Inter_400Regular', marginTop: 2 },
+  body: { flex: 1, backgroundColor: '#F3F4F6' },
+  list: { padding: 16, paddingBottom: 24 },
 })

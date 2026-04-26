@@ -18,7 +18,7 @@ export function useDoctorWalletSummary() {
     const handler = () => {
       qc.invalidateQueries({ queryKey: queryKeys.doctorWallet.summary })
       qc.invalidateQueries({ queryKey: ['doctor-wallet', 'transactions'] })
-      showToast.success({ message: '💰 Bạn vừa nhận được tiền từ một ca đã giải quyết!' })
+      showToast.success({ message: 'Bạn đã nhận được tiền từ một ca sự cố!' })
     }
     socketService.on('doctor.wallet.credited', handler)
     return () => socketService.off('doctor.wallet.credited', handler)
