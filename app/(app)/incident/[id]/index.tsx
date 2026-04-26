@@ -33,7 +33,7 @@ export default function IncidentDetailScreen() {
 
   const farmerQuery = useIncidentDetail(id)
   const doctorQuery = useDoctorIncidentDetail(id)
-  const { data, isLoading, isError, refetch, isFetching } = isDoctor ? doctorQuery : farmerQuery
+  const { data, isLoading, isError, refetch } = isDoctor ? doctorQuery : farmerQuery
 
   const { data: rxData, isLoading: rxLoading, refetch: refetchRx } = usePrescriptions(id)
   const { mutate: acceptIncident, isPending: isAccepting } = useAcceptIncident()
@@ -46,6 +46,14 @@ export default function IncidentDetailScreen() {
   }, [refetch, refetchRx])
 
   useFocusEffect(refreshAll)
+
+  // Tách pull-to-refresh state ra khỏi background isFetching để spinner không stuck
+  // khi useFocusEffect gọi refetch lúc back từ chat về.
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const handlePullRefresh = useCallback(async () => {
+    setIsRefreshing(true)
+    try { await Promise.all([refetch(), refetchRx()]) } finally { setIsRefreshing(false) }
+  }, [refetch, refetchRx])
 
   const status = data?.status ?? ''
   const isAssignee = isDoctor && data?.assignee?.id === user?.id
@@ -107,7 +115,7 @@ export default function IncidentDetailScreen() {
         style={styles.body}
         contentContainerStyle={styles.bodyContent}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refreshAll} tintColor='#2463EB' />}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handlePullRefresh} tintColor='#2463EB' />}
       >
         <View style={styles.card}>
           <Text style={styles.title} numberOfLines={2}>{data.title}</Text>

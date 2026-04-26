@@ -22,6 +22,14 @@ const TYPE_META: Record<string, { icon: string; color: string; bg: string }> = {
 
 const getTypeMeta = (type: string) => TYPE_META[type] ?? TYPE_META.system
 
+// BE redirectUrl `/tickets/:id` → FE route `/(app)/incident/:id`
+function resolveRedirect(redirectUrl: string | null | undefined): string | null {
+  if (!redirectUrl) return null
+  const m = redirectUrl.match(/\/tickets\/([^/]+)/)
+  if (m?.[1]) return `/(app)/incident/${m[1]}`
+  return redirectUrl
+}
+
 function NotificationItem({
   item,
   onPress,
@@ -67,46 +75,50 @@ export default function NotificationsScreen() {
 
   const handlePress = (item: Notification) => {
     if (!item.isRead) markRead(item.id)
-    if (item.redirectUrl) router.push(item.redirectUrl as any)
+    const target = resolveRedirect(item.redirectUrl)
+    if (target) router.push(target as any)
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
       <TopBar title={`Thông báo${unreadCount > 0 ? ` (${unreadCount})` : ''}`} />
 
-      {isLoading ? (
-        <ActivityIndicator style={{ marginTop: 40 }} color="#2463EB" />
-      ) : isError ? (
-        <View style={styles.emptyBox}>
-          <Text style={styles.emptyText}>Không thể tải thông báo.</Text>
-          <TouchableOpacity onPress={refetch} style={styles.retryBtn}>
-            <Text style={styles.retryText}>Thử lại</Text>
-          </TouchableOpacity>
-        </View>
-      ) : notifications.length === 0 ? (
-        <View style={styles.emptyBox}>
-          <Text style={styles.emptyEmoji}>🔔</Text>
-          <Text style={styles.emptyText}>Chưa có thông báo nào.</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={notifications}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <NotificationItem item={item} onPress={handlePress} />
-          )}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-          contentContainerStyle={styles.list}
-          onRefresh={refetch}
-          refreshing={isLoading}
-        />
-      )}
+      <View style={styles.body}>
+        {isLoading ? (
+          <ActivityIndicator style={{ marginTop: 40 }} color='#2463EB' />
+        ) : isError ? (
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyText}>Không thể tải thông báo.</Text>
+            <TouchableOpacity onPress={() => refetch()} style={styles.retryBtn}>
+              <Text style={styles.retryText}>Thử lại</Text>
+            </TouchableOpacity>
+          </View>
+        ) : notifications.length === 0 ? (
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyEmoji}>🔔</Text>
+            <Text style={styles.emptyText}>Chưa có thông báo nào.</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={notifications}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <NotificationItem item={item} onPress={handlePress} />
+            )}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
+            contentContainerStyle={styles.list}
+            onRefresh={() => refetch()}
+            refreshing={isLoading}
+          />
+        )}
+      </View>
     </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F3F4F6' },
+  safe: { flex: 1, backgroundColor: '#FFFFFF' },
+  body: { flex: 1, backgroundColor: '#F3F4F6' },
   list: { paddingVertical: 8 },
   item: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 12,
