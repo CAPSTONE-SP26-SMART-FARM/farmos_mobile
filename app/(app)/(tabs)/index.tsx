@@ -3,102 +3,101 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { Text } from '@/components/ui'
 import { useAuth } from '@/hooks/useAuth'
-import { useDoctorProfile, useDoctorRequestsList } from '@/hooks/useDoctor'
 import { icons } from '@/constants/icon'
+import { useDoctorIncidentList } from '@/hooks/useDoctor'
+import { useIncidentList } from '@/hooks/useIncident'
+import { EarningsCard } from '@/components/features/home/EarningsCard'
+import { DoctorStatusCard } from '@/components/features/home/DoctorStatusCard'
+import { IncidentSummaryCard } from '@/components/features/home/IncidentSummaryCard'
+import { FarmStatusCard } from '@/components/features/home/FarmStatusCard'
+import { TodayScheduleCard } from '@/components/features/home/TodayScheduleCard'
+import { QuickActionsCard, type QuickActionItem } from '@/components/features/home/QuickActionsCard'
+import { TipsCard } from '@/components/features/home/TipsCard'
 
 const NotiIcon = icons.notiBgSvg
+const EditProfileBgIcon = icons.editProfileBgSvg
+const IncidentIcon = icons.incidentSvg
+const StorefrontIcon = icons.storefrontSvg
+const AlertIcon = icons.alertSvg
+const PlusIcon = icons.plusSvg
 
-function DoctorHome() {
-  const { user } = useAuth()
-  const { data: profile } = useDoctorProfile()
-  const { data: requestsData } = useDoctorRequestsList()
+const DOCTOR_QUICK_ACTIONS: QuickActionItem[] = [
+  {
+    Icon: EditProfileBgIcon,
+    label: 'Cập nhật hồ sơ',
+    onPress: () => router.push('/(app)/(tabs)/profile'),
+    selfContained: true,
+  },
+  {
+    Icon: IncidentIcon,
+    label: 'Kê khai sự cố',
+    onPress: () => router.push('/(app)/(tabs)/incidents'),
+  },
+]
 
-  const latestRequest = requestsData?.data?.[0]
-  const isApproved = latestRequest?.registrationStatus === 'Approved'
-  const isOnline = profile?.isOnline ?? user?.isOnline ?? false
+const FARMER_QUICK_ACTIONS: QuickActionItem[] = [
+  {
+    Icon: StorefrontIcon,
+    label: 'Trang trại',
+    onPress: () => router.push('/(app)/(tabs)/farm'),
+  },
+  {
+    Icon: PlusIcon,
+    label: 'Tạo sự cố',
+    onPress: () => router.push('/(app)/incident/create'),
+  },
+  {
+    Icon: IncidentIcon,
+    label: 'Sự cố',
+    onPress: () => router.push('/(app)/(tabs)/incidents'),
+  },
+  {
+    Icon: AlertIcon,
+    label: 'Cảnh báo',
+    onPress: () => router.push('/(app)/(tabs)/alerts'),
+  },
+]
+
+function DoctorHome({ isApproved, userName }: { isApproved: boolean; userName: string }) {
+  const { data: activeData } = useDoctorIncidentList(1, false)
+  const { data: resolvedData } = useDoctorIncidentList(1, true)
+  const allTickets = [...(activeData?.data ?? []), ...(resolvedData?.data ?? [])]
+  const activeCount = activeData?.data?.length ?? 0
 
   return (
     <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-      {/* Status banner */}
-      {isApproved ? (
-        <View style={[styles.banner, isOnline ? styles.bannerOnline : styles.bannerOffline]}>
-          <Text style={styles.bannerTitle}>{isOnline ? '🟢 Đang Online' : '🔴 Offline'}</Text>
-          <Text style={styles.bannerSub}>
-            {isOnline
-              ? 'Bạn có thể nhận sự cố từ farmer'
-              : 'Sang tab Hồ sơ để bật Online'}
-          </Text>
-        </View>
-      ) : (
-        <View style={[styles.banner, styles.bannerPending]}>
-          <Text style={styles.bannerTitle}>
-            {latestRequest?.registrationStatus === 'Pending'
-              ? '⏳ Đang chờ phê duyệt'
-              : '⚠️ Chưa có hồ sơ'}
-          </Text>
-          <Text style={styles.bannerSub}>
-            {latestRequest?.registrationStatus === 'Pending'
-              ? 'Admin đang xét duyệt tài khoản của bạn'
-              : 'Vào Hồ sơ để hoàn tất đăng ký'}
-          </Text>
-        </View>
-      )}
-
-      <Text style={styles.sectionTitle}>Thao tác nhanh</Text>
-      <View style={styles.actions}>
-        <TouchableOpacity
-          style={styles.actionRow}
-          onPress={() => router.push('/(app)/(tabs)/incidents')}
-        >
-          <Text style={styles.actionText}>🚨 Sự cố được phân công</Text>
-          <Text style={styles.arrow}>→</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.actionRow}
-          onPress={() => router.push('/(app)/(tabs)/profile')}
-        >
-          <Text style={styles.actionText}>👨‍⚕️ Hồ sơ & trạng thái</Text>
-          <Text style={styles.arrow}>→</Text>
-        </TouchableOpacity>
-      </View>
+      <EarningsCard />
+      <TodayScheduleCard userName={userName} tickets={allTickets} delay={150} />
+      <DoctorStatusCard isApproved={isApproved} activeCount={activeCount} />
+      <QuickActionsCard items={DOCTOR_QUICK_ACTIONS} delay={200} />
+      <TipsCard
+        title='Hướng dẫn bác sĩ FarmOS'
+        description='Tìm hiểu cách nhận và xử lý sự cố từ nông dân hiệu quả'
+        onPress={() => router.push('/(app)/(tabs)/profile')}
+        delay={250}
+      />
+      <View style={styles.bottomSpacer} />
     </ScrollView>
   )
 }
 
-function FarmerHome() {
+function FarmerHome({ userName }: { userName: string }) {
+  const { data } = useIncidentList()
+  const tickets = data?.data ?? []
+
   return (
     <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-      <Text style={styles.sectionTitle}>Thao tác nhanh</Text>
-      <View style={styles.actions}>
-        <TouchableOpacity
-          style={styles.actionRow}
-          onPress={() => router.push('/(app)/(tabs)/farm')}
-        >
-          <Text style={styles.actionText}>🌱 Trang trại & cảm biến</Text>
-          <Text style={styles.arrow}>→</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.actionRow}
-          onPress={() => router.push('/(app)/incident/create')}
-        >
-          <Text style={styles.actionText}>➕ Tạo báo cáo sự cố</Text>
-          <Text style={styles.arrow}>→</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.actionRow}
-          onPress={() => router.push('/(app)/(tabs)/incidents')}
-        >
-          <Text style={styles.actionText}>📋 Danh sách sự cố</Text>
-          <Text style={styles.arrow}>→</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.actionRow}
-          onPress={() => router.push('/(app)/(tabs)/alerts')}
-        >
-          <Text style={styles.actionText}>🔔 Cảnh báo IoT</Text>
-          <Text style={styles.arrow}>→</Text>
-        </TouchableOpacity>
-      </View>
+      <IncidentSummaryCard tickets={tickets} />
+      <TodayScheduleCard userName={userName} tickets={tickets} delay={150} />
+      <FarmStatusCard />
+      <QuickActionsCard items={FARMER_QUICK_ACTIONS} delay={200} />
+      <TipsCard
+        title='Hướng dẫn báo cáo sự cố'
+        description='Mô tả chi tiết và chọn đúng mức độ để được hỗ trợ nhanh nhất'
+        onPress={() => router.push('/(app)/incident/create')}
+        delay={250}
+      />
+      <View style={styles.bottomSpacer} />
     </ScrollView>
   )
 }
@@ -106,14 +105,15 @@ function FarmerHome() {
 export default function HomeScreen() {
   const { user } = useAuth()
   const isDoctor = user?.role === 'doctor'
+  const isApproved = user?.isActive ?? false
+  const userName = user?.fullName ?? 'FarmOS'
 
   return (
-    <SafeAreaView style={styles.safe}>
-      {/* Header */}
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
       <View style={styles.header}>
         <View style={styles.greeting}>
           <Text style={styles.greetSub}>Chào mừng trở lại,</Text>
-          <Text style={styles.greetName}>{user?.fullName ?? 'FarmOS'}</Text>
+          <Text style={styles.greetName}>{userName}</Text>
         </View>
         <TouchableOpacity
           style={styles.notiBtnWrap}
@@ -124,52 +124,33 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {isDoctor ? <DoctorHome /> : <FarmerHome />}
+      {isDoctor
+        ? <DoctorHome isApproved={isApproved} userName={userName} />
+        : <FarmerHome userName={userName} />
+      }
     </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F9FAFB' },
+  safe: { flex: 1, backgroundColor: '#F3F4F6' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 8,
   },
   greeting: { gap: 2 },
   greetSub: { fontSize: 13, color: '#6B7280', fontFamily: 'Inter_400Regular' },
-  greetName: { fontSize: 22, color: '#111827', fontFamily: 'Inter_700Bold' },
+  greetName: { fontSize: 22, color: '#111827', fontFamily: 'Inter_600SemiBold' },
   notiBtnWrap: {
     width: 40,
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  scroll: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 40, gap: 16 },
-  banner: {
-    borderRadius: 12,
-    padding: 16,
-    gap: 4,
-  },
-  bannerOnline: { backgroundColor: '#D1FAE5' },
-  bannerOffline: { backgroundColor: '#FEE2E2' },
-  bannerPending: { backgroundColor: '#FEF3C7' },
-  bannerTitle: { fontSize: 15, fontFamily: 'Inter_600SemiBold', color: '#111827' },
-  bannerSub: { fontSize: 13, fontFamily: 'Inter_400Regular', color: '#6B7280' },
-  sectionTitle: { fontSize: 13, color: '#9CA3AF', fontFamily: 'Inter_500Medium' },
-  actions: { gap: 8 },
-  actionRow: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  actionText: { fontSize: 15, color: '#111827', fontFamily: 'Inter_400Regular' },
-  arrow: { fontSize: 15, color: '#9CA3AF' },
+  scroll: { paddingHorizontal: 16, paddingTop: 8 },
+  bottomSpacer: { height: 24 },
 })

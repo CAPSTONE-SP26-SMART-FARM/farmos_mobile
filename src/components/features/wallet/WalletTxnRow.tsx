@@ -40,7 +40,12 @@ export function WalletTxnRow({ item }: WalletTxnRowProps) {
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: '#fff', padding: 14, borderRadius: 12,
+    backgroundColor: '#fff', padding: 14, borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
   },
   dot: { width: 10, height: 10, borderRadius: 5 },
   label: { fontSize: 14, color: '#111827', fontFamily: 'Inter_500Medium' },

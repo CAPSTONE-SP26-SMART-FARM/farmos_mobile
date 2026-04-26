@@ -121,9 +121,9 @@ export default function FarmerProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F9FAFB' },
-  scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40, gap: 16 },
-  title: { fontSize: 24, color: '#111827', fontFamily: 'Inter_700Bold' },
+  safe: { flex: 1, backgroundColor: '#F3F4F6' },
+  scroll: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 24, gap: 16 },
+  title: { fontSize: 24, color: '#111827', fontFamily: 'Inter_600SemiBold' },
   avatarSection: { alignItems: 'center', paddingVertical: 8, gap: 8 },
   avatar: {
     width: 72,

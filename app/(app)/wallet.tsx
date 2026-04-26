@@ -70,10 +70,10 @@ export default function WalletScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F9FAFB' },
-  content: { padding: 20, paddingBottom: 32 },
+  safe: { flex: 1, backgroundColor: '#F3F4F6' },
+  content: { padding: 16, paddingBottom: 24 },
   sectionTitle: {
-    fontSize: 13, color: '#6B7280', fontFamily: 'Inter_600SemiBold',
+    fontSize: 16, color: '#111827', fontFamily: 'Inter_600SemiBold',
     marginTop: 24, marginBottom: 10,
   },
   filter: { marginBottom: 12 },

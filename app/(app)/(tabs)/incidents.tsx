@@ -135,15 +135,15 @@ export default function IncidentsScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F9FAFB' },
+  safe: { flex: 1, backgroundColor: '#F3F4F6' },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 20, paddingTop: 24, paddingBottom: 16,
+    paddingHorizontal: 16, paddingTop: 24, paddingBottom: 16,
   },
-  title: { fontSize: 24, color: '#111827', fontFamily: 'Inter_700Bold' },
+  title: { fontSize: 24, color: '#111827', fontFamily: 'Inter_600SemiBold' },
   subtitle: { fontSize: 13, color: '#9CA3AF', fontFamily: 'Inter_400Regular', marginTop: 2 },
-  createBtn: { backgroundColor: '#2463EB', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 },
+  createBtn: { backgroundColor: '#2463EB', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 },
   createBtnText: { color: '#fff', fontSize: 14, fontFamily: 'Inter_600SemiBold' },
-  tabRow: { paddingHorizontal: 20, paddingBottom: 12 },
-  list: { paddingHorizontal: 16, paddingBottom: 32 },
+  tabRow: { paddingHorizontal: 16, paddingBottom: 12 },
+  list: { paddingHorizontal: 16, paddingBottom: 24 },
 })
