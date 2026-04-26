@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/constants/queryKeys'
 import { incidentApi } from '@/services/api/incident'
-import type { CreateIncidentBody } from '@/types/incident'
+import type { CreateIncidentBody, TicketStatus } from '@/types/incident'
 
 export function useIncidentList(page = 1) {
   return useQuery({
@@ -38,6 +38,18 @@ export function useEndIncident() {
       qc.invalidateQueries({ queryKey: ['incident', 'doctor-list'] })
       qc.invalidateQueries({ queryKey: queryKeys.incident.detail(ticketId) })
       qc.invalidateQueries({ queryKey: queryKeys.incident.doctorDetail(ticketId) })
+    },
+  })
+}
+
+export function useUpdateIncidentStatus() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ ticketId, status }: { ticketId: string; status: TicketStatus }) =>
+      incidentApi.updateStatus(ticketId, status),
+    onSuccess: (_data, { ticketId }) => {
+      qc.invalidateQueries({ queryKey: ['incident', 'list'] })
+      qc.invalidateQueries({ queryKey: queryKeys.incident.detail(ticketId) })
     },
   })
 }

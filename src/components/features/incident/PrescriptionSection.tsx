@@ -44,12 +44,22 @@ export function PrescriptionSection({
 const styles = StyleSheet.create({
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    marginTop: 20, marginBottom: 8,
+    marginBottom: 6,
   },
-  sectionTitle: { fontSize: 13, color: '#6B7280', fontFamily: 'Inter_600SemiBold' },
+  sectionTitle: { fontSize: 13, color: '#6B7280', fontFamily: 'Inter_500Medium' },
   addBtn: { backgroundColor: '#EFF6FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
   addText: { fontSize: 13, color: '#2463EB', fontFamily: 'Inter_600SemiBold' },
   list: { gap: 10 },
-  empty: { paddingVertical: 16, alignItems: 'center', backgroundColor: '#F9FAFB', borderRadius: 10, borderWidth: 1, borderColor: '#E5E7EB' },
+  empty: {
+    paddingVertical: 20,
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
+  },
   emptyText: { fontSize: 13, color: '#9CA3AF', fontFamily: 'Inter_400Regular' },
 })

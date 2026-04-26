@@ -73,6 +73,7 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(
       onChangeText,
       onFocus,
       onBlur,
+      multiline,
       ...props
     },
     ref
@@ -148,6 +149,7 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(
         <Animated.View
           style={[
             styles.container,
+            multiline ? styles.containerMulti : styles.containerSingle,
             state === 'disabled' && styles.containerDisabled,
             state === 'readonly' && styles.containerReadonly,
             borderStyle,
@@ -169,8 +171,10 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(
             placeholderTextColor='transparent'
             selectionColor={COLORS.primary}
             cursorColor={COLORS.primary}
+            multiline={multiline}
             style={[
               styles.input,
+              multiline ? styles.inputMulti : styles.inputSingle,
               state === 'disabled' && styles.inputDisabled,
               state === 'readonly' && styles.inputReadonly,
               inputStyle
@@ -229,13 +233,19 @@ const styles = StyleSheet.create({
     marginBottom: 0
   },
   container: {
-    height: 56,
     borderRadius: 12,
     borderWidth: 1,
     backgroundColor: COLORS.bgDefault,
     flexDirection: 'row',
-    alignItems: 'center',
     overflow: 'hidden'
+  },
+  containerSingle: {
+    height: 56,
+    alignItems: 'center'
+  },
+  containerMulti: {
+    minHeight: 100,
+    alignItems: 'flex-start'
   },
   containerDisabled: {
     backgroundColor: COLORS.bgDisabled,
@@ -252,14 +262,22 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    height: 56,
-    paddingTop: 24,
-    paddingBottom: 8,
     paddingLeft: 16,
     paddingRight: 8,
     fontSize: 16,
-    color: COLORS.text,
+    color: COLORS.text
+  },
+  inputSingle: {
+    height: 56,
+    paddingTop: 24,
+    paddingBottom: 8,
     textAlignVertical: 'center'
+  },
+  inputMulti: {
+    paddingTop: 28,
+    paddingBottom: 12,
+    minHeight: 100,
+    textAlignVertical: 'top'
   },
   inputDisabled: {
     color: COLORS.textDisabled

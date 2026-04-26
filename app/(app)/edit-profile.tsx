@@ -1,14 +1,13 @@
-import { View, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TouchableOpacity } from 'react-native'
+import { View, KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native'
 import { router } from 'expo-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import Ionicons from '@expo/vector-icons/Ionicons'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
 import { FormTextField } from '@/components/react-hook-form/FormTextField'
-import { PrimaryButton, Text } from '@/components/ui'
+import { PrimaryButton, Text, TopBar } from '@/components/ui'
 
 const schema = z.object({
   fullName: z.string().min(2, 'Họ tên ít nhất 2 ký tự').max(255),
@@ -49,18 +48,7 @@ export default function EditProfileScreen() {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backBtn}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name='arrow-back' size={22} color='#111827' />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Chỉnh sửa hồ sơ</Text>
-          <View style={styles.spacer} />
-        </View>
+        <TopBar title='Chỉnh sửa hồ sơ' />
 
         <ScrollView
           contentContainerStyle={styles.scroll}
@@ -104,23 +92,6 @@ export default function EditProfileScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#FFFFFF' },
   flex: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  backBtn: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center',
-  },
-  headerTitle: {
-    flex: 1, textAlign: 'center',
-    fontSize: 16, color: '#111827', fontFamily: 'Inter_600SemiBold',
-  },
-  spacer: { width: 36 },
   scroll: { padding: 16, gap: 16 },
   readOnlyField: {
     backgroundColor: '#F0F2F5',

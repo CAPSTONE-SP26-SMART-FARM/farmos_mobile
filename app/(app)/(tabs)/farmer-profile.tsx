@@ -1,9 +1,9 @@
-import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native'
+import { View, ScrollView, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Text, PrimaryButton } from '@/components/ui'
+import { Text, TextField, PrimaryButton, SecondaryButton } from '@/components/ui'
 import { FormTextField } from '@/components/react-hook-form/FormTextField'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
@@ -35,6 +35,8 @@ export default function FarmerProfileScreen() {
     },
   })
 
+  const roleLabel = ROLE_LABEL[user?.role ?? ''] ?? user?.role ?? '—'
+
   const onSubmit = async (data: EditForm) => {
     try {
       await updateProfile({ fullName: data.fullName, phone: data.phone || null })
@@ -45,75 +47,62 @@ export default function FarmerProfileScreen() {
   }
 
   const handleLogout = async () => {
-    try {
-      await logout()
-    } catch {
-      showToast.error({ message: 'Đăng xuất thất bại' })
-    }
+    try { await logout() } catch { /* ignore */ }
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <Text style={styles.headerTitle}>Hồ sơ</Text>
+          <Text style={styles.headerSub}>{user?.email ?? ''}</Text>
+        </View>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>
+            {user?.fullName?.charAt(0)?.toUpperCase() ?? '?'}
+          </Text>
+        </View>
+      </View>
+
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps='handled'
       >
-        <Text style={styles.title}>Hồ sơ</Text>
-
-        <View style={styles.avatarSection}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {user?.fullName?.charAt(0)?.toUpperCase() ?? '?'}
-            </Text>
-          </View>
-          <Text style={styles.fullName}>{user?.fullName ?? '—'}</Text>
-          <View style={styles.roleBadge}>
-            <Text style={styles.roleText}>
-              {ROLE_LABEL[user?.role ?? ''] ?? user?.role ?? '—'}
-            </Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Thông tin cá nhân</Text>
+          <View style={styles.fields}>
+            <TextField label='Email' value={user?.email ?? ''} readOnly showError={false} />
+            <TextField label='Vai trò' value={roleLabel} readOnly showError={false} />
+            <FormTextField
+              control={control}
+              name='fullName'
+              label='Họ và tên'
+              autoCapitalize='words'
+              showError={false}
+            />
+            <FormTextField
+              control={control}
+              name='phone'
+              label='Số điện thoại'
+              keyboardType='phone-pad'
+              showError={false}
+            />
+            <PrimaryButton
+              title='Lưu thay đổi'
+              loading={isLoading}
+              disabled={!isDirty}
+              onPress={handleSubmit(onSubmit)}
+            />
           </View>
         </View>
 
-        <View style={styles.fieldsSection}>
-          <View style={styles.readOnlyField}>
-            <Text style={styles.readOnlyLabel}>Email</Text>
-            <Text style={styles.readOnlyValue}>{user?.email ?? '—'}</Text>
-          </View>
-
-          <View style={styles.readOnlyField}>
-            <Text style={styles.readOnlyLabel}>Vai trò</Text>
-            <Text style={styles.readOnlyValue}>
-              {ROLE_LABEL[user?.role ?? ''] ?? user?.role ?? '—'}
-            </Text>
-          </View>
-
-          <FormTextField
-            control={control}
-            name='fullName'
-            label='Họ và tên'
-            autoCapitalize='words'
-          />
-
-          <FormTextField
-            control={control}
-            name='phone'
-            label='Số điện thoại'
-            keyboardType='phone-pad'
-          />
-        </View>
-
-        <PrimaryButton
-          title='Lưu thay đổi'
-          loading={isLoading}
-          disabled={!isDirty}
-          onPress={handleSubmit(onSubmit)}
-        />
-
-        <PrimaryButton
+        <SecondaryButton
           title='Đăng xuất'
           onPress={handleLogout}
           style={styles.logoutBtn}
+          textStyle={{ color: '#EF4444' }}
         />
       </ScrollView>
     </SafeAreaView>
@@ -121,28 +110,45 @@ export default function FarmerProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F3F4F6' },
-  scroll: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 24, gap: 16 },
-  title: { fontSize: 24, color: '#111827', fontFamily: 'Inter_600SemiBold' },
-  avatarSection: { alignItems: 'center', paddingVertical: 8, gap: 8 },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#2463EB',
+  safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 12,
+    backgroundColor: '#FFFFFF',
   },
-  avatarText: { fontSize: 28, color: '#FFFFFF', fontFamily: 'Inter_700Bold' },
-  fullName: { fontSize: 18, color: '#111827', fontFamily: 'Inter_600SemiBold' },
-  roleBadge: { backgroundColor: '#EFF6FF', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 },
-  roleText: { fontSize: 13, color: '#2463EB', fontFamily: 'Inter_500Medium' },
-  fieldsSection: { gap: 12 },
-  readOnlyField: {
-    height: 56, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB',
-    backgroundColor: '#F0F2F5', paddingHorizontal: 16, justifyContent: 'center', gap: 2,
+  headerLeft: { flex: 1 },
+  headerTitle: { fontSize: 24, lineHeight: 32, color: '#111827', fontFamily: 'Inter_600SemiBold' },
+  headerSub: { fontSize: 13, color: '#9CA3AF', fontFamily: 'Inter_400Regular', marginTop: 2 },
+  avatar: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: '#2463EB', alignItems: 'center', justifyContent: 'center',
   },
-  readOnlyLabel: { fontSize: 12, color: '#9CA3AF', fontFamily: 'Inter_400Regular' },
-  readOnlyValue: { fontSize: 15, color: '#4B5563', fontFamily: 'Inter_500Medium' },
-  logoutBtn: { backgroundColor: '#EF4444' },
+  avatarText: { fontSize: 18, color: '#fff', fontFamily: 'Inter_600SemiBold' },
+
+  scrollContainer: { flex: 1, backgroundColor: '#F3F4F6' },
+  scrollContent: { padding: 16, paddingBottom: 32, gap: 12 },
+
+  section: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 14,
+    gap: 8,
+  },
+  sectionTitle: {
+    fontSize: 16, lineHeight: 24,
+    color: '#111827', fontFamily: 'Inter_600SemiBold',
+    marginBottom: 4,
+  },
+  fields: { gap: 8, marginTop: 4 },
+
+  logoutBtn: {
+    borderWidth: 1, borderColor: '#FCA5A5', backgroundColor: '#FFF5F5',
+    marginTop: 8,
+  },
 })

@@ -21,7 +21,7 @@ export function usePrescriptions(ticketId: string) {
     const handler = (_payload: { created: { ticketId: string } }) => {
       if (_payload.created.ticketId !== ticketId) return
       qc.invalidateQueries({ queryKey: queryKeys.prescriptions.list(ticketId) })
-      showToast.success({ message: '💊 Bác sĩ vừa kê đơn thuốc mới!' })
+      showToast.success({ message: 'Bác sĩ vừa kê đơn thuốc mới!' })
     }
     socketService.on('prescription.incident.created', handler)
     return () => socketService.off('prescription.incident.created', handler)

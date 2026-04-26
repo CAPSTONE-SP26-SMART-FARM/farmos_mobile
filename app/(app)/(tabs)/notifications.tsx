@@ -4,7 +4,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
-import { Text } from '@/components/ui'
+import { Text, TopBar } from '@/components/ui'
 import { useNotifications, useMarkNotificationRead } from '@/hooks/useNotification'
 import { formatRelativeTime } from '@/utils/date'
 import type { Notification } from '@/types/notification'
@@ -72,15 +72,7 @@ export default function NotificationsScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.back}>← Quay lại</Text>
-        </TouchableOpacity>
-        <Text style={styles.topBarTitle}>
-          Thông báo{unreadCount > 0 ? ` (${unreadCount})` : ''}
-        </Text>
-        <View style={{ width: 60 }} />
-      </View>
+      <TopBar title={`Thông báo${unreadCount > 0 ? ` (${unreadCount})` : ''}`} />
 
       {isLoading ? (
         <ActivityIndicator style={{ marginTop: 40 }} color="#2463EB" />
@@ -115,13 +107,6 @@ export default function NotificationsScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F3F4F6' },
-  topBar: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: '#F3F4F6', backgroundColor: '#fff',
-  },
-  back: { fontSize: 15, color: '#2463EB', fontFamily: 'Inter_500Medium', width: 60 },
-  topBarTitle: { fontSize: 16, color: '#111827', fontFamily: 'Inter_600SemiBold' },
   list: { paddingVertical: 8 },
   item: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 12,

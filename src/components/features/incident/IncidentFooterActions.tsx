@@ -5,25 +5,23 @@ interface IncidentFooterActionsProps {
   isClosed: boolean
   canAccept: boolean
   canChat: boolean
-  canResolve: boolean
   waitingForDoctor: boolean
+  isDoctor: boolean
   isAccepting: boolean
-  isEnding: boolean
   onAccept: () => void
   onOpenChat: () => void
-  onResolve: () => void
 }
 
 export function IncidentFooterActions({
-  isClosed, canAccept, canChat, canResolve, waitingForDoctor,
-  isAccepting, isEnding,
-  onAccept, onOpenChat, onResolve,
+  isClosed, canAccept, canChat, waitingForDoctor,
+  isDoctor, isAccepting,
+  onAccept, onOpenChat,
 }: IncidentFooterActionsProps) {
   if (isClosed) {
     return (
       <View style={styles.wrap}>
         <View style={[styles.btn, styles.btnDisabled]}>
-          <Text style={[styles.btnText, { color: '#6B7280' }]}>✓ Sự cố đã đóng</Text>
+          <Text style={[styles.btnText, { color: '#6B7280' }]}>Sự cố đã đóng</Text>
         </View>
       </View>
     )
@@ -38,7 +36,7 @@ export function IncidentFooterActions({
           disabled={isAccepting}
         >
           <Text style={styles.btnText}>
-            {isAccepting ? '⏳ Đang tiếp nhận...' : '✓ Tiếp nhận sự cố'}
+            {isAccepting ? 'Đang tiếp nhận...' : 'Tiếp nhận sự cố'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -48,26 +46,15 @@ export function IncidentFooterActions({
   if (canChat) {
     return (
       <View style={styles.wrap}>
-        <View style={styles.row}>
-          <TouchableOpacity
-            style={[styles.btn, { flex: 1 }, waitingForDoctor && styles.btnDisabled]}
-            onPress={onOpenChat}
-            disabled={waitingForDoctor}
-          >
-            <Text style={styles.btnText}>
-              {waitingForDoctor ? '⏳ Chờ bác sĩ tiếp nhận...' : '💬 Trao đổi'}
-            </Text>
-          </TouchableOpacity>
-          {canResolve && (
-            <TouchableOpacity
-              style={[styles.btn, { backgroundColor: '#10B981' }]}
-              onPress={onResolve}
-              disabled={isEnding}
-            >
-              <Text style={styles.btnText}>{isEnding ? '⏳' : '✓ Đã giải quyết'}</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        <TouchableOpacity
+          style={[styles.btn, waitingForDoctor && styles.btnDisabled]}
+          onPress={onOpenChat}
+          disabled={waitingForDoctor}
+        >
+          <Text style={styles.btnText}>
+            {waitingForDoctor ? 'Chờ bác sĩ tiếp nhận...' : isDoctor ? 'Chat với Farmer' : 'Chat với Bác sĩ'}
+          </Text>
+        </TouchableOpacity>
       </View>
     )
   }
@@ -82,7 +69,6 @@ const styles = StyleSheet.create({
     borderTopColor: '#E5E7EB',
     backgroundColor: '#fff',
   },
-  row: { flexDirection: 'row', gap: 8 },
   btn: {
     backgroundColor: '#2463EB',
     borderRadius: 12,

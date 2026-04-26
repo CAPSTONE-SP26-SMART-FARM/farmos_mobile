@@ -20,9 +20,6 @@ function Row({ label, value }: { label: string; value: string }) {
 export function IncidentInfoList({ ticket, isDoctor }: IncidentInfoListProps) {
   return (
     <View style={styles.box}>
-      <Row label='Ưu tiên' value={ticket.priority} />
-      {ticket.zone && <Row label='Khu vực' value={ticket.zone.name} />}
-      {ticket.farm && <Row label='Trang trại' value={ticket.farm.name} />}
       {isDoctor && ticket.creator && (
         <Row label='Farmer báo cáo' value={ticket.creator.fullName} />
       )}
@@ -30,13 +27,21 @@ export function IncidentInfoList({ ticket, isDoctor }: IncidentInfoListProps) {
         <Row label='Bác sĩ phụ trách' value={ticket.assignee.fullName} />
       )}
       <Row label='Ngày tạo' value={formatDateTime(ticket.createdAt)} />
-      <Row label='Cập nhật' value={formatDateTime(ticket.updatedAt)} />
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  box: { backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden' },
+  box: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
+  },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
