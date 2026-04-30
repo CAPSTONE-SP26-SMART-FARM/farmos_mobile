@@ -20,6 +20,7 @@ const IncidentIcon = icons.incidentSvg
 const StorefrontIcon = icons.storefrontSvg
 const AlertIcon = icons.alertSvg
 const PlusIcon = icons.plusSvg
+const DiaryIcon = icons.diarySvg
 
 const DOCTOR_QUICK_ACTIONS: QuickActionItem[] = [
   {
@@ -55,6 +56,11 @@ const FARMER_QUICK_ACTIONS: QuickActionItem[] = [
     Icon: AlertIcon,
     label: 'Cảnh báo',
     onPress: () => router.push('/(app)/(tabs)/alerts'),
+  },
+  {
+    Icon: DiaryIcon,
+    label: 'Nhật ký',
+    onPress: () => router.push({ pathname: '/(app)/(tabs)/farm', params: { tab: 'tasks' } }),
   },
 ]
 

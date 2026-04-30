@@ -42,6 +42,9 @@ export const queryKeys = {
   alerts: {
     list: (page?: number) => ['alerts', 'list', page] as const,
   },
+  dailyLog: {
+    tasksForToday: (page?: number) => ['daily-log', 'tasks-for-today', page ?? 1] as const,
+  },
   doctorWallet: {
     summary: ['doctor-wallet', 'summary'] as const,
     transactions: (page?: number, type?: string) =>
