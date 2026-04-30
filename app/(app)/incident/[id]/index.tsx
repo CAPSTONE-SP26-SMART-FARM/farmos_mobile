@@ -1,5 +1,6 @@
 import {
   View, ScrollView, ActivityIndicator, StyleSheet, RefreshControl,
+  Image, TouchableOpacity, Modal, Pressable,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
@@ -30,6 +31,7 @@ export default function IncidentDetailScreen() {
   const { showToast } = useToast()
   const isDoctor = user?.role === 'doctor'
   const [rxModalVisible, setRxModalVisible] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
 
   const farmerQuery = useIncidentDetail(id)
   const doctorQuery = useDoctorIncidentDetail(id)
@@ -117,6 +119,11 @@ export default function IncidentDetailScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handlePullRefresh} tintColor='#2463EB' />}
       >
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Thông tin</Text>
+          <IncidentInfoList ticket={data} isDoctor={isDoctor} />
+        </View>
+
         <View style={styles.card}>
           <Text style={styles.title} numberOfLines={2}>{data.title}</Text>
           {metaParts.length > 0 && (
@@ -137,19 +144,30 @@ export default function IncidentDetailScreen() {
           <View style={styles.divider} />
           <Text style={styles.cardLabel}>Mô tả</Text>
           <Text style={styles.description}>{data.description}</Text>
+
+          {data.attachments.length > 0 && (
+            <>
+              <View style={styles.divider} />
+              <Text style={styles.cardLabel}>Ảnh đính kèm</Text>
+              <View style={styles.attachRow}>
+                {data.attachments.map((att) => (
+                  <TouchableOpacity key={att.id} onPress={() => setPreviewUrl(att.url)} activeOpacity={0.8}>
+                    <Image source={{ uri: att.url }} style={styles.attachThumb} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
+          )}
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Thông tin</Text>
-          <IncidentInfoList ticket={data} isDoctor={isDoctor} />
-        </View>
-
-        <PrescriptionSection
-          prescriptions={prescriptions}
-          isLoading={rxLoading}
-          canPrescribe={canPrescribe}
-          onAdd={() => setRxModalVisible(true)}
-        />
+        {status !== 'open' && (
+          <PrescriptionSection
+            prescriptions={prescriptions}
+            isLoading={rxLoading}
+            canPrescribe={canPrescribe}
+            onAdd={() => setRxModalVisible(true)}
+          />
+        )}
       </ScrollView>
 
       <IncidentFooterActions
@@ -162,6 +180,14 @@ export default function IncidentDetailScreen() {
         onAccept={handleAcceptIncident}
         onOpenChat={() => router.push(`/(app)/incident/${id}/chat`)}
       />
+
+      <Modal visible={!!previewUrl} transparent animationType='fade' onRequestClose={() => setPreviewUrl(null)}>
+        <Pressable style={styles.previewOverlay} onPress={() => setPreviewUrl(null)}>
+          {previewUrl && (
+            <Image source={{ uri: previewUrl }} style={styles.previewImg} resizeMode='contain' />
+          )}
+        </Pressable>
+      </Modal>
 
       <PrescriptionModal
         visible={rxModalVisible}
@@ -197,4 +223,13 @@ const styles = StyleSheet.create({
   description: { fontSize: 15, color: '#374151', fontFamily: 'Inter_400Regular', lineHeight: 22 },
   section: { gap: 6 },
   sectionLabel: { fontSize: 13, color: '#6B7280', fontFamily: 'Inter_500Medium' },
+
+  attachRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
+  attachThumb: { width: 80, height: 80, borderRadius: 10, backgroundColor: '#F3F4F6' },
+
+  previewOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  previewImg: { width: '100%', height: '80%' },
 })

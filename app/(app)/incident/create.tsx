@@ -1,17 +1,23 @@
 import { useMemo, useState } from 'react'
 import {
   View, ScrollView, StyleSheet, KeyboardAvoidingView, Platform,
-  Keyboard, TouchableWithoutFeedback,
+  Keyboard, TouchableWithoutFeedback, TouchableOpacity, Image,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import * as ImagePicker from 'expo-image-picker'
 import { useRouter } from 'expo-router'
 import { Text, TextField, SelectField, PrimaryButton, TopBar } from '@/components/ui'
 import { useCreateIncident, useMyMilestones } from '@/hooks/useIncident'
 import { useToast } from '@/hooks/useToast'
 import { getErrorMessage } from '@/utils/error'
+import { uploadImageToCloudinary } from '@/utils/cloudinary'
 import { SEVERITY_META } from '@/constants/incident'
+import { icons } from '@/constants/icon'
 import type { IncidentSeverity } from '@/types/incident'
 import type { FarmerMyMilestone } from '@/types/production'
+
+const CloseIcon = icons.closeSvg
+const PlusIcon = icons.plusSvg
 
 const SEVERITY_OPTIONS = (Object.keys(SEVERITY_META) as IncidentSeverity[]).map((value) => ({
   value,
@@ -19,6 +25,8 @@ const SEVERITY_OPTIONS = (Object.keys(SEVERITY_META) as IncidentSeverity[]).map(
   desc: SEVERITY_META[value].desc,
   color: SEVERITY_META[value].color,
 }))
+
+const MAX_IMAGES = 3
 
 export default function CreateIncidentScreen() {
   const router = useRouter()
@@ -30,27 +38,62 @@ export default function CreateIncidentScreen() {
   const [severity, setSeverity] = useState<IncidentSeverity>('medium')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [imageUris, setImageUris] = useState<string[]>([])
+  const [isUploading, setIsUploading] = useState(false)
 
   const milestoneOptions = useMemo(
-    () => milestones.map((m) => ({
-      ...m,
-      label: m.stageName,
-      subtitle: m.zoneName,
-    })),
+    () => milestones.map((m) => ({ ...m, label: m.stageName, subtitle: m.zoneName })),
     [milestones],
   )
 
-  const severityMeta = SEVERITY_META[severity]
   const canSubmit = !!milestone && title.trim().length > 0 && description.trim().length > 0
 
-  const handleSubmit = () => {
+  const handlePickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (status !== 'granted') {
+      showToast.error({ message: 'Cần quyền truy cập thư viện ảnh' })
+      return
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: 'images',
+      quality: 0.8,
+      allowsMultipleSelection: true,
+    })
+    if (!result.canceled && result.assets.length > 0) {
+      const newUris = result.assets.map((a) => a.uri)
+      setImageUris((prev) => [...prev, ...newUris].slice(0, MAX_IMAGES))
+    }
+  }
+
+  const handleRemoveImage = (uri: string) => {
+    setImageUris((prev) => prev.filter((u) => u !== uri))
+  }
+
+  const handleSubmit = async () => {
     if (!canSubmit) return
+
+    let attachments: { url: string }[] | undefined
+
+    if (imageUris.length > 0) {
+      setIsUploading(true)
+      try {
+        const urls = await Promise.all(imageUris.map(uploadImageToCloudinary))
+        attachments = urls.map((url) => ({ url }))
+      } catch {
+        showToast.error({ message: 'Upload ảnh thất bại, vui lòng thử lại' })
+        return
+      } finally {
+        setIsUploading(false)
+      }
+    }
+
     mutate(
       {
         milestoneId: milestone!.id,
         title: title.trim(),
         description: description.trim(),
         severity,
+        attachments,
       },
       {
         onSuccess: () => {
@@ -62,14 +105,13 @@ export default function CreateIncidentScreen() {
     )
   }
 
+  const isLoading = isPending || isUploading
+
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
       <TopBar title='Báo cáo sự cố' />
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.flex}
-      >
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView
             style={styles.scrollView}
@@ -105,7 +147,7 @@ export default function CreateIncidentScreen() {
 
                 <SelectField
                   label='Mức độ nghiêm trọng'
-                  value={severityMeta.label}
+                  value={SEVERITY_META[severity].label}
                   options={SEVERITY_OPTIONS}
                   bottomSheetTitle='Chọn mức độ nghiêm trọng'
                   labelExtractor={(item) => item.label}
@@ -125,6 +167,31 @@ export default function CreateIncidentScreen() {
                   inputStyle={styles.textarea}
                   showError={false}
                 />
+
+                <View style={styles.imageSection}>
+                  <Text style={styles.imageLabel}>Ảnh đính kèm (tuỳ chọn)</Text>
+                  <View style={styles.imageRow}>
+                    {imageUris.map((uri) => (
+                      <View key={uri} style={styles.thumb}>
+                        <Image source={{ uri }} style={styles.thumbImg} />
+                        <TouchableOpacity
+                          style={styles.thumbRemove}
+                          onPress={() => handleRemoveImage(uri)}
+                          hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                        >
+                          <CloseIcon width={10} height={10} color='#fff' />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+
+                    {imageUris.length < MAX_IMAGES && (
+                      <TouchableOpacity style={styles.addBtn} onPress={handlePickImage} activeOpacity={0.7}>
+                        <PlusIcon width={20} height={20} color='#9CA3AF' />
+                        <Text style={styles.addBtnText}>Thêm ảnh</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
               </View>
             </View>
           </ScrollView>
@@ -133,8 +200,8 @@ export default function CreateIncidentScreen() {
         <View style={styles.footer}>
           <PrimaryButton
             title='Hoàn thành'
-            loading={isPending}
-            disabled={!canSubmit}
+            loading={isLoading}
+            disabled={!canSubmit || isLoading}
             onPress={handleSubmit}
           />
         </View>
@@ -167,6 +234,39 @@ const styles = StyleSheet.create({
   },
   fields: { gap: 12 },
   textarea: { minHeight: 120 },
+
+  imageSection: { gap: 8 },
+  imageLabel: { fontSize: 13, color: '#6B7280', fontFamily: 'Inter_400Regular' },
+  imageRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+
+  thumb: { width: 80, height: 80, borderRadius: 10, overflow: 'visible' },
+  thumbImg: { width: 80, height: 80, borderRadius: 10, backgroundColor: '#F3F4F6' },
+  thumbRemove: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#374151',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  addBtn: {
+    width: 80,
+    height: 80,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F9FAFB',
+  },
+  addBtnText: { fontSize: 11, color: '#9CA3AF', fontFamily: 'Inter_400Regular' },
+
   footer: {
     paddingHorizontal: 20,
     paddingTop: 12,

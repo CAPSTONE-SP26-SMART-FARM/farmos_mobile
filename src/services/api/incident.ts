@@ -16,7 +16,7 @@ export const incidentApi = {
 
   create: (body: CreateIncidentBody) =>
     apiClient
-      .post<{ data: IncidentTicket }, CreateIncidentBody>('/ticket/incident', body)
+      .post<{ data: IncidentTicket }>('/ticket/incident', body)
       .then((r) => r.data.data),
 
   myMilestones: () =>
