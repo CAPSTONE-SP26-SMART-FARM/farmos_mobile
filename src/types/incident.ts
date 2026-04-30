@@ -50,6 +50,7 @@ export type CreateIncidentBody = {
   title: string
   description: string
   severity: IncidentSeverity
+  attachments?: { url: string }[]
 }
 
 export type ListIncidentTicketsRes = {
