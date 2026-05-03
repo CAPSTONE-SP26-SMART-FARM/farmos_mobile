@@ -10,12 +10,16 @@ interface IncidentFooterActionsProps {
   isAccepting: boolean
   onAccept: () => void
   onOpenChat: () => void
+  canCancel?: boolean
+  isCancelling?: boolean
+  onCancel?: () => void
 }
 
 export function IncidentFooterActions({
   isClosed, canAccept, canChat, waitingForDoctor,
   isDoctor, isAccepting,
   onAccept, onOpenChat,
+  canCancel, isCancelling, onCancel,
 }: IncidentFooterActionsProps) {
   if (isClosed) {
     return (
@@ -37,6 +41,22 @@ export function IncidentFooterActions({
         >
           <Text style={styles.btnText}>
             {isAccepting ? 'Đang tiếp nhận...' : 'Tiếp nhận sự cố'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    )
+  }
+
+  if (canCancel) {
+    return (
+      <View style={styles.wrap}>
+        <TouchableOpacity
+          style={[styles.btn, styles.btnCancel]}
+          onPress={onCancel}
+          disabled={isCancelling}
+        >
+          <Text style={[styles.btnText, { color: '#DC2626' }]}>
+            {isCancelling ? 'Đang hủy...' : 'Hủy sự cố'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -77,5 +97,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   btnDisabled: { backgroundColor: '#E5E7EB' },
+  btnCancel: { backgroundColor: '#FEF2F2' },
   btnText: { color: '#fff', fontSize: 15, fontFamily: 'Inter_600SemiBold' },
 })

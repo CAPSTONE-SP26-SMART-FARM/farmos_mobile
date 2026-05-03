@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/constants/queryKeys'
 import { incidentApi } from '@/services/api/incident'
-import type { CreateIncidentBody, TicketStatus } from '@/types/incident'
+import type { CreateIncidentBody } from '@/types/incident'
 
 export function useIncidentList(page = 1) {
   return useQuery({
@@ -15,7 +15,6 @@ export function useIncidentDetail(ticketId: string) {
     queryKey: queryKeys.incident.detail(ticketId),
     queryFn: () => incidentApi.detail(ticketId),
     enabled: !!ticketId,
-    // Poll mỗi 5s khi chờ bác sĩ tiếp nhận để auto update trạng thái
     refetchInterval: (query) =>
       query.state.data?.status === 'open' ? 5000 : false,
   })
@@ -29,24 +28,11 @@ export function useCreateIncident() {
   })
 }
 
-export function useEndIncident() {
+export function useCancelIncident() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (ticketId: string) => incidentApi.endIncident(ticketId),
-    onSuccess: (_data, ticketId) => {
-      qc.invalidateQueries({ queryKey: ['incident', 'list'] })
-      qc.invalidateQueries({ queryKey: ['incident', 'doctor-list'] })
-      qc.invalidateQueries({ queryKey: queryKeys.incident.detail(ticketId) })
-      qc.invalidateQueries({ queryKey: queryKeys.incident.doctorDetail(ticketId) })
-    },
-  })
-}
-
-export function useUpdateIncidentStatus() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: ({ ticketId, status }: { ticketId: string; status: TicketStatus }) =>
-      incidentApi.updateStatus(ticketId, status),
+    mutationFn: ({ ticketId, reason }: { ticketId: string; reason?: string }) =>
+      incidentApi.cancel(ticketId, reason),
     onSuccess: (_data, { ticketId }) => {
       qc.invalidateQueries({ queryKey: ['incident', 'list'] })
       qc.invalidateQueries({ queryKey: queryKeys.incident.detail(ticketId) })

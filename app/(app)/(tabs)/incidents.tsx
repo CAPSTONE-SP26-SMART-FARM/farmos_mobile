@@ -2,11 +2,12 @@ import { View, FlatList, TouchableOpacity, ActivityIndicator, StyleSheet } from 
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { useFocusEffect } from '@react-navigation/native'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Text, PillTabs, EmptyState, type PillTabItem } from '@/components/ui'
 import { IncidentCard } from '@/components/features/incident/IncidentCard'
 import { useIncidentList } from '@/hooks/useIncident'
+import { useActiveTicketCategories } from '@/hooks/useTicketCategory'
 import { useDoctorIncidentList, useDoctorProfile } from '@/hooks/useDoctor'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
@@ -45,6 +46,11 @@ export default function IncidentsScreen() {
   const farmerQuery = useIncidentList()
   const doctorQuery = useDoctorIncidentList(1, endedParam)
   const { data, isLoading, isError, refetch } = isDoctor ? doctorQuery : farmerQuery
+  const { data: categories = [] } = useActiveTicketCategories(!isDoctor)
+  const categoryMap = useMemo(
+    () => Object.fromEntries(categories.map((c) => [c.id, c.name])),
+    [categories],
+  )
 
   // Doctor profile dùng lấy isOnline — /auth/me không có field này
   const { data: doctorProfile } = useDoctorProfile()
@@ -120,7 +126,11 @@ export default function IncidentsScreen() {
             onRefresh={handleRefresh}
             refreshing={isRefreshing}
             renderItem={({ item }) => (
-              <IncidentCard item={item} onPress={() => router.push(`/(app)/incident/${item.id}`)} />
+              <IncidentCard
+                item={item}
+                categoryName={item.categoryConfigId ? categoryMap[item.categoryConfigId] : undefined}
+                onPress={() => router.push(`/(app)/incident/${item.id}`)}
+              />
             )}
           />
         )}
