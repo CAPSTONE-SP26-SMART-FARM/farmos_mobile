@@ -1,5 +1,5 @@
-/** "50.000 ₫" — format VND cho UI ví/giao dịch */
-export const formatVnd = (n: number): string => n.toLocaleString('vi-VN') + ' ₫'
+/** "50.000đ" — format VND cho UI ví/giao dịch (dùng đ thường, tránh ₫ bị gạch chân ở 1 số font) */
+export const formatVnd = (n: number): string => n.toLocaleString('vi-VN') + 'đ'
 
 export const formatNumber = (
   value: number | string | null | undefined,

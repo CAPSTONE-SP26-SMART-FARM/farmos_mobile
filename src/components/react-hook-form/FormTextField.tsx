@@ -1,6 +1,6 @@
 import { Control, Controller, FieldValues, Path, RegisterOptions } from 'react-hook-form'
 import { TextField } from '@/components/ui'
-import { KeyboardTypeOptions } from 'react-native'
+import { KeyboardTypeOptions, StyleProp, ViewStyle } from 'react-native'
 
 interface FormTextFieldProps<T extends FieldValues> {
   control: Control<T>
@@ -17,7 +17,10 @@ interface FormTextFieldProps<T extends FieldValues> {
   secureTextEntry?: boolean
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters'
   autoComplete?: string
+  multiline?: boolean
+  numberOfLines?: number
   transform?: (value: string) => string
+  containerStyle?: StyleProp<ViewStyle>
 }
 
 export const FormTextField = <T extends FieldValues>({
@@ -35,7 +38,10 @@ export const FormTextField = <T extends FieldValues>({
   secureTextEntry,
   autoCapitalize,
   autoComplete,
+  multiline,
+  numberOfLines,
   transform,
+  containerStyle,
 }: FormTextFieldProps<T>) => (
   <Controller
     control={control}
@@ -58,6 +64,9 @@ export const FormTextField = <T extends FieldValues>({
         secureTextEntry={secureTextEntry}
         autoCapitalize={autoCapitalize}
         autoComplete={autoComplete as any}
+        multiline={multiline}
+        numberOfLines={numberOfLines}
+        containerStyle={containerStyle}
       />
     )}
   />

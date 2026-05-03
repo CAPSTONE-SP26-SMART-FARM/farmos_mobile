@@ -60,4 +60,11 @@ export const queryKeys = {
     transactions: (page?: number, type?: string) =>
       ['doctor-wallet', 'transactions', page, type ?? 'all'] as const,
   },
+  bankAccount: {
+    list: ['bank-account', 'list'] as const,
+  },
+  withdrawal: {
+    list: (status?: string) => ['withdrawal', 'list', status ?? 'all'] as const,
+    detail: (id: string) => ['withdrawal', id] as const,
+  },
 } as const

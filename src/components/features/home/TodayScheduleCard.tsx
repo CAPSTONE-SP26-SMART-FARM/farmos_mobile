@@ -1,6 +1,7 @@
 import { View, StyleSheet } from 'react-native'
 import { Text } from '@/components/ui'
 import { icons } from '@/constants/icon'
+import { isToday } from '@/utils/date'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import type { IncidentTicket } from '@/types/incident'
 
@@ -8,16 +9,6 @@ const CalendarIcon = icons.calendarBgSvg
 const ClockIcon = icons.clockSvg
 
 const DONE_STATUSES = ['resolved', 'closed']
-
-function isToday(dateStr: string) {
-  const d = new Date(dateStr)
-  const now = new Date()
-  return (
-    d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate()
-  )
-}
 
 function formatToday() {
   return new Date().toLocaleDateString('vi-VN', {

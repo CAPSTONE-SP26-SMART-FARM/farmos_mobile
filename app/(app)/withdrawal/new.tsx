@@ -1,0 +1,210 @@
+import {
+  View, ScrollView, StyleSheet, KeyboardAvoidingView, Platform,
+  Keyboard, TouchableWithoutFeedback,
+} from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { Stack, useRouter } from 'expo-router'
+import { useForm } from 'react-hook-form'
+import { useEffect } from 'react'
+import { MaterialIcons } from '@expo/vector-icons'
+import { Text } from '@/components/ui'
+import { FormTextField } from '@/components/react-hook-form/FormTextField'
+import { FormSelectField } from '@/components/react-hook-form/FormSelectField'
+import { SheetHeader } from '@/components/features/incident/SheetHeader'
+import { useToast } from '@/hooks/useToast'
+import { usePreventUnsavedChanges } from '@/hooks/usePreventUnsavedChanges'
+import { useBankAccountList } from '@/hooks/useBankAccounts'
+import { useCreateWithdrawal } from '@/hooks/useWithdrawals'
+import { useDoctorWalletSummary } from '@/hooks/useDoctorWallet'
+import { formatVnd } from '@/utils/number'
+
+const MIN_AMOUNT = 50_000
+const MAX_AMOUNT = 50_000_000
+
+type FormData = {
+  amount: string
+  bankAccountId: string
+  doctorNote?: string
+}
+
+export default function WithdrawalNewScreen() {
+  const router = useRouter()
+  const { showToast } = useToast()
+  const { data: accounts = [] } = useBankAccountList()
+  const { data: summary } = useDoctorWalletSummary()
+  const balance = summary?.balance ?? 0
+
+  const { mutate: create, isPending } = useCreateWithdrawal()
+
+  const defaultBank = accounts.find((a) => a.isDefault) ?? accounts[0]
+
+  const {
+    control, handleSubmit, setValue, watch,
+    formState: { isDirty, isValid },
+  } = useForm<FormData>({
+    mode: 'onChange',
+    defaultValues: {
+      amount: '',
+      bankAccountId: '',
+      doctorNote: '',
+    },
+  })
+
+  useEffect(() => {
+    if (defaultBank) setValue('bankAccountId', defaultBank.id)
+  }, [defaultBank, setValue])
+
+  const amountStr = watch('amount')
+  const amount = parseInt(amountStr || '0', 10)
+  const amountError =
+    amount > 0 && amount < MIN_AMOUNT
+      ? `Tối thiểu ${formatVnd(MIN_AMOUNT)}`
+      : amount > MAX_AMOUNT
+        ? `Tối đa ${formatVnd(MAX_AMOUNT)}`
+        : amount > balance
+          ? 'Vượt quá số dư khả dụng'
+          : null
+
+  const canSave = !!amount && amount >= MIN_AMOUNT && amount <= MAX_AMOUNT && amount <= balance && !!watch('bankAccountId') && !isPending
+
+  usePreventUnsavedChanges(isDirty && !isPending, {
+    message: 'Bạn đang nhập yêu cầu rút. Thoát ra sẽ mất thay đổi.',
+  })
+
+  const onSubmit = (data: FormData) => {
+    Keyboard.dismiss()
+    const amountNum = parseInt(data.amount, 10)
+    create(
+      {
+        amount: amountNum,
+        bankAccountId: data.bankAccountId,
+        doctorNote: data.doctorNote?.trim() || undefined,
+      },
+      {
+        onSuccess: () => {
+          showToast.success({ message: 'Đã gửi yêu cầu rút tiền' })
+          router.back()
+        },
+        onError: (err: any) => {
+          const msg = err?.response?.data?.message || 'Không thể tạo yêu cầu'
+          showToast.error({ message: String(msg) })
+        },
+      }
+    )
+  }
+
+  return (
+    <SafeAreaView edges={['bottom']} style={styles.container}>
+      <Stack.Screen options={{ gestureEnabled: !isDirty }} />
+      <SheetHeader
+        title='Tạo yêu cầu rút tiền'
+        onCancel={() => router.back()}
+        onDone={handleSubmit(onSubmit)}
+        doneLabel='Gửi'
+        canDone={canSave && isValid}
+      />
+
+      {accounts.length === 0 ? (
+        <View style={styles.noBankWrap}>
+          <MaterialIcons name='account-balance' size={48} color='#D1D5DB' />
+          <Text style={styles.noBankText}>Bạn chưa có tài khoản ngân hàng</Text>
+          <Text style={styles.noBankHint}>Thêm tài khoản trước khi tạo yêu cầu rút</Text>
+        </View>
+      ) : (
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <ScrollView
+              style={styles.scroll}
+              contentContainerStyle={styles.content}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps='handled'
+            >
+              <View style={styles.balanceCard}>
+                <Text style={styles.balanceLabel}>Số dư khả dụng</Text>
+                <Text style={styles.balanceAmount}>{formatVnd(balance)}</Text>
+              </View>
+
+              <View style={styles.section}>
+                <View style={styles.fields}>
+                  <FormTextField
+                    control={control}
+                    name='amount'
+                    label='Số tiền (VND)'
+                    rules={{ required: true }}
+                    showError={false}
+                    showClear={false}
+                    keyboardType='number-pad'
+                    autoFocus
+                    transform={(t) => t.replace(/[^0-9]/g, '')}
+                  />
+                  {!!amountError && <Text style={styles.errorText}>{amountError}</Text>}
+
+                  <FormSelectField
+                    control={control}
+                    name='bankAccountId'
+                    label='Tài khoản nhận'
+                    rules={{ required: true }}
+                    showError={false}
+                    options={accounts}
+                    bottomSheetTitle='Chọn tài khoản'
+                    variant='radio'
+                    labelExtractor={(item) => `${item.bankName} - ${item.accountNumber}`}
+                    valueExtractor={(item) => item.id}
+                    subtitleExtractor={(item) => item.accountHolderName}
+                    rightIconComponent={
+                      <MaterialIcons name='keyboard-arrow-down' size={22} color='#4B5563' />
+                    }
+                    height='60%'
+                  />
+
+                  <FormTextField
+                    control={control}
+                    name='doctorNote'
+                    label='Ghi chú (tùy chọn)'
+                    showError={false}
+                    showClear={false}
+                    multiline
+                    numberOfLines={3}
+                    maxLength={2000}
+                  />
+                </View>
+              </View>
+
+              <Text style={styles.hint}>
+                * Số tiền từ {formatVnd(MIN_AMOUNT)} đến {formatVnd(MAX_AMOUNT)}.{'\n'}
+                * Yêu cầu sẽ được admin duyệt trong vòng 24h.
+              </Text>
+            </ScrollView>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
+      )}
+    </SafeAreaView>
+  )
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#F3F4F6' },
+  scroll: { flex: 1 },
+  content: { padding: 16, gap: 12 },
+
+  balanceCard: {
+    backgroundColor: '#2463EB', borderRadius: 16,
+    paddingVertical: 16, paddingHorizontal: 18,
+    gap: 4,
+  },
+  balanceLabel: { fontSize: 12, color: 'rgba(255,255,255,0.85)', fontFamily: 'Inter_400Regular' },
+  balanceAmount: { fontSize: 22, color: '#FFFFFF', fontFamily: 'Inter_600SemiBold' },
+
+  section: {
+    backgroundColor: '#FFFFFF', borderRadius: 16,
+    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 16,
+  },
+  fields: { gap: 12 },
+
+  errorText: { fontSize: 12, color: '#DC2828', marginTop: -8, marginLeft: 4, fontFamily: 'Inter_400Regular' },
+  hint: { fontSize: 12, color: '#6B7280', fontFamily: 'Inter_400Regular', lineHeight: 18, paddingHorizontal: 4 },
+
+  noBankWrap: { alignItems: 'center', paddingTop: 80, gap: 12, padding: 24 },
+  noBankText: { fontSize: 15, color: '#374151', fontFamily: 'Inter_500Medium' },
+  noBankHint: { fontSize: 13, color: '#6B7280', fontFamily: 'Inter_400Regular', textAlign: 'center' },
+})
