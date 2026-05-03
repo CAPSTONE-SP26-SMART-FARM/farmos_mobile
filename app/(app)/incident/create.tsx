@@ -8,6 +8,8 @@ import * as ImagePicker from 'expo-image-picker'
 import { useRouter } from 'expo-router'
 import { Text, TextField, SelectField, PrimaryButton, TopBar } from '@/components/ui'
 import { useCreateIncident, useMyMilestones } from '@/hooks/useIncident'
+import { useActiveTicketCategories } from '@/hooks/useTicketCategory'
+import type { TicketCategory } from '@/types/ticketCategory'
 import { useToast } from '@/hooks/useToast'
 import { getErrorMessage } from '@/utils/error'
 import { uploadImageToCloudinary } from '@/utils/cloudinary'
@@ -34,19 +36,28 @@ export default function CreateIncidentScreen() {
   const { mutate, isPending } = useCreateIncident()
   const { data: milestones = [], isLoading: isLoadingMilestones } = useMyMilestones()
 
+  const { data: categories = [], isLoading: isLoadingCategories } = useActiveTicketCategories()
   const [milestone, setMilestone] = useState<FarmerMyMilestone | null>(null)
+  const [category, setCategory] = useState<TicketCategory | null>(null)
   const [severity, setSeverity] = useState<IncidentSeverity>('medium')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [imageUris, setImageUris] = useState<string[]>([])
   const [isUploading, setIsUploading] = useState(false)
 
+  const categoryOptions = useMemo(
+    () => categories.map((c) => ({ ...c, label: c.name, subtitle: `${(c.unitPrice / 1000).toFixed(0)}k / lần` })),
+    [categories],
+  )
+
   const milestoneOptions = useMemo(
-    () => milestones.map((m) => ({ ...m, label: m.stageName, subtitle: m.zoneName })),
+    () => milestones
+      .filter((m) => m.status === 'in_progress')
+      .map((m) => ({ ...m, label: m.stageName, subtitle: m.zoneName })),
     [milestones],
   )
 
-  const canSubmit = !!milestone && title.trim().length > 0 && description.trim().length > 0
+  const canSubmit = !!milestone && !!category && title.trim().length > 0 && description.trim().length > 0
 
   const handlePickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
@@ -90,6 +101,7 @@ export default function CreateIncidentScreen() {
     mutate(
       {
         milestoneId: milestone!.id,
+        categoryConfigId: category!.id,
         title: title.trim(),
         description: description.trim(),
         severity,
@@ -123,6 +135,20 @@ export default function CreateIncidentScreen() {
               <Text style={styles.cardTitle}>Thông tin sự cố</Text>
 
               <View style={styles.fields}>
+                <SelectField
+                  label='Loại sự cố'
+                  value={category ? `${category.name} · ${(category.unitPrice / 1000).toFixed(0)}k` : ''}
+                  options={categoryOptions}
+                  bottomSheetTitle='Chọn loại sự cố'
+                  disabled={isLoadingCategories}
+                  labelExtractor={(item) => item.name}
+                  subtitleExtractor={(item) => item.subtitle ?? ''}
+                  valueExtractor={(item) => item.id}
+                  selectedValue={category?.id ?? null}
+                  onSelect={(item) => setCategory(item)}
+                  showError={false}
+                />
+
                 <SelectField
                   label='Milestone'
                   value={milestone ? `${milestone.stageName} · ${milestone.zoneName}` : ''}

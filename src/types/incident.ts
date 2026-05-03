@@ -1,6 +1,7 @@
 export type IncidentSeverity = 'low' | 'medium' | 'high' | 'critical'
 export type TicketStatus = 'open' | 'assigned' | 'in_progress' | 'resolved' | 'closed' | 'cancelled'
 export type TicketPriority = 'low' | 'normal' | 'high' | 'urgent'
+export type TicketSource = 'SUBSCRIPTION_GRANT' | 'PURCHASED' | 'ADMIN_GIFT'
 
 export type UserBrief = {
   id: string
@@ -43,10 +44,16 @@ export type IncidentTicket = {
   farm: FarmBrief | null
   zone: ZoneBrief | null
   attachments: { id: string; url: string; uploadedBy: string; createdAt: string }[]
+  // v2 fields
+  categoryConfigId: string | null
+  unitPriceSnapshot: number | null
+  source: TicketSource | null
+  sourceLedgerId: string | null
 }
 
 export type CreateIncidentBody = {
   milestoneId: string
+  categoryConfigId: string
   title: string
   description: string
   severity: IncidentSeverity
