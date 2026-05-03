@@ -68,23 +68,26 @@ class SocketService {
     }
   }
 
-  subscribeZone(zoneId: string): Promise<boolean> {
+  private subscribe(event: string, payload: Record<string, string>): Promise<boolean> {
     return new Promise((resolve) => {
       if (!this.socket?.connected) { resolve(false); return }
-      this.socket.emit('zone.subscribe', { zoneId }, (res: { ok: boolean }) => {
+      this.socket.emit(event, payload, (res: { ok: boolean }) => {
+        if (IS_DEV) console.log(`[Socket] ${event}`, payload, res)
         resolve(res?.ok ?? false)
       })
     })
   }
 
+  subscribeZone(zoneId: string): Promise<boolean> {
+    return this.subscribe('zone.subscribe', { zoneId })
+  }
+
   subscribeTicket(ticketId: string): Promise<boolean> {
-    return new Promise((resolve) => {
-      if (!this.socket?.connected) { resolve(false); return }
-      this.socket.emit('ticket.subscribe', { ticketId }, (res: { ok: boolean }) => {
-        if (IS_DEV) console.log('[Socket] ticket.subscribe', ticketId, res)
-        resolve(res?.ok ?? false)
-      })
-    })
+    return this.subscribe('ticket.subscribe', { ticketId })
+  }
+
+  subscribeFarm(farmId: string): Promise<boolean> {
+    return this.subscribe('farm.subscribe', { farmId })
   }
 
   on<T>(event: string, handler: (data: T) => void): void {

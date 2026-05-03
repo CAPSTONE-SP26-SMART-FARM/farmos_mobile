@@ -20,6 +20,7 @@ import { getErrorMessage } from '@/utils/error'
 import { socketService } from '@/services/socket/socketService'
 import { SEVERITY_META } from '@/constants/incident'
 import { icons } from '@/constants/icon'
+import { queryKeys } from '@/constants/queryKeys'
 import type { IncidentSeverity } from '@/types/incident'
 
 type DoctorFilter = 'broadcasts' | 'active' | 'resolved'
@@ -171,23 +172,31 @@ export default function IncidentsScreen() {
 
   useFocusEffect(useCallback(() => { refetch() }, [refetch]))
 
-  // D4 — WS: ticket.broadcast → switch to broadcasts tab + toast
+  // WS: ticket.broadcast (doctor), ticket.incident.created (doctor), ticket.resolved (farmer)
   useEffect(() => {
-    if (!isDoctor || !isOnline) return
     const onBroadcast = () => {
-      qc.invalidateQueries({ queryKey: ['broadcast', 'pending'] })
+      if (!isDoctor) return
+      qc.invalidateQueries({ queryKey: queryKeys.broadcast.pending })
       showToast.success({ message: 'Có yêu cầu sự cố mới!' })
     }
     const onCreated = () => {
-      qc.invalidateQueries({ queryKey: ['incident', 'doctor-list'] })
+      if (!isDoctor) return
+      qc.invalidateQueries({ queryKey: queryKeys.incident.doctorList() })
+    }
+    const onResolved = () => {
+      if (isDoctor) return
+      qc.invalidateQueries({ queryKey: queryKeys.incident.list() })
+      showToast.success({ message: 'Bác sĩ vừa giải quyết một sự cố' })
     }
     socketService.on('ticket.broadcast', onBroadcast)
     socketService.on('ticket.incident.created', onCreated)
+    socketService.on('ticket.resolved', onResolved)
     return () => {
       socketService.off('ticket.broadcast', onBroadcast)
       socketService.off('ticket.incident.created', onCreated)
+      socketService.off('ticket.resolved', onResolved)
     }
-  }, [isDoctor, isOnline, qc, showToast])
+  }, [isDoctor, qc, showToast])
 
   if (isDoctor && !isApproved) return <DoctorGuardScreen message='Hồ sơ chưa được phê duyệt. Vào tab Hồ sơ để hoàn tất.' />
   if (isDoctor && !isOnline) return <DoctorGuardScreen message='Bạn đang offline. Bật online ở tab Hồ sơ để nhận sự cố.' />
