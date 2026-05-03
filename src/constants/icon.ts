@@ -29,6 +29,8 @@ import bulbSvg from '@/assets/icons/icon-bulb.svg'
 import bulkBgSvg from '@/assets/icons/icon-bulkBg.svg'
 import editProfileBgSvg from '@/assets/icons/icon-edit-profileBg.svg'
 import incidentSvg from '@/assets/icons/icon-incident.svg'
+import emptyCartSvg from '@/assets/icons/icon-empty-cart.svg'
+import emptySearchSvg from '@/assets/icons/icon-empty-search.svg'
 
 export const icons = {
   // Tab icons
@@ -69,4 +71,8 @@ export const icons = {
   bulbSvg,
   bulkBgSvg,
   editProfileBgSvg,
+
+  // Empty states
+  emptyCartSvg,
+  emptySearchSvg,
 }

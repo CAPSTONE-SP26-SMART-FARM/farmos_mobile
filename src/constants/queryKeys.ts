@@ -36,6 +36,7 @@ export const queryKeys = {
     detail: (ticketId: string, prescriptionId: string) =>
       ['prescriptions', ticketId, prescriptionId] as const,
   },
+  ticketFull: (ticketId: string) => ['ticket-full', ticketId] as const,
   notifications: {
     list: (page?: number) => ['notifications', 'list', page] as const,
   },
@@ -44,6 +45,12 @@ export const queryKeys = {
   },
   ticketCategory: {
     active: ['ticket-category', 'active'] as const,
+  },
+  broadcast: {
+    pending: ['broadcast', 'pending'] as const,
+  },
+  medicine: {
+    catalog: (q: string) => ['medicine', 'catalog', q] as const,
   },
   dailyLog: {
     tasksForToday: (page?: number) => ['daily-log', 'tasks-for-today', page ?? 1] as const,

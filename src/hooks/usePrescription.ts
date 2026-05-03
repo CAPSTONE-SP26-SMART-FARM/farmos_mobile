@@ -6,14 +6,15 @@ import { queryKeys } from '@/constants/queryKeys'
 import { useToast } from '@/hooks/useToast'
 import type { CreatePrescriptionBody } from '@/types/prescription'
 
-export function usePrescriptions(ticketId: string) {
+export function usePrescriptions(ticketId: string, enabled = true) {
   const qc = useQueryClient()
   const { showToast } = useToast()
 
   const query = useQuery({
     queryKey: queryKeys.prescriptions.list(ticketId),
     queryFn: () => prescriptionApi.list(ticketId),
-    enabled: !!ticketId,
+    enabled: !!ticketId && enabled,
+    retry: false,
   })
 
   useEffect(() => {

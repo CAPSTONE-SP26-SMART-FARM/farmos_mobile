@@ -13,6 +13,10 @@ interface IncidentFooterActionsProps {
   canCancel?: boolean
   isCancelling?: boolean
   onCancel?: () => void
+  canClose?: boolean
+  onClose?: () => void
+  canResolve?: boolean
+  onResolve?: () => void
 }
 
 export function IncidentFooterActions({
@@ -20,6 +24,8 @@ export function IncidentFooterActions({
   isDoctor, isAccepting,
   onAccept, onOpenChat,
   canCancel, isCancelling, onCancel,
+  canClose, onClose,
+  canResolve, onResolve,
 }: IncidentFooterActionsProps) {
   if (isClosed) {
     return (
@@ -42,6 +48,31 @@ export function IncidentFooterActions({
           <Text style={styles.btnText}>
             {isAccepting ? 'Đang tiếp nhận...' : 'Tiếp nhận sự cố'}
           </Text>
+        </TouchableOpacity>
+      </View>
+    )
+  }
+
+  if (canResolve) {
+    return (
+      <View style={[styles.wrap, styles.wrapStack]}>
+        <TouchableOpacity style={[styles.btn, { backgroundColor: '#7C3AED' }]} onPress={onResolve}>
+          <Text style={styles.btnText}>Resolve & Kê đơn thuốc</Text>
+        </TouchableOpacity>
+        {canChat && (
+          <TouchableOpacity style={[styles.btn, styles.btnSecondary]} onPress={onOpenChat}>
+            <Text style={[styles.btnText, { color: '#2463EB' }]}>Chat với Farmer</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    )
+  }
+
+  if (canClose) {
+    return (
+      <View style={styles.wrap}>
+        <TouchableOpacity style={[styles.btn, { backgroundColor: '#10B981' }]} onPress={onClose}>
+          <Text style={styles.btnText}>Đóng & Đánh giá</Text>
         </TouchableOpacity>
       </View>
     )
@@ -98,5 +129,7 @@ const styles = StyleSheet.create({
   },
   btnDisabled: { backgroundColor: '#E5E7EB' },
   btnCancel: { backgroundColor: '#FEF2F2' },
+  btnSecondary: { backgroundColor: '#EFF6FF' },
   btnText: { color: '#fff', fontSize: 15, fontFamily: 'Inter_600SemiBold' },
+  wrapStack: { gap: 8 },
 })

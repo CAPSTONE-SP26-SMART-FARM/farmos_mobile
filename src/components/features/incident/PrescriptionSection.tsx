@@ -8,10 +8,11 @@ interface PrescriptionSectionProps {
   isLoading: boolean
   canPrescribe: boolean
   onAdd: () => void
+  onPressItem?: (rx: Prescription) => void
 }
 
 export function PrescriptionSection({
-  prescriptions, isLoading, canPrescribe, onAdd,
+  prescriptions, isLoading, canPrescribe, onAdd, onPressItem,
 }: PrescriptionSectionProps) {
   return (
     <>
@@ -34,7 +35,13 @@ export function PrescriptionSection({
         </View>
       ) : (
         <View style={styles.list}>
-          {prescriptions.map((rx) => <PrescriptionCard key={rx.id} item={rx} />)}
+          {prescriptions.map((rx) => (
+            <PrescriptionCard
+              key={rx.id}
+              item={rx}
+              onPress={onPressItem ? () => onPressItem(rx) : undefined}
+            />
+          ))}
         </View>
       )}
     </>

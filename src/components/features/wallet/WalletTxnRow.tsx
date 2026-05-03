@@ -12,6 +12,8 @@ const TXN_META: Record<
 > = {
   EARNING: { label: 'Thu nhập', color: '#10B981', sign: '+' },
   WITHDRAWAL: { label: 'Rút tiền', color: '#EF4444', sign: '-' },
+  WITHDRAWAL_PENDING: { label: 'Đang chờ rút', color: '#F59E0B', sign: '-' },
+  WITHDRAWAL_REFUND: { label: 'Hoàn rút', color: '#10B981', sign: '+' },
   PENALTY: { label: 'Phạt', color: '#F59E0B', sign: '-' },
 }
 
@@ -21,8 +23,10 @@ interface WalletTxnRowProps {
   item: DoctorWalletTransaction
 }
 
+const FALLBACK_META = { label: 'Khác', color: '#6B7280', sign: '-' as const }
+
 export function WalletTxnRow({ item }: WalletTxnRowProps) {
-  const meta = TXN_META[item.transactionType]
+  const meta = TXN_META[item.transactionType] ?? FALLBACK_META
   return (
     <View style={styles.row}>
       <View style={[styles.dot, { backgroundColor: meta.color }]} />

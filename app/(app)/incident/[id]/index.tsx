@@ -5,24 +5,31 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useFocusEffect } from '@react-navigation/native'
-import { useCallback, useState } from 'react'
-import { Text, EmptyState, TopBar } from '@/components/ui'
+import { useCallback, useEffect, useState } from 'react'
+import { Text, EmptyState, TopBar, BottomSheet, PrimaryButton, TextField } from '@/components/ui'
 import { usePrescriptions, useCreatePrescription } from '@/hooks/usePrescription'
 import { useAcceptIncident, useDoctorIncidentDetail } from '@/hooks/useDoctor'
 import { useIncidentDetail, useCancelIncident } from '@/hooks/useIncident'
 import { useActiveTicketCategories } from '@/hooks/useTicketCategory'
+import { useCloseTicket, useRateTicket, useAbandonResolution } from '@/hooks/useTicketLifecycle'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
 import { SEVERITY_META } from '@/constants/incident'
+import { socketService } from '@/services/socket/socketService'
 import { IncidentStatusBadge } from '@/components/features/incident/IncidentStatusBadge'
 import { PrescriptionModal } from '@/components/features/incident/PrescriptionModal'
 import { PrescriptionSection } from '@/components/features/incident/PrescriptionSection'
 import { IncidentInfoList } from '@/components/features/incident/IncidentInfoList'
 import { IncidentFooterActions } from '@/components/features/incident/IncidentFooterActions'
+import { CloseRateModal } from '@/components/features/incident/CloseRateModal'
+import { AbandonModal } from '@/components/features/incident/AbandonModal'
+import { useAddAddendum } from '@/hooks/useTicketLifecycle'
+import type { AddAddendumBody } from '@/types/medicine'
 import { getErrorMessage } from '@/utils/error'
 import type { CreatePrescriptionBody } from '@/types/prescription'
+import type { AbandonResolution } from '@/types/ticketLifecycle'
 
-const CLOSED_STATUSES = ['resolved', 'closed', 'cancelled'] as const
+const CLOSED_STATUSES = ['closed', 'cancelled'] as const
 const PRESCRIBABLE_STATUSES = ['assigned', 'in_progress'] as const
 const SOURCE_LABEL: Record<string, string> = {
   SUBSCRIPTION_GRANT: 'Từ gói',
@@ -35,13 +42,24 @@ export default function IncidentDetailScreen() {
   const { user } = useAuth()
   const { showToast } = useToast()
   const isDoctor = user?.role === 'doctor'
+
   const [rxModalVisible, setRxModalVisible] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [closeModalVisible, setCloseModalVisible] = useState(false)
+  const [abandonModalVisible, setAbandonModalVisible] = useState(false)
+  const [addendumVisible, setAddendumVisible] = useState(false)
+  const [addendumContent, setAddendumContent] = useState('')
+
   const { data: categories = [] } = useActiveTicketCategories(!isDoctor)
   const { mutate: cancelIncident, isPending: isCancelling } = useCancelIncident()
+  const { mutate: closeTicket, isPending: isClosing } = useCloseTicket(id)
+  const { mutate: rateTicket, isPending: isRating } = useRateTicket(id)
+  const { mutate: abandonResolution, isPending: isAbandoning } = useAbandonResolution(id)
+  const { mutate: addAddendum, isPending: isAddingAddendum } = useAddAddendum(id)
 
-  const farmerQuery = useIncidentDetail(id)
-  const doctorQuery = useDoctorIncidentDetail(id)
+  // Chỉ chạy 1 query theo role — tránh duplicate API call (cả 2 đều gọi /tickets/:id v2)
+  const farmerQuery = useIncidentDetail(isDoctor ? '' : id)
+  const doctorQuery = useDoctorIncidentDetail(isDoctor ? id : '')
   const { data, isLoading, isError, refetch } = isDoctor ? doctorQuery : farmerQuery
 
   const { data: rxData, isLoading: rxLoading, refetch: refetchRx } = usePrescriptions(id)
@@ -49,20 +67,30 @@ export default function IncidentDetailScreen() {
   const { mutate: createPrescription, isPending: isCreatingRx } = useCreatePrescription(id)
   const prescriptions = rxData?.data ?? []
 
-  const refreshAll = useCallback(() => {
-    refetch()
-    refetchRx()
-  }, [refetch, refetchRx])
-
+  const refreshAll = useCallback(() => { refetch(); refetchRx() }, [refetch, refetchRx])
   useFocusEffect(refreshAll)
 
-  // Tách pull-to-refresh state ra khỏi background isFetching để spinner không stuck
-  // khi useFocusEffect gọi refetch lúc back từ chat về.
   const [isRefreshing, setIsRefreshing] = useState(false)
   const handlePullRefresh = useCallback(async () => {
     setIsRefreshing(true)
     try { await Promise.all([refetch(), refetchRx()]) } finally { setIsRefreshing(false) }
   }, [refetch, refetchRx])
+
+  // F9 — WS listeners
+  useEffect(() => {
+    const onResolved = (payload: any) => {
+      if (payload?.ticketId === id) refetch()
+    }
+    const onFallback = (payload: any) => {
+      if (payload?.ticketId === id) setAbandonModalVisible(true)
+    }
+    socketService.on('ticket.resolved', onResolved)
+    socketService.on('ticket.fallback-required', onFallback)
+    return () => {
+      socketService.off('ticket.resolved', onResolved)
+      socketService.off('ticket.fallback-required', onFallback)
+    }
+  }, [id, refetch])
 
   const status = data?.status ?? ''
   const isAssignee = isDoctor && data?.assignee?.id === user?.id
@@ -71,6 +99,24 @@ export default function IncidentDetailScreen() {
   const canPrescribe = isAssignee && PRESCRIBABLE_STATUSES.includes(status as any)
   const isClosed = CLOSED_STATUSES.includes(status as any)
   const canCancel = isCreator && status === 'open'
+  const canClose = isCreator && status === 'resolved'
+  const canResolve = isAssignee && PRESCRIBABLE_STATUSES.includes(status as any)
+  const canAddAddendum = isAssignee && (status === 'resolved' || status === 'closed')
+
+  const handleAddAddendum = () => {
+    if (!addendumContent.trim()) return
+    addAddendum(
+      { type: 'SOLUTION_NOTE', content: addendumContent.trim() },
+      {
+        onSuccess: () => {
+          showToast.success({ message: 'Đã thêm ghi chú' })
+          setAddendumVisible(false)
+          setAddendumContent('')
+        },
+        onError: (err) => showToast.error({ message: getErrorMessage(err, 'Thêm ghi chú thất bại') }),
+      }
+    )
+  }
 
   const categoryName = data?.categoryConfigId
     ? categories.find((c) => c.id === data.categoryConfigId)?.name
@@ -80,21 +126,56 @@ export default function IncidentDetailScreen() {
     cancelIncident(
       { ticketId: id },
       {
-        onSuccess: () => {
-          showToast.success({ message: 'Đã hủy sự cố' })
-          router.back()
-        },
+        onSuccess: () => { showToast.success({ message: 'Đã hủy sự cố' }); router.back() },
         onError: (err) => showToast.error({ message: getErrorMessage(err, 'Hủy thất bại') }),
+      }
+    )
+  }
+
+  const handleCloseSubmit = (stars: number, feedback: string) => {
+    closeTicket(undefined, {
+      onSuccess: () => {
+        if (stars > 0) {
+          rateTicket(
+            { stars, feedback: feedback || undefined },
+            {
+              onSuccess: () => {
+                showToast.success({ message: 'Đã đóng và đánh giá sự cố' })
+                setCloseModalVisible(false)
+              },
+              onError: () => {
+                showToast.success({ message: 'Đã đóng sự cố' })
+                setCloseModalVisible(false)
+              },
+            }
+          )
+        } else {
+          showToast.success({ message: 'Đã đóng sự cố' })
+          setCloseModalVisible(false)
+        }
+      },
+      onError: (err) => showToast.error({ message: getErrorMessage(err, 'Đóng sự cố thất bại') }),
+    })
+  }
+
+  const handleAbandon = (resolution: AbandonResolution) => {
+    abandonResolution(
+      { resolution },
+      {
+        onSuccess: () => {
+          setAbandonModalVisible(false)
+          showToast.success({
+            message: resolution === 'FALLBACK_AI' ? 'Đã chuyển sang AI xử lý' : 'Đã hoàn ticket',
+          })
+        },
+        onError: (err) => showToast.error({ message: getErrorMessage(err, 'Thao tác thất bại') }),
       }
     )
   }
 
   const handleAcceptIncident = () => {
     acceptIncident(id, {
-      onSuccess: () => {
-        showToast.success({ message: 'Tiếp nhận sự cố thành công!' })
-        refetch()
-      },
+      onSuccess: () => { showToast.success({ message: 'Tiếp nhận sự cố thành công!' }); refetch() },
       onError: (err) => showToast.error({ message: getErrorMessage(err, 'Tiếp nhận thất bại') }),
     })
   }
@@ -133,6 +214,11 @@ export default function IncidentDetailScreen() {
   }
 
   const metaParts = [data.zone?.name, data.farm?.name].filter(Boolean)
+
+  // F10 — withdrawal warning từ prescription items (nếu BE trả withdrawalPeriodDays)
+  const withdrawalWarnings = prescriptions
+    .flatMap((p: any) => p.items ?? [])
+    .filter((item: any) => item.withdrawalPeriodDays > 0)
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
@@ -191,19 +277,37 @@ export default function IncidentDetailScreen() {
           )}
         </View>
 
+        {/* F10 — withdrawal warning banner */}
+        {withdrawalWarnings.length > 0 && (
+          <View style={styles.withdrawalBanner}>
+            <Text style={styles.withdrawalText}>
+              ⚠️ Thuốc trong đơn có thời gian ngừng thuốc trước thu hoạch. Vui lòng tuân thủ hướng dẫn của bác sĩ.
+            </Text>
+          </View>
+        )}
+
         {status !== 'open' && (
           <PrescriptionSection
             prescriptions={prescriptions}
             isLoading={rxLoading}
             canPrescribe={canPrescribe}
             onAdd={() => setRxModalVisible(true)}
+            onPressItem={() => router.push(`/(app)/incident/${id}/prescription`)}
           />
+        )}
+
+        {/* D3 — Addendum button for doctor after resolved */}
+        {canAddAddendum && (
+          <TouchableOpacity style={styles.addendumBtn} onPress={() => setAddendumVisible(true)}>
+            <Text style={styles.addendumBtnText}>+ Thêm ghi chú bổ sung</Text>
+          </TouchableOpacity>
         )}
       </ScrollView>
 
       <IncidentFooterActions
         isClosed={isClosed}
         canAccept={canAccept}
+        canClose={canClose}
         canChat={isAssignee || !isDoctor}
         waitingForDoctor={!isDoctor && !data.assignee}
         isDoctor={isDoctor}
@@ -213,6 +317,9 @@ export default function IncidentDetailScreen() {
         canCancel={canCancel}
         isCancelling={isCancelling}
         onCancel={handleCancel}
+        onClose={() => setCloseModalVisible(true)}
+        canResolve={canResolve}
+        onResolve={() => router.push(`/(app)/incident/${id}/resolve`)}
       />
 
       <Modal visible={!!previewUrl} transparent animationType='fade' onRequestClose={() => setPreviewUrl(null)}>
@@ -223,12 +330,48 @@ export default function IncidentDetailScreen() {
         </Pressable>
       </Modal>
 
+      <CloseRateModal
+        visible={closeModalVisible}
+        isClosing={isClosing}
+        isRating={isRating}
+        onClose={() => setCloseModalVisible(false)}
+        onSubmit={handleCloseSubmit}
+      />
+
+      <AbandonModal
+        visible={abandonModalVisible}
+        isPending={isAbandoning}
+        onClose={() => setAbandonModalVisible(false)}
+        onSelect={handleAbandon}
+      />
+
       <PrescriptionModal
         visible={rxModalVisible}
         onClose={() => setRxModalVisible(false)}
         onSubmit={handleCreatePrescription}
         isPending={isCreatingRx}
       />
+
+      {/* D3 — Addendum modal for doctor */}
+      <BottomSheet visible={addendumVisible} onClose={() => setAddendumVisible(false)}>
+        <BottomSheet.Header title='Thêm ghi chú bổ sung' onClose={() => setAddendumVisible(false)} />
+        <View style={styles.addendumBody}>
+          <TextField
+            label='Nội dung ghi chú'
+            value={addendumContent}
+            onChangeText={setAddendumContent}
+            multiline
+            numberOfLines={4}
+            showClear={false}
+          />
+          <PrimaryButton
+            title='Gửi ghi chú'
+            onPress={handleAddAddendum}
+            loading={isAddingAddendum}
+            disabled={!addendumContent.trim() || isAddingAddendum}
+          />
+        </View>
+      </BottomSheet>
     </SafeAreaView>
   )
 }
@@ -249,7 +392,7 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 20, lineHeight: 28, color: '#111827', fontFamily: 'Inter_600SemiBold', marginBottom: 4 },
   titleMeta: { fontSize: 13, color: '#6B7280', fontFamily: 'Inter_400Regular', marginBottom: 10 },
-  badges: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+  badges: { flexDirection: 'row', gap: 8, marginBottom: 16, flexWrap: 'wrap' },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   badgeText: { fontSize: 12, fontFamily: 'Inter_500Medium' },
   divider: { height: 1, backgroundColor: '#F3F4F6', marginBottom: 12 },
@@ -266,9 +409,26 @@ const styles = StyleSheet.create({
   attachRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   attachThumb: { width: 80, height: 80, borderRadius: 10, backgroundColor: '#F3F4F6' },
 
+  withdrawalBanner: {
+    backgroundColor: '#FEF2F2',
+    borderRadius: 12,
+    padding: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#DC2626',
+  },
+  withdrawalText: { fontSize: 13, color: '#DC2626', fontFamily: 'Inter_500Medium', lineHeight: 18 },
+
   previewOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.9)',
     justifyContent: 'center', alignItems: 'center',
   },
   previewImg: { width: '100%', height: '80%' },
+
+  addendumBtn: {
+    paddingVertical: 12, backgroundColor: '#fff',
+    borderRadius: 12, alignItems: 'center',
+    borderWidth: 1, borderColor: '#E5E7EB', borderStyle: 'dashed',
+  },
+  addendumBtnText: { fontSize: 14, color: '#2463EB', fontFamily: 'Inter_500Medium' },
+  addendumBody: { paddingHorizontal: 16, paddingBottom: 32, gap: 12 },
 })

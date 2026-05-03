@@ -1,15 +1,24 @@
-import { View, StyleSheet } from 'react-native'
+import { Pressable, View, StyleSheet } from 'react-native'
+import { MaterialIcons } from '@expo/vector-icons'
 import { Text } from '@/components/ui'
 import type { Prescription } from '@/types/prescription'
 
 interface Props {
   item: Prescription
+  onPress?: () => void
 }
 
-export function PrescriptionCard({ item }: Props) {
+export function PrescriptionCard({ item, onPress }: Props) {
+  const Wrapper: any = onPress ? Pressable : View
   return (
-    <View style={styles.card}>
-      <Text style={styles.medicineName}>{item.medicineName}</Text>
+    <Wrapper
+      style={({ pressed }: { pressed?: boolean }) => [styles.card, pressed && { opacity: 0.7 }]}
+      onPress={onPress}
+    >
+      <View style={styles.titleRow}>
+        <Text style={styles.medicineName}>{item.medicineName}</Text>
+        {onPress ? <MaterialIcons name='chevron-right' size={20} color='#9CA3AF' /> : null}
+      </View>
       <View style={styles.row}>
         <Text style={styles.label}>Liều dùng</Text>
         <Text style={styles.value}>{item.dosage}</Text>
@@ -18,7 +27,7 @@ export function PrescriptionCard({ item }: Props) {
         <Text style={styles.label}>Ngày kê</Text>
         <Text style={styles.value}>{new Date(item.createdAt).toLocaleString('vi-VN')}</Text>
       </View>
-    </View>
+    </Wrapper>
   )
 }
 
@@ -31,7 +40,9 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     gap: 8,
   },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   medicineName: {
+    flex: 1,
     fontSize: 15,
     color: '#111827',
     fontFamily: 'Inter_600SemiBold',

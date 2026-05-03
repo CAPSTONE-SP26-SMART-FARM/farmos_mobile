@@ -1,18 +1,20 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
   View, ScrollView, StyleSheet, KeyboardAvoidingView, Platform,
   Keyboard, TouchableWithoutFeedback, TouchableOpacity, Image,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import * as ImagePicker from 'expo-image-picker'
-import { useRouter } from 'expo-router'
-import { Text, TextField, SelectField, PrimaryButton, TopBar } from '@/components/ui'
+import { Stack, useRouter } from 'expo-router'
+import { Text, TextField, SelectField } from '@/components/ui'
+import { SheetHeader } from '@/components/features/incident/SheetHeader'
 import { useCreateIncident, useMyMilestones } from '@/hooks/useIncident'
 import { useActiveTicketCategories } from '@/hooks/useTicketCategory'
 import type { TicketCategory } from '@/types/ticketCategory'
 import { useToast } from '@/hooks/useToast'
 import { getErrorMessage } from '@/utils/error'
 import { uploadImageToCloudinary } from '@/utils/cloudinary'
+import { usePreventUnsavedChanges } from '@/hooks/usePreventUnsavedChanges'
 import { SEVERITY_META } from '@/constants/incident'
 import { icons } from '@/constants/icon'
 import type { IncidentSeverity } from '@/types/incident'
@@ -110,6 +112,7 @@ export default function CreateIncidentScreen() {
       {
         onSuccess: () => {
           showToast.success({ message: 'Đã gửi báo cáo sự cố' })
+          justSavedRef.current = true
           router.back()
         },
         onError: (err) => showToast.error({ message: getErrorMessage(err, 'Gửi báo cáo thất bại') }),
@@ -119,9 +122,23 @@ export default function CreateIncidentScreen() {
 
   const isLoading = isPending || isUploading
 
+  const isDirty =
+    !!milestone || !!category || title.length > 0 || description.length > 0 || imageUris.length > 0
+  const justSavedRef = useRef(false)
+  usePreventUnsavedChanges(isDirty && !justSavedRef.current && !isLoading, {
+    message: 'Bạn đang nhập báo cáo sự cố. Thoát ra sẽ mất các thay đổi.',
+  })
+
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
-      <TopBar title='Báo cáo sự cố' />
+    <SafeAreaView edges={['bottom', 'left', 'right']} style={styles.container}>
+      <Stack.Screen options={{ gestureEnabled: !isDirty }} />
+      <SheetHeader
+        title='Báo cáo sự cố'
+        onCancel={() => router.back()}
+        onDone={handleSubmit}
+        doneLabel={isLoading ? 'Đang gửi…' : 'Hoàn thành'}
+        canDone={canSubmit && !isLoading}
+      />
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -222,22 +239,13 @@ export default function CreateIncidentScreen() {
             </View>
           </ScrollView>
         </TouchableWithoutFeedback>
-
-        <View style={styles.footer}>
-          <PrimaryButton
-            title='Hoàn thành'
-            loading={isLoading}
-            disabled={!canSubmit || isLoading}
-            onPress={handleSubmit}
-          />
-        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  container: { flex: 1, backgroundColor: '#F3F4F6' },
   flex: { flex: 1 },
   scrollView: { flex: 1, backgroundColor: '#F3F4F6' },
   scrollContent: { padding: 16, paddingBottom: 24 },
@@ -292,13 +300,4 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   addBtnText: { fontSize: 11, color: '#9CA3AF', fontFamily: 'Inter_400Regular' },
-
-  footer: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 24,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-  },
 })

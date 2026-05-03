@@ -99,8 +99,15 @@ export function useDoctorIncidentList(page = 1, ended?: boolean) {
 export function useDoctorIncidentDetail(ticketId: string) {
   return useQuery({
     queryKey: queryKeys.incident.doctorDetail(ticketId),
-    queryFn: () => incidentApi.doctorDetail(ticketId),
+    queryFn: () => incidentApi.detail(ticketId), // v2 endpoint — supports doctor broadcast/accepted access
     enabled: !!ticketId,
+    // Race condition: broadcast dispatcher tạo TicketBroadcast async,
+    // doctor click broadcast quá nhanh → 403. Retry để chờ dispatcher commit.
+    retry: (failureCount, error: any) => {
+      if (failureCount >= 3) return false
+      return error?.response?.status === 403
+    },
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
   })
 }
 

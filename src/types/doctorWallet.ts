@@ -1,4 +1,9 @@
-export type DoctorWalletTransactionType = 'EARNING' | 'WITHDRAWAL' | 'PENALTY'
+export type DoctorWalletTransactionType =
+  | 'EARNING'
+  | 'WITHDRAWAL'
+  | 'WITHDRAWAL_PENDING'
+  | 'WITHDRAWAL_REFUND'
+  | 'PENALTY'
 
 export interface DoctorWalletSummary {
   walletId: string | null
