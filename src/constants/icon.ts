@@ -31,6 +31,10 @@ import editProfileBgSvg from '@/assets/icons/icon-edit-profileBg.svg'
 import incidentSvg from '@/assets/icons/icon-incident.svg'
 import emptyCartSvg from '@/assets/icons/icon-empty-cart.svg'
 import emptySearchSvg from '@/assets/icons/icon-empty-search.svg'
+import sendMoneySvg from '@/assets/icons/send_money.svg'
+import timerPauseSvg from '@/assets/icons/timer_pause.svg'
+import financeChipSvg from '@/assets/icons/finance_chip.svg'
+import outputSvg from '@/assets/icons/output.svg'
 
 export const icons = {
   // Tab icons
@@ -75,4 +79,10 @@ export const icons = {
   // Empty states
   emptyCartSvg,
   emptySearchSvg,
+
+  // Wallet
+  sendMoneySvg,
+  timerPauseSvg,
+  financeChipSvg,
+  outputSvg,
 }

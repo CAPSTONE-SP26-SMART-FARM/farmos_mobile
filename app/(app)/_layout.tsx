@@ -25,6 +25,11 @@ export default function AppLayout() {
         <Stack.Screen name='incident/[id]/select-medicine' options={formSheetOptions} />
         <Stack.Screen name='incident/[id]/custom-medicine' options={formSheetOptions} />
         <Stack.Screen name='incident/[id]/prescription' options={formSheetOptions} />
+        <Stack.Screen name='bank-accounts/index' />
+        <Stack.Screen name='bank-accounts/form' options={formSheetOptions} />
+        <Stack.Screen name='withdrawal/index' />
+        <Stack.Screen name='withdrawal/[id]' />
+        <Stack.Screen name='withdrawal/new' options={formSheetOptions} />
       </Stack>
       <NotificationBanner />
       <ChatNotificationBanner />

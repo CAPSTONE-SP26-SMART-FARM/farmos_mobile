@@ -1,42 +1,65 @@
 import { View, StyleSheet } from 'react-native'
 import { Text } from '@/components/ui'
 import { formatVnd } from '@/utils/number'
-import { formatDateTime } from '@/utils/date'
+import { formatTime } from '@/utils/date'
+import { icons } from '@/constants/icon'
 import type {
   DoctorWalletTransaction, DoctorWalletTransactionType,
 } from '@/types/doctorWallet'
 
+const SendMoneyIcon = icons.sendMoneySvg
+const TimerPauseIcon = icons.timerPauseSvg
+const FinanceChipIcon = icons.financeChipSvg
+
+const GREEN = '#299f47'
+const RED = '#DC2828'
+const AMBER = '#D97706'
+
 const TXN_META: Record<
   DoctorWalletTransactionType,
-  { label: string; color: string; sign: '+' | '-' }
+  { label: string; color: string; sign: '+' | '-'; Icon: typeof SendMoneyIcon }
 > = {
-  EARNING: { label: 'Thu nhập', color: '#10B981', sign: '+' },
-  WITHDRAWAL: { label: 'Rút tiền', color: '#EF4444', sign: '-' },
-  WITHDRAWAL_PENDING: { label: 'Đang chờ rút', color: '#F59E0B', sign: '-' },
-  WITHDRAWAL_REFUND: { label: 'Hoàn rút', color: '#10B981', sign: '+' },
-  PENALTY: { label: 'Phạt', color: '#F59E0B', sign: '-' },
+  EARNING:            { label: 'Thu nhập',     color: GREEN, sign: '+', Icon: FinanceChipIcon },
+  WITHDRAWAL:         { label: 'Rút tiền',     color: RED,   sign: '-', Icon: SendMoneyIcon },
+  WITHDRAWAL_PENDING: { label: 'Đang chờ rút', color: AMBER, sign: '-', Icon: TimerPauseIcon },
+  WITHDRAWAL_REFUND:  { label: 'Hoàn rút',     color: GREEN, sign: '+', Icon: FinanceChipIcon },
+  PENALTY:            { label: 'Phạt',         color: RED,   sign: '-', Icon: SendMoneyIcon },
 }
 
-export const TXN_TYPE_LABELS = TXN_META
+const FALLBACK_META: typeof TXN_META[DoctorWalletTransactionType] = {
+  label: 'Khác', color: '#6B7280', sign: '-', Icon: FinanceChipIcon,
+}
 
 interface WalletTxnRowProps {
   item: DoctorWalletTransaction
+  /** Số dư ví ngay sau giao dịch (đã tính client-side); không hiển thị nếu undefined */
+  balanceAfter?: number
+  showDivider?: boolean
 }
 
-const FALLBACK_META = { label: 'Khác', color: '#6B7280', sign: '-' as const }
-
-export function WalletTxnRow({ item }: WalletTxnRowProps) {
+export function WalletTxnRow({ item, balanceAfter, showDivider }: WalletTxnRowProps) {
   const meta = TXN_META[item.transactionType] ?? FALLBACK_META
+  const Icon = meta.Icon
   return (
-    <View style={styles.row}>
-      <View style={[styles.dot, { backgroundColor: meta.color }]} />
-      <View style={{ flex: 1 }}>
-        <Text style={styles.label}>{meta.label}</Text>
-        <Text style={styles.date}>{formatDateTime(item.createdAt)}</Text>
+    <View>
+      <View style={styles.row}>
+        <View style={styles.iconCircle}>
+          <Icon width={24} height={24} color={meta.color} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.label}>{meta.label}</Text>
+          <Text style={styles.time}>{formatTime(item.createdAt)}</Text>
+        </View>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text style={[styles.amount, { color: meta.color }]}>
+            {meta.sign}{formatVnd(Math.abs(item.amount))}
+          </Text>
+          {balanceAfter !== undefined && (
+            <Text style={styles.balance}>Số dư ví: {formatVnd(balanceAfter)}</Text>
+          )}
+        </View>
       </View>
-      <Text style={[styles.amount, { color: meta.color }]}>
-        {meta.sign}{formatVnd(Math.abs(item.amount))}
-      </Text>
+      {showDivider && <View style={styles.divider} />}
     </View>
   )
 }
@@ -44,15 +67,16 @@ export function WalletTxnRow({ item }: WalletTxnRowProps) {
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: '#fff', padding: 14, borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 2,
+    paddingVertical: 14,
   },
-  dot: { width: 10, height: 10, borderRadius: 5 },
+  iconCircle: {
+    width: 44, height: 44, borderRadius: 22,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: '#E5E7EB',
+  },
   label: { fontSize: 14, color: '#111827', fontFamily: 'Inter_500Medium' },
-  date: { fontSize: 11, color: '#9CA3AF', fontFamily: 'Inter_400Regular', marginTop: 2 },
-  amount: { fontSize: 15, fontFamily: 'Inter_700Bold' },
+  time: { fontSize: 11, color: '#9CA3AF', fontFamily: 'Inter_400Regular', marginTop: 2 },
+  amount: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
+  balance: { fontSize: 11, color: '#6B7280', fontFamily: 'Inter_400Regular', marginTop: 2 },
+  divider: { height: 1, backgroundColor: '#F3F4F6', marginLeft: 52 },
 })
