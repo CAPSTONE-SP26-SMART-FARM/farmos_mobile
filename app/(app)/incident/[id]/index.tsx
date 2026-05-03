@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useFocusEffect } from '@react-navigation/native'
 import { useCallback, useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Text, EmptyState, TopBar, BottomSheet, PrimaryButton, TextField } from '@/components/ui'
 import { usePrescriptions, useCreatePrescription } from '@/hooks/usePrescription'
 import { useAcceptIncident, useDoctorIncidentDetail } from '@/hooks/useDoctor'
@@ -16,6 +17,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
 import { SEVERITY_META } from '@/constants/incident'
 import { socketService } from '@/services/socket/socketService'
+import { queryKeys } from '@/constants/queryKeys'
 import { IncidentStatusBadge } from '@/components/features/incident/IncidentStatusBadge'
 import { PrescriptionModal } from '@/components/features/incident/PrescriptionModal'
 import { PrescriptionSection } from '@/components/features/incident/PrescriptionSection'
@@ -41,6 +43,7 @@ export default function IncidentDetailScreen() {
   const router = useRouter()
   const { user } = useAuth()
   const { showToast } = useToast()
+  const qc = useQueryClient()
   const isDoctor = user?.role === 'doctor'
 
   const [rxModalVisible, setRxModalVisible] = useState(false)
@@ -76,13 +79,25 @@ export default function IncidentDetailScreen() {
     try { await Promise.all([refetch(), refetchRx()]) } finally { setIsRefreshing(false) }
   }, [refetch, refetchRx])
 
-  // F9 — WS listeners
+  // Subscribe ticket and setup WS listeners
   useEffect(() => {
-    const onResolved = (payload: any) => {
-      if (payload?.ticketId === id) refetch()
+    if (data?.id) {
+      socketService.subscribeTicket(data.id)
     }
-    const onFallback = (payload: any) => {
-      if (payload?.ticketId === id) setAbandonModalVisible(true)
+  }, [data?.id])
+
+  useEffect(() => {
+    const onResolved = ({ ticketId }: any) => {
+      if (ticketId === id) {
+        qc.invalidateQueries({ queryKey: queryKeys.incident.detail(id) })
+        qc.invalidateQueries({ queryKey: queryKeys.incident.doctorDetail(id) })
+        qc.invalidateQueries({ queryKey: queryKeys.prescriptions.list(id) })
+        qc.invalidateQueries({ queryKey: ['incident', 'list'] })
+        showToast.success({ message: 'Sự cố đã được giải quyết' })
+      }
+    }
+    const onFallback = ({ ticketId }: any) => {
+      if (ticketId === id) setAbandonModalVisible(true)
     }
     socketService.on('ticket.resolved', onResolved)
     socketService.on('ticket.fallback-required', onFallback)
@@ -90,7 +105,7 @@ export default function IncidentDetailScreen() {
       socketService.off('ticket.resolved', onResolved)
       socketService.off('ticket.fallback-required', onFallback)
     }
-  }, [id, refetch])
+  }, [id, qc, showToast])
 
   const status = data?.status ?? ''
   const isAssignee = isDoctor && data?.assignee?.id === user?.id
