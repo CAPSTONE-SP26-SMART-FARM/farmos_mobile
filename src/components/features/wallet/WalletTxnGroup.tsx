@@ -13,7 +13,7 @@ interface WalletTxnGroupProps {
 
 export function WalletTxnGroup({ date, items }: WalletTxnGroupProps) {
   return (
-    <View style={styles.group}>
+    <View>
       <Text style={styles.dateHeader}>{formatDayHeader(date)}</Text>
       <View style={styles.card}>
         {items.map((item, i) => (
@@ -30,16 +30,15 @@ export function WalletTxnGroup({ date, items }: WalletTxnGroupProps) {
 }
 
 const styles = StyleSheet.create({
-  group: { gap: 8 },
   dateHeader: {
-    fontSize: 13, color: '#4B5563',
+    fontSize: 13,
+    color: '#6B7280',
     fontFamily: 'Inter_500Medium',
-    marginLeft: 4,
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 8,
   },
   card: {
-    backgroundColor: '#FFFFFF', borderRadius: 16,
-    paddingHorizontal: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04, shadowRadius: 10, elevation: 2,
+    backgroundColor: '#FFFFFF',
   },
 })

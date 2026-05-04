@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
-  View, StyleSheet, ActivityIndicator, RefreshControl, FlatList, TouchableOpacity,
+  View, StyleSheet, ActivityIndicator, RefreshControl, FlatList, TouchableOpacity, Pressable,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
@@ -10,14 +10,11 @@ import { useDoctorWalletSummary, useDoctorWalletTransactions } from '@/hooks/use
 import { useWithdrawalList, useWithdrawalListeners } from '@/hooks/useWithdrawals'
 import { WalletBalanceCard } from '@/components/features/wallet/WalletBalanceCard'
 import { WalletTxnGroup, type TxnWithBalance } from '@/components/features/wallet/WalletTxnGroup'
-import { icons } from '@/constants/icon'
 import { WD_STATUS_META } from '@/constants/withdrawal'
 import { formatVnd } from '@/utils/number'
 import { isToday, toDateKey } from '@/utils/date'
 import type { DoctorWalletTransaction } from '@/types/doctorWallet'
 import type { WithdrawalRequest } from '@/types/withdrawal'
-
-const OutputIcon = icons.outputSvg
 
 type FilterKey = 'all' | 'EARNING'
 
@@ -26,16 +23,10 @@ const FILTERS: readonly PillTabItem<FilterKey>[] = [
   { key: 'EARNING', label: 'Thu nhập' },
 ]
 
-/** Inflow types tăng số dư: EARNING + WITHDRAWAL_REFUND */
 function isInflow(t: DoctorWalletTransaction): boolean {
   return t.transactionType === 'EARNING' || t.transactionType === 'WITHDRAWAL_REFUND'
 }
 
-/**
- * Tính balanceAfter cho từng giao dịch (mới → cũ).
- * Chỉ chính xác khi `txns` là TOÀN BỘ giao dịch không bị filter (vì số dư phụ thuộc mọi loại txn).
- * Nếu filter !== 'all' → trả undefined cho balanceAfter.
- */
 function withBalanceAfter(
   txns: DoctorWalletTransaction[], currentBalance: number, includeBalance: boolean,
 ): TxnWithBalance[] {
@@ -90,7 +81,6 @@ export default function WalletScreen() {
     [allTxs],
   )
 
-  // Group + tính balanceAfter (chỉ chính xác khi filter='all')
   const groups = useMemo(
     () => groupByDate(withBalanceAfter(txs, balance, filter === 'all')),
     [txs, balance, filter],
@@ -104,7 +94,18 @@ export default function WalletScreen() {
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
-      <TopBar title='Ví của tôi' />
+      <TopBar
+        title='Ví của tôi'
+        right={
+          <Pressable
+            onPress={() => router.push('/(app)/bank-accounts')}
+            hitSlop={10}
+            style={({ pressed }) => pressed && { opacity: 0.6 }}
+          >
+            <MaterialIcons name='account-balance' size={22} color='#4B5563' />
+          </Pressable>
+        }
+      />
 
       <FlatList
         style={styles.body}
@@ -112,40 +113,29 @@ export default function WalletScreen() {
         keyExtractor={(g) => g.date}
         refreshControl={<RefreshControl refreshing={isFetching} onRefresh={handleRefresh} tintColor='#2463EB' />}
         contentContainerStyle={styles.content}
-        ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
+        ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         renderItem={({ item }) => <WalletTxnGroup date={item.date} items={item.items} />}
         ListHeaderComponent={
-          <>
+          <View style={styles.header}>
             <WalletBalanceCard
               todayRevenue={todayRevenue}
               balance={balance}
               loading={summaryLoading}
             />
 
-            <View style={styles.actionRow}>
-              <TouchableOpacity
-                style={styles.actionBtn}
-                onPress={() => router.push('/(app)/withdrawal/new')}
-              >
-                <OutputIcon width={22} height={22} color='#299f47' />
-                <Text style={[styles.actionBtnText, { color: '#299f47' }]}>Rút tiền</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.actionBtn}
-                onPress={() => router.push('/(app)/bank-accounts')}
-              >
-                <MaterialIcons name='account-balance' size={22} color='#2463EB' />
-                <Text style={styles.actionBtnText}>Tài khoản NH</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Recent withdrawals */}
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitleInline}>Yêu cầu rút gần đây</Text>
-              <TouchableOpacity onPress={() => router.push('/(app)/withdrawal')}>
-                <Text style={styles.seeAll}>Xem tất cả</Text>
-              </TouchableOpacity>
+              <View style={styles.sectionActions}>
+                <TouchableOpacity onPress={() => router.push('/(app)/withdrawal/new')}>
+                  <Text style={styles.actionLink}>+ Rút tiền</Text>
+                </TouchableOpacity>
+                <Text style={styles.dot}>·</Text>
+                <TouchableOpacity onPress={() => router.push('/(app)/withdrawal')}>
+                  <Text style={styles.actionLink}>Xem tất cả</Text>
+                </TouchableOpacity>
+              </View>
             </View>
+
             {recentWds.length === 0 ? (
               <View style={styles.wdEmpty}>
                 <Text style={styles.wdEmptyText}>Chưa có yêu cầu rút nào</Text>
@@ -160,7 +150,7 @@ export default function WalletScreen() {
 
             <Text style={styles.sectionTitle}>Giao dịch gần đây</Text>
             <PillTabs items={FILTERS} value={filter} onChange={setFilter} style={styles.filter} />
-          </>
+          </View>
         }
         ListEmptyComponent={
           txLoading ? (
@@ -194,20 +184,17 @@ function WdRow({ item, onPress }: { item: WithdrawalRequest; onPress: () => void
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#FFFFFF' },
   body: { flex: 1, backgroundColor: '#F3F4F6' },
-  content: { padding: 16, paddingBottom: 24 },
-
-  actionRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
-  actionBtn: {
-    flex: 1, paddingVertical: 14, paddingHorizontal: 12,
-    backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB',
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-  },
-  actionBtnText: { fontSize: 14, color: '#2463EB', fontFamily: 'Inter_500Medium' },
+  content: { paddingBottom: 24 },
+  header: { padding: 16, paddingBottom: 4 },
 
   sectionHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     marginTop: 20, marginBottom: 10,
   },
+  sectionActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  actionLink: { fontSize: 13, color: '#2463EB', fontFamily: 'Inter_500Medium' },
+  dot: { fontSize: 13, color: '#D1D5DB', fontFamily: 'Inter_400Regular' },
+
   sectionTitle: {
     fontSize: 16, color: '#111827', fontFamily: 'Inter_600SemiBold',
     marginTop: 20, marginBottom: 10,
@@ -215,7 +202,6 @@ const styles = StyleSheet.create({
   sectionTitleInline: {
     fontSize: 16, color: '#111827', fontFamily: 'Inter_600SemiBold',
   },
-  seeAll: { fontSize: 13, color: '#2463EB', fontFamily: 'Inter_500Medium' },
 
   wdGroup: { gap: 8 },
   wdRow: {

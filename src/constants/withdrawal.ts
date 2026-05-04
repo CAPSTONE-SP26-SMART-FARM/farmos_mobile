@@ -1,5 +1,8 @@
 import type { WithdrawalStatus } from '@/types/withdrawal'
 
+export const WD_MIN_AMOUNT = 50_000
+export const WD_MAX_AMOUNT = 50_000_000
+
 export const WD_STATUS_META: Record<WithdrawalStatus, { label: string; color: string; bg: string }> = {
   pending:      { label: 'Chờ duyệt',      color: '#92400E', bg: '#FEF3C7' },
   in_progress:  { label: 'Đang xử lý',     color: '#1E40AF', bg: '#DBEAFE' },

@@ -36,7 +36,7 @@ export default function BankAccountsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Danh sách tài khoản </Text>
+          <Text style={styles.sectionTitle}>Danh sách tài khoản</Text>
           {accounts.length > 0 && (
             <Pressable style={styles.createLink} onPress={handleAddNew}>
               <MaterialIcons name="add" size={20} color="#2463EB" />
