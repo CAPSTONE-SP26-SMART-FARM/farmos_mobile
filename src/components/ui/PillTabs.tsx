@@ -1,4 +1,4 @@
-import { View, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native'
+import { ScrollView, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native'
 import { Text } from './Text'
 
 export interface PillTabItem<T extends string> {
@@ -15,7 +15,12 @@ interface PillTabsProps<T extends string> {
 
 export function PillTabs<T extends string>({ items, value, onChange, style }: PillTabsProps<T>) {
   return (
-    <View style={[styles.row, style]}>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={[styles.scroll, style]}
+      contentContainerStyle={styles.row}
+    >
       {items.map((tab) => {
         const active = value === tab.key
         return (
@@ -28,12 +33,13 @@ export function PillTabs<T extends string>({ items, value, onChange, style }: Pi
           </TouchableOpacity>
         )
       })}
-    </View>
+    </ScrollView>
   )
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  scroll: { flexGrow: 0 },
+  row: { flexDirection: 'row', gap: 8 },
   tab: {
     paddingHorizontal: 14,
     paddingVertical: 8,

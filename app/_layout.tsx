@@ -20,6 +20,8 @@ import { registerUnauthorizedHandler } from '@/services/api/client'
 import { Toast, useToastState } from '@/components/ui/Toast'
 import { AppContext } from '@/hooks/useToast'
 import { socketService } from '@/services/socket/socketService'
+import { NotificationBanner } from '@/components/features/notification/NotificationBanner'
+import { ChatNotificationBanner } from '@/components/features/incident/ChatNotificationBanner'
 
 LogBox.ignoreLogs(['SafeAreaView has been deprecated'])
 SplashScreen.preventAutoHideAsync()
@@ -47,7 +49,6 @@ export default function RootLayout() {
     fetchMe().finally(() => setAuthChecked(true))
   }, [fetchMe])
 
-  // Connect / disconnect socket theo auth state
   useEffect(() => {
     if (isAuthenticated) {
       socketService.connect()
@@ -75,6 +76,9 @@ export default function RootLayout() {
                 <Stack.Screen name='(auth)' options={{ animation: 'fade' }} />
               </Stack.Protected>
             </Stack>
+            {/* Banners return null until a notification arrives — no native views at startup */}
+            <NotificationBanner />
+            <ChatNotificationBanner />
             {toast.visible && <Toast {...toast} onHide={hideToast} />}
           </GestureHandlerRootView>
         </SafeAreaProvider>

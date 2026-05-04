@@ -16,10 +16,8 @@ import { usePreventUnsavedChanges } from '@/hooks/usePreventUnsavedChanges'
 import { useBankAccountList } from '@/hooks/useBankAccounts'
 import { useCreateWithdrawal } from '@/hooks/useWithdrawals'
 import { useDoctorWalletSummary } from '@/hooks/useDoctorWallet'
+import { WD_MIN_AMOUNT, WD_MAX_AMOUNT } from '@/constants/withdrawal'
 import { formatVnd } from '@/utils/number'
-
-const MIN_AMOUNT = 50_000
-const MAX_AMOUNT = 50_000_000
 
 type FormData = {
   amount: string
@@ -57,15 +55,15 @@ export default function WithdrawalNewScreen() {
   const amountStr = watch('amount')
   const amount = parseInt(amountStr || '0', 10)
   const amountError =
-    amount > 0 && amount < MIN_AMOUNT
-      ? `Tối thiểu ${formatVnd(MIN_AMOUNT)}`
-      : amount > MAX_AMOUNT
-        ? `Tối đa ${formatVnd(MAX_AMOUNT)}`
+    amount > 0 && amount < WD_MIN_AMOUNT
+      ? `Tối thiểu ${formatVnd(WD_MIN_AMOUNT)}`
+      : amount > WD_MAX_AMOUNT
+        ? `Tối đa ${formatVnd(WD_MAX_AMOUNT)}`
         : amount > balance
           ? 'Vượt quá số dư khả dụng'
           : null
 
-  const canSave = !!amount && amount >= MIN_AMOUNT && amount <= MAX_AMOUNT && amount <= balance && !!watch('bankAccountId') && !isPending
+  const canSave = !!amount && amount >= WD_MIN_AMOUNT && amount <= WD_MAX_AMOUNT && amount <= balance && !!watch('bankAccountId') && !isPending
 
   usePreventUnsavedChanges(isDirty && !isPending, {
     message: 'Bạn đang nhập yêu cầu rút. Thoát ra sẽ mất thay đổi.',
@@ -119,12 +117,11 @@ export default function WithdrawalNewScreen() {
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps='handled'
             >
-              <View style={styles.balanceCard}>
-                <Text style={styles.balanceLabel}>Số dư khả dụng</Text>
-                <Text style={styles.balanceAmount}>{formatVnd(balance)}</Text>
-              </View>
-
               <View style={styles.section}>
+                <View style={styles.balanceRow}>
+                  <Text style={styles.balanceLabel}>Số dư khả dụng</Text>
+                  <Text style={styles.balanceAmount}>{formatVnd(balance)}</Text>
+                </View>
                 <View style={styles.fields}>
                   <FormTextField
                     control={control}
@@ -171,7 +168,7 @@ export default function WithdrawalNewScreen() {
               </View>
 
               <Text style={styles.hint}>
-                * Số tiền từ {formatVnd(MIN_AMOUNT)} đến {formatVnd(MAX_AMOUNT)}.{'\n'}
+                * Số tiền từ {formatVnd(WD_MIN_AMOUNT)} đến {formatVnd(WD_MAX_AMOUNT)}.{'\n'}
                 * Yêu cầu sẽ được admin duyệt trong vòng 24h.
               </Text>
             </ScrollView>
@@ -187,13 +184,13 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { padding: 16, gap: 12 },
 
-  balanceCard: {
-    backgroundColor: '#2463EB', borderRadius: 16,
-    paddingVertical: 16, paddingHorizontal: 18,
-    gap: 4,
+  balanceRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingBottom: 12, marginBottom: 4,
+    borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
   },
-  balanceLabel: { fontSize: 12, color: 'rgba(255,255,255,0.85)', fontFamily: 'Inter_400Regular' },
-  balanceAmount: { fontSize: 22, color: '#FFFFFF', fontFamily: 'Inter_600SemiBold' },
+  balanceLabel: { fontSize: 13, color: '#6B7280', fontFamily: 'Inter_400Regular' },
+  balanceAmount: { fontSize: 15, color: '#111827', fontFamily: 'Inter_600SemiBold' },
 
   section: {
     backgroundColor: '#FFFFFF', borderRadius: 16,

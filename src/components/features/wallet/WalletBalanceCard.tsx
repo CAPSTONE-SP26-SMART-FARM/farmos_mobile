@@ -1,4 +1,6 @@
-import { View, ActivityIndicator, StyleSheet } from 'react-native'
+import { useState } from 'react'
+import { View, ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native'
+import { MaterialIcons } from '@expo/vector-icons'
 import { Text } from '@/components/ui'
 import { formatNumber } from '@/utils/number'
 
@@ -9,6 +11,8 @@ interface WalletSummaryCardProps {
 }
 
 export function WalletBalanceCard({ todayRevenue, balance, loading }: WalletSummaryCardProps) {
+  const [visible, setVisible] = useState(false)
+
   return (
     <View style={styles.card}>
       <View style={styles.col}>
@@ -23,11 +27,22 @@ export function WalletBalanceCard({ todayRevenue, balance, loading }: WalletSumm
       <View style={styles.divider} />
 
       <View style={styles.col}>
-        <Text style={styles.label}>Số dư hiện tại</Text>
+        <View style={styles.labelRow}>
+          <Text style={styles.label}>Số dư hiện tại</Text>
+          <TouchableOpacity onPress={() => setVisible((v) => !v)} hitSlop={10}>
+            <MaterialIcons
+              name={visible ? 'visibility' : 'visibility-off'}
+              size={16}
+              color='#9CA3AF'
+            />
+          </TouchableOpacity>
+        </View>
         {loading ? (
           <ActivityIndicator color='#2463EB' style={{ alignSelf: 'flex-start', marginTop: 4 }} />
         ) : (
-          <Text style={styles.value}>{formatNumber(balance, 0)}</Text>
+          <Text style={styles.value}>
+            {visible ? formatNumber(balance, 0) : '********'}
+          </Text>
         )}
       </View>
     </View>
@@ -42,6 +57,12 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   col: { flex: 1 },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
   divider: {
     width: 1,
     backgroundColor: '#E5E7EB',
@@ -53,7 +74,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontFamily: 'Inter_500Medium',
     color: '#4B5563',
-    marginBottom: 6,
   },
   value: {
     fontSize: 20,

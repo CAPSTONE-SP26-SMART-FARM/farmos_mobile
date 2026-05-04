@@ -25,38 +25,44 @@ export function ChatNotificationBanner() {
   const [notif, setNotif] = useState<MessageNotif | null>(null)
 
   const dismiss = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current)
     Animated.timing(translateY, {
       toValue: HIDDEN_Y,
       duration: 280,
       useNativeDriver: true,
-    }).start()
+    }).start(() => setNotif(null))
   }, [translateY])
 
-  const show = useCallback((incoming: MessageNotif) => {
-    if (timerRef.current) clearTimeout(timerRef.current)
-    setNotif(incoming)
+  // Animate in when a new notif arrives
+  useEffect(() => {
+    if (!notif) return
+    translateY.setValue(HIDDEN_Y)
     Animated.spring(translateY, { toValue: 0, useNativeDriver: true, bounciness: 6 }).start()
     timerRef.current = setTimeout(dismiss, AUTO_DISMISS_MS)
-  }, [translateY, dismiss])
+    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
+  }, [notif])
 
   useEffect(() => {
     const handler = (payload: { ticketId: string; senderId: string; senderName: string }) => {
       if (payload.senderId === currentUserId) return
       if (pathname.includes(`/incident/${payload.ticketId}/chat`)) return
-      show({ ticketId: payload.ticketId, senderName: payload.senderName })
+      setNotif({ ticketId: payload.ticketId, senderName: payload.senderName })
     }
     socketService.on('ticket.message.created', handler)
     return () => {
       socketService.off('ticket.message.created', handler)
       if (timerRef.current) clearTimeout(timerRef.current)
     }
-  }, [pathname, currentUserId, show])
+  }, [pathname, currentUserId])
 
   const handlePress = () => {
     if (!notif?.ticketId) return
     dismiss()
     router.push(`/(app)/incident/${notif.ticketId}/chat` as any)
   }
+
+  // Return null when idle — no native views = no layout interference
+  if (!notif) return null
 
   return (
     <Animated.View
@@ -72,7 +78,7 @@ export function ChatNotificationBanner() {
         </View>
         <View style={styles.body}>
           <Text style={styles.name} numberOfLines={1}>
-            {notif?.senderName ?? ''}
+            {notif.senderName}
           </Text>
           <Text style={styles.sub} numberOfLines={1}>Vừa gửi tin nhắn • Nhấn để xem</Text>
         </View>

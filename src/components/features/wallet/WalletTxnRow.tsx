@@ -32,7 +32,6 @@ const FALLBACK_META: typeof TXN_META[DoctorWalletTransactionType] = {
 
 interface WalletTxnRowProps {
   item: DoctorWalletTransaction
-  /** Số dư ví ngay sau giao dịch (đã tính client-side); không hiển thị nếu undefined */
   balanceAfter?: number
   showDivider?: boolean
 }
@@ -66,8 +65,11 @@ export function WalletTxnRow({ item, balanceAfter, showDivider }: WalletTxnRowPr
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     paddingVertical: 14,
+    paddingHorizontal: 16,
   },
   iconCircle: {
     width: 44, height: 44, borderRadius: 22,
@@ -78,5 +80,5 @@ const styles = StyleSheet.create({
   time: { fontSize: 11, color: '#9CA3AF', fontFamily: 'Inter_400Regular', marginTop: 2 },
   amount: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
   balance: { fontSize: 11, color: '#6B7280', fontFamily: 'Inter_400Regular', marginTop: 2 },
-  divider: { height: 1, backgroundColor: '#F3F4F6', marginLeft: 52 },
+  divider: { height: 1, backgroundColor: '#F3F4F6', marginLeft: 72 },
 })

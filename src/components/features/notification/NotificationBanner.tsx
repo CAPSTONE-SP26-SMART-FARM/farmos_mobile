@@ -39,53 +39,46 @@ export function NotificationBanner() {
   const [notif, setNotif] = useState<IncomingNotif | null>(null)
 
   const dismiss = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current)
     Animated.timing(translateY, {
       toValue: HIDDEN_Y,
       duration: 280,
       useNativeDriver: true,
-    }).start()
+    }).start(() => setNotif(null))
   }, [translateY])
 
-  const show = useCallback(
-    (incoming: IncomingNotif) => {
-      if (timerRef.current) clearTimeout(timerRef.current)
-      setNotif(incoming)
-      Animated.spring(translateY, { toValue: 0, useNativeDriver: true, bounciness: 6 }).start()
-      timerRef.current = setTimeout(dismiss, AUTO_DISMISS_MS)
-    },
-    [translateY, dismiss],
-  )
+  // Animate in when a new notif arrives
+  useEffect(() => {
+    if (!notif) return
+    translateY.setValue(HIDDEN_Y)
+    Animated.spring(translateY, { toValue: 0, useNativeDriver: true, bounciness: 6 }).start()
+    timerRef.current = setTimeout(dismiss, AUTO_DISMISS_MS)
+    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
+  }, [notif])
 
   useEffect(() => {
     const handler = (payload: IncomingNotif) => {
-      // Invalidate notification list để tab Thông báo refetch
       qc.invalidateQueries({ queryKey: ['notifications'] })
-
-      // Nếu noti gắn với ticket → invalidate incident queries để detail/list cập nhật status
       if (payload.ticketId) {
         qc.invalidateQueries({ queryKey: queryKeys.incident.detail(payload.ticketId) })
         qc.invalidateQueries({ queryKey: queryKeys.incident.doctorDetail(payload.ticketId) })
         qc.invalidateQueries({ queryKey: ['incident', 'list'] })
         qc.invalidateQueries({ queryKey: ['incident', 'doctor-list'] })
       }
-
-      // Đang ở chính màn liên quan thì không cần banner
       if (payload.ticketId && pathname.includes(`/incident/${payload.ticketId}`)) return
       if (pathname.includes('/(tabs)/notifications')) return
-
-      show(payload)
+      setNotif(payload)
     }
     socketService.on('notification.created', handler)
     return () => {
       socketService.off('notification.created', handler)
       if (timerRef.current) clearTimeout(timerRef.current)
     }
-  }, [pathname, qc, show])
+  }, [pathname, qc])
 
   const handlePress = () => {
     dismiss()
     if (notif?.redirectUrl) {
-      // /tickets/:id (BE) → /(app)/incident/:id (FE)
       const m = notif.redirectUrl.match(/\/tickets\/([^/]+)/)
       if (m?.[1]) {
         router.push(`/(app)/incident/${m[1]}` as any)
@@ -95,7 +88,10 @@ export function NotificationBanner() {
     router.push('/(app)/(tabs)/notifications')
   }
 
-  const icon = TYPE_ICON[notif?.type ?? 'system'] ?? '🔔'
+  // Return null when idle — no native views = no layout interference
+  if (!notif) return null
+
+  const icon = TYPE_ICON[notif.type ?? 'system'] ?? '🔔'
 
   return (
     <Animated.View
@@ -111,10 +107,10 @@ export function NotificationBanner() {
         </View>
         <View style={styles.body}>
           <Text style={styles.title} numberOfLines={1}>
-            {notif?.title ?? ''}
+            {notif.title}
           </Text>
           <Text style={styles.sub} numberOfLines={2}>
-            {notif?.content ?? ''}
+            {notif.content}
           </Text>
         </View>
       </TouchableOpacity>

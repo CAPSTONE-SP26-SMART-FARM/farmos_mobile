@@ -78,12 +78,12 @@ export function useWithdrawalListeners() {
       qc.invalidateQueries({ queryKey: queryKeys.withdrawal.list() })
       showToast.success({ message: 'Yêu cầu rút đã được duyệt' })
     }
-    const onPaid = (payload: any) => {
+    const onPaid = (payload: { transferReference?: string }) => {
       qc.invalidateQueries({ queryKey: queryKeys.withdrawal.list() })
       const ref = payload?.transferReference || 'N/A'
       showToast.success({ message: `Đã chuyển khoản: ${ref}` })
     }
-    const onRejected = (payload: any) => {
+    const onRejected = (payload: { rejectReason?: string }) => {
       qc.invalidateQueries({ queryKey: queryKeys.withdrawal.list() })
       const reason = payload?.rejectReason || 'Không rõ'
       showToast.error({ message: `Từ chối: ${reason}` })
