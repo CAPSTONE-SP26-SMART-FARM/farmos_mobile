@@ -1,11 +1,18 @@
+import { useState } from 'react'
 import { View, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native'
+import { MaterialIcons } from '@expo/vector-icons'
 import { Text } from '@/components/ui'
+import { icons } from '@/constants/icon'
 import { useDoctorWalletSummary } from '@/hooks/useDoctorWallet'
+import { formatNumber } from '@/utils/number'
 import { router } from 'expo-router'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 
+const DolarIcon = icons.dolarSvg
+
 export function EarningsCard() {
   const { data: summary, isLoading } = useDoctorWalletSummary()
+  const [visible, setVisible] = useState(false)
   const balance = summary?.balance ?? 0
 
   return (
@@ -14,7 +21,17 @@ export function EarningsCard() {
       style={styles.card}
     >
       <View style={styles.row}>
-        <Text style={styles.label}>Thu nhập của bạn</Text>
+        <View style={styles.labelRow}>
+          <DolarIcon width={18} height={18} color='#2463EB' />
+          <Text style={styles.label}>Tổng doanh thu</Text>
+          <TouchableOpacity onPress={() => setVisible((v) => !v)} hitSlop={10}>
+            <MaterialIcons
+              name={visible ? 'visibility' : 'visibility-off'}
+              size={16}
+              color='#9CA3AF'
+            />
+          </TouchableOpacity>
+        </View>
         <TouchableOpacity
           style={styles.detailBtn}
           onPress={() => router.push('/(app)/wallet')}
@@ -26,7 +43,7 @@ export function EarningsCard() {
       {isLoading ? (
         <ActivityIndicator color='#2463EB' style={{ marginTop: 4 }} />
       ) : (
-        <Text style={styles.amount}>{balance.toLocaleString('vi-VN')} ₫</Text>
+        <Text style={styles.amount}>{visible ? formatNumber(balance, 0) : '********'}</Text>
       )}
     </Animated.View>
   )
@@ -51,6 +68,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 8,
   },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   label: {
     fontSize: 16,
     lineHeight: 20,

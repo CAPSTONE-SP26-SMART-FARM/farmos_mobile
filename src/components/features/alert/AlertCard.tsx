@@ -4,10 +4,10 @@ import { formatRelativeTime } from '@/utils/date'
 import type { Alert, AlertSeverity } from '@/types/alert'
 
 const SEVERITY_META: Record<AlertSeverity, { label: string; color: string; badgeBg: string; badgeText: string }> = {
-  low:      { label: 'Thấp',         color: '#16A249', badgeBg: '#DCFCE7', badgeText: '#166434' },
-  medium:   { label: 'Trung bình',   color: '#DB7706', badgeBg: '#FEF3C8', badgeText: '#92400E' },
-  high:     { label: 'Cao',          color: '#EA580C', badgeBg: '#FFEDD5', badgeText: '#9A3412' },
-  critical: { label: 'Nghiêm trọng', color: '#DC2828', badgeBg: '#FEF1F1', badgeText: '#BA1C1C' },
+  low:      { label: 'Trong ngưỡng', color: '#16A249', badgeBg: '#DCFCE7', badgeText: '#166434' },
+  medium:   { label: 'Gần ngưỡng',  color: '#DB7706', badgeBg: '#FEF3C8', badgeText: '#92400E' },
+  high:     { label: 'Vượt ngưỡng', color: '#DC2828', badgeBg: '#FEE2E2', badgeText: '#991B1B' },
+  critical: { label: 'Nguy hiểm',   color: '#991B1B', badgeBg: '#FEE2E2', badgeText: '#7F1D1D' },
 }
 
 const RESOLVED_META = { label: 'Đã xử lý', badgeBg: '#F3F4F6', badgeText: '#4B5563' }
@@ -28,6 +28,10 @@ export function AlertCard({ item }: { item: Alert }) {
 
   const actual = item.actualValue ? Number(item.actualValue) : null
   const threshold = item.thresholdValue ? Number(item.thresholdValue) : null
+  // max threshold: actual/threshold (87/85 → full). min threshold: threshold/actual (22/20.5 → full)
+  const progress = actual !== null && threshold !== null && threshold > 0
+    ? Math.min(actual >= threshold ? actual / threshold : threshold / actual, 1)
+    : 1
 
   return (
     <View style={styles.card}>
@@ -46,14 +50,17 @@ export function AlertCard({ item }: { item: Alert }) {
         <View
           style={[
             styles.progressFill,
-            { width: '100%', backgroundColor: resolved ? '#9CA3AF' : severity.color },
+            {
+              width: `${progress * 100}%`,
+              backgroundColor: resolved ? '#9CA3AF' : severity.color,
+            },
           ]}
         />
       </View>
 
       <View style={styles.metaRow}>
         <Text style={styles.metaText}>
-          {threshold !== null ? `Ngưỡng ${threshold}` : item.zoneName}
+          {threshold !== null ? `${item.zoneName} · Ngưỡng ${threshold}` : item.zoneName}
         </Text>
         <Text style={styles.metaText}>{formatRelativeTime(item.createdAt)}</Text>
       </View>
