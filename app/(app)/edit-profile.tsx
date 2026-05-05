@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
 import { FormTextField } from '@/components/react-hook-form/FormTextField'
-import { PrimaryButton, Text, TopBar } from '@/components/ui'
+import { PrimaryButton, Text, TextField, TopBar } from '@/components/ui'
 
 const schema = z.object({
   fullName: z.string().min(2, 'Họ tên ít nhất 2 ký tự').max(255),
@@ -19,7 +19,7 @@ export default function EditProfileScreen() {
   const { user, updateProfile, isLoading } = useAuth()
   const { showToast } = useToast()
 
-  const { control, handleSubmit, formState: { isDirty } } = useForm<EditForm>({
+  const { control, handleSubmit } = useForm<EditForm>({
     resolver: zodResolver(schema),
     defaultValues: {
       fullName: user?.fullName ?? '',
@@ -29,61 +29,51 @@ export default function EditProfileScreen() {
 
   const onSubmit = async (data: EditForm) => {
     try {
-      await updateProfile({
-        fullName: data.fullName,
-        phone: data.phone || null,
-      })
+      await updateProfile({ fullName: data.fullName, phone: data.phone || null })
       showToast.success({ message: 'Cập nhật hồ sơ thành công!' })
       router.back()
     } catch (err: any) {
-      showToast.error({
-        message: err?.response?.data?.message ?? 'Cập nhật thất bại, vui lòng thử lại',
-      })
+      showToast.error({ message: err?.response?.data?.message ?? 'Cập nhật thất bại, vui lòng thử lại' })
     }
   }
 
   return (
     <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <TopBar title='Chỉnh sửa hồ sơ' />
-
+      <TopBar title='Chỉnh sửa hồ sơ' />
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView
-          contentContainerStyle={styles.scroll}
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps='handled'
           showsVerticalScrollIndicator={false}
         >
-          {/* Email — read-only, không cho sửa */}
-          <View style={styles.readOnlyField}>
-            <Text style={styles.readOnlyLabel}>Email</Text>
-            <Text style={styles.readOnlyValue}>{user?.email}</Text>
-          </View>
-
-          <View style={styles.form}>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Thông tin cá nhân</Text>
+            <TextField label='Email' value={user?.email ?? ''} readOnly showError={false} />
             <FormTextField
               control={control}
               name='fullName'
               label='Họ và tên'
               autoCapitalize='words'
+              showError={false}
             />
             <FormTextField
               control={control}
               name='phone'
               label='Số điện thoại (tuỳ chọn)'
               keyboardType='phone-pad'
+              showError={false}
             />
           </View>
+        </ScrollView>
 
+        <View style={styles.footer}>
           <PrimaryButton
             title='Lưu thay đổi'
             loading={isLoading}
-            disabled={!isDirty}
             onPress={handleSubmit(onSubmit)}
-            style={styles.saveBtn}
           />
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   )
@@ -92,18 +82,15 @@ export default function EditProfileScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#FFFFFF' },
   flex: { flex: 1 },
-  scroll: { padding: 16, gap: 16 },
-  readOnlyField: {
-    backgroundColor: '#F0F2F5',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 4,
+  scroll: { flex: 1, backgroundColor: '#F3F4F6' },
+  scrollContent: { padding: 16, gap: 16 },
+  footer: { padding: 20, backgroundColor: '#FFFFFF' },
+  section: {
+    backgroundColor: '#FFFFFF', borderRadius: 16,
+    padding: 16, gap: 16,
   },
-  readOnlyLabel: { fontSize: 12, color: '#9CA3AF', fontFamily: 'Inter_400Regular' },
-  readOnlyValue: { fontSize: 15, color: '#4B5563', fontFamily: 'Inter_500Medium' },
-  form: { gap: 16 },
-  saveBtn: { marginTop: 8 },
+  sectionTitle: {
+    fontSize: 16, lineHeight: 24,
+    color: '#111827', fontFamily: 'Inter_600SemiBold',
+  },
 })

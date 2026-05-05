@@ -27,6 +27,9 @@ export default function AppLayout() {
       <Stack.Screen name='withdrawal/index' />
       <Stack.Screen name='withdrawal/[id]' />
       <Stack.Screen name='withdrawal/new' options={formSheetOptions} />
+      <Stack.Screen name='edit-doctor-profile' />
+      <Stack.Screen name='farmer-profile-info' />
+      <Stack.Screen name='doctor-profile-info' />
     </Stack>
   )
 }
