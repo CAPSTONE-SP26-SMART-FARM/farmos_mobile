@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { ScrollView, StyleSheet, Pressable } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter, type Href } from 'expo-router'
@@ -8,7 +9,7 @@ const EditIcon = icons.editNoBackgroundSvg
 
 interface Props {
   editPath: Href
-  children: React.ReactNode
+  children: ReactNode
 }
 
 export function ProfileInfoLayout({ editPath, children }: Props) {

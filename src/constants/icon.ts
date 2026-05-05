@@ -35,6 +35,7 @@ import sendMoneySvg from '@/assets/icons/send_money.svg'
 import timerPauseSvg from '@/assets/icons/timer_pause.svg'
 import financeChipSvg from '@/assets/icons/finance_chip.svg'
 import outputSvg from '@/assets/icons/output.svg'
+import dolarSvg from '@/assets/icons/icon-dolar.svg'
 
 export const icons = {
   // Tab icons
@@ -85,4 +86,5 @@ export const icons = {
   timerPauseSvg,
   financeChipSvg,
   outputSvg,
+  dolarSvg,
 }
