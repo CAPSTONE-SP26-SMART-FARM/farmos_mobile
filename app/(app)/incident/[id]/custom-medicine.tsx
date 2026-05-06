@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   View, ScrollView, StyleSheet, KeyboardAvoidingView, Platform,
   Keyboard, TouchableWithoutFeedback,
@@ -41,10 +41,13 @@ export default function CustomMedicineScreen() {
     dosage !== initial.dosage ||
     frequency !== initial.frequency ||
     usageInstructions !== initial.usageInstructions
-  const justSavedRef = useRef(false)
-  usePreventUnsavedChanges(isDirty && !justSavedRef.current, {
+  const [justSaved, setJustSaved] = useState(false)
+  usePreventUnsavedChanges(isDirty && !justSaved, {
     message: 'Bạn đang nhập thông tin thuốc. Thoát ra sẽ mất các thay đổi.',
   })
+  useEffect(() => {
+    if (justSaved) router.back()
+  }, [justSaved])
 
   const handleSave = () => {
     if (!canSave) {
@@ -69,8 +72,7 @@ export default function CustomMedicineScreen() {
         usageInstructions: usageInstructions.trim(),
       })
     }
-    justSavedRef.current = true
-    router.back()
+    setJustSaved(true)
   }
 
   return (
