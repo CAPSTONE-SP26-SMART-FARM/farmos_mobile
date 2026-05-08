@@ -1,14 +1,14 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState, useEffect } from 'react'
 import {
   View, ScrollView, StyleSheet, KeyboardAvoidingView, Platform,
-  Keyboard, TouchableWithoutFeedback, TouchableOpacity, Image,
+  Keyboard, TouchableWithoutFeedback, TouchableOpacity, Image, Animated as RNAnimated,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as ImagePicker from 'expo-image-picker'
 import { Stack, useRouter } from 'expo-router'
 import { Text, TextField, SelectField } from '@/components/ui'
 import { SheetHeader } from '@/components/features/incident/SheetHeader'
-import { useCreateIncident, useMyMilestones } from '@/hooks/useIncident'
+import { useCreateIncident, useMyMilestones, useTicketBalance } from '@/hooks/useIncident'
 import { useActiveTicketCategories } from '@/hooks/useTicketCategory'
 import type { TicketCategory } from '@/types/ticketCategory'
 import { useToast } from '@/hooks/useToast'
@@ -34,11 +34,14 @@ const MAX_IMAGES = 3
 
 export default function CreateIncidentScreen() {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const { showToast } = useToast()
   const { mutate, isPending } = useCreateIncident()
   const { data: milestones = [], isLoading: isLoadingMilestones } = useMyMilestones()
 
   const { data: categories = [], isLoading: isLoadingCategories } = useActiveTicketCategories()
+  const { data: balanceRaw } = useTicketBalance()
+  const balanceItems = Array.isArray(balanceRaw) ? balanceRaw : []
   const [milestone, setMilestone] = useState<FarmerMyMilestone | null>(null)
   const [category, setCategory] = useState<TicketCategory | null>(null)
   const [severity, setSeverity] = useState<IncidentSeverity>('medium')
@@ -46,10 +49,34 @@ export default function CreateIncidentScreen() {
   const [description, setDescription] = useState('')
   const [imageUris, setImageUris] = useState<string[]>([])
   const [isUploading, setIsUploading] = useState(false)
+  const [inlineError, setInlineError] = useState<string | null>(null)
+  const errorOpacity = useRef(new RNAnimated.Value(0)).current
+  const justSavedRef = useRef(false)
+
+  useEffect(() => {
+    if (!inlineError) return
+    RNAnimated.timing(errorOpacity, { toValue: 1, duration: 200, useNativeDriver: true }).start()
+    const t = setTimeout(() => {
+      RNAnimated.timing(errorOpacity, { toValue: 0, duration: 300, useNativeDriver: true }).start(
+        () => setInlineError(null)
+      )
+    }, 3500)
+    return () => clearTimeout(t)
+  }, [inlineError])
+
+  const balanceMap = useMemo(
+    () => Object.fromEntries(balanceItems.map((b) => [b.categoryConfigId, b.total])),
+    [balanceItems],
+  )
 
   const categoryOptions = useMemo(
-    () => categories.map((c) => ({ ...c, label: c.name, subtitle: `${(c.unitPrice / 1000).toFixed(0)}k / lần` })),
-    [categories],
+    () => categories.map((c) => ({
+      ...c,
+      label: c.name,
+      subtitle: `${(c.unitPrice / 1000).toFixed(0)}k / lần`,
+      noQuota: balanceItems.length > 0 && (balanceMap[c.id] ?? -1) === 0,
+    })),
+    [categories, balanceItems, balanceMap],
   )
 
   const milestoneOptions = useMemo(
@@ -115,7 +142,7 @@ export default function CreateIncidentScreen() {
           justSavedRef.current = true
           router.back()
         },
-        onError: (err) => showToast.error({ message: getErrorMessage(err, 'Gửi báo cáo thất bại') }),
+        onError: (err) => setInlineError(getErrorMessage(err, 'Gửi báo cáo thất bại')),
       },
     )
   }
@@ -124,15 +151,16 @@ export default function CreateIncidentScreen() {
 
   const isDirty =
     !!milestone || !!category || title.length > 0 || description.length > 0 || imageUris.length > 0
-  const justSavedRef = useRef(false)
   usePreventUnsavedChanges(isDirty && !justSavedRef.current && !isLoading, {
     message: 'Bạn đang nhập báo cáo sự cố. Thoát ra sẽ mất các thay đổi.',
   })
 
   return (
-    <SafeAreaView edges={['bottom', 'left', 'right']} style={styles.container}>
+    <View style={styles.container}>
       <Stack.Screen options={{ gestureEnabled: !isDirty }} />
-      <SheetHeader
+
+      <SafeAreaView edges={['bottom', 'left', 'right']} style={styles.flex}>
+        <SheetHeader
         title='Báo cáo sự cố'
         onCancel={() => router.back()}
         onDone={handleSubmit}
@@ -164,6 +192,17 @@ export default function CreateIncidentScreen() {
                   selectedValue={category?.id ?? null}
                   onSelect={(item) => setCategory(item)}
                   showError={false}
+                  disabledExtractor={(item) => item.noQuota === true}
+                  renderLabel={(item) => (
+                    <View style={styles.categoryLabelRow}>
+                      <Text style={styles.categoryLabelText}>{item.name}</Text>
+                      {item.noQuota && (
+                        <View style={styles.noQuotaBadge}>
+                          <Text style={styles.noQuotaBadgeText}>Hết quota</Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
                 />
 
                 <SelectField
@@ -240,13 +279,21 @@ export default function CreateIncidentScreen() {
           </ScrollView>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+      </SafeAreaView>
+
+
+      {inlineError && (
+        <RNAnimated.View style={[styles.inlineToast, { bottom: insets.bottom + 12, opacity: errorOpacity }]}>
+          <Text style={styles.inlineToastText}>{inlineError}</Text>
+        </RNAnimated.View>
+      )}
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F3F4F6' },
-  flex: { flex: 1 },
+  flex: { flex: 1, backgroundColor: '#F3F4F6' },
   scrollView: { flex: 1, backgroundColor: '#F3F4F6' },
   scrollContent: { padding: 16, paddingBottom: 24 },
   card: {
@@ -300,4 +347,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   addBtnText: { fontSize: 11, color: '#9CA3AF', fontFamily: 'Inter_400Regular' },
+
+  categoryLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
+  categoryLabelText: { fontSize: 15, color: '#111827', fontFamily: 'Inter_400Regular', flex: 1 },
+  noQuotaBadge: { backgroundColor: '#FEF2F2', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
+  noQuotaBadgeText: { fontSize: 11, color: '#DC2626', fontFamily: 'Inter_500Medium' },
+
+  inlineToast: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    zIndex: 100,
+    backgroundColor: '#1E293B',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  inlineToastText: { color: '#FFFFFF', fontSize: 14, fontFamily: 'Inter_500Medium', lineHeight: 20 },
 })

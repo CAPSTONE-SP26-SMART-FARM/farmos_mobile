@@ -8,6 +8,7 @@ import type {
   UpsertDoctorProfileRequest,
   SubmitDoctorRequestRequest,
   UpdateDoctorOnlineStatusRequest,
+  DoctorDqs,
 } from '@/types/doctor'
 
 export const doctorApi = {
@@ -61,5 +62,10 @@ export const doctorApi = {
   getMyAssignmentDetail: (id: string) =>
     apiClient
       .get<{ data: any }>(`/doctor-assignment/doctor/my-assignments/${id}`)
+      .then((r) => r.data.data),
+
+  getDqs: () =>
+    apiClient
+      .get<{ data: DoctorDqs }>('/doctor/me/dqs')
       .then((r) => r.data.data),
 }

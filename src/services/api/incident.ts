@@ -1,5 +1,5 @@
 import { apiClient } from './client'
-import type { CreateIncidentBody, IncidentTicket, ListIncidentTicketsRes } from '@/types/incident'
+import type { CreateIncidentBody, IncidentTicket, ListIncidentTicketsRes, TicketBalanceItem } from '@/types/incident'
 import type { FarmerMyMilestone, FarmerAssignment } from '@/types/production'
 
 export const incidentApi = {
@@ -32,6 +32,11 @@ export const incidentApi = {
   myAssignments: () =>
     apiClient
       .get<{ data: { data: FarmerAssignment[] } }>('/sensor-reading/farmer/my-assignments')
+      .then((r) => r.data.data.data),
+
+  getTicketBalance: () =>
+    apiClient
+      .get<{ data: { data: TicketBalanceItem[] } }>('/me/ticket-balance')
       .then((r) => r.data.data.data),
 
   // Doctor endpoints — giữ v1

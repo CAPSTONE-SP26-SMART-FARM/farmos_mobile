@@ -185,6 +185,7 @@ BottomSheet.SelectOption = <T extends any>({
   valueExtractor,
   selectedValue,
   renderLabel,
+  disabledExtractor,
   onSelect
 }: {
   data: T[]
@@ -194,6 +195,7 @@ BottomSheet.SelectOption = <T extends any>({
   valueExtractor: (item: T) => string | number | undefined
   selectedValue?: string | number
   renderLabel?: (item: T) => React.ReactNode
+  disabledExtractor?: (item: T) => boolean
   onSelect: (item: T) => void
 }) => (
   <View style={styles.content}>
@@ -206,6 +208,7 @@ BottomSheet.SelectOption = <T extends any>({
         isLast={index === data.length - 1}
         onPress={() => onSelect(item)}
         renderLabel={renderLabel ? () => renderLabel(item) : undefined}
+        disabled={disabledExtractor?.(item) ?? false}
       />
     ))}
   </View>
@@ -217,7 +220,8 @@ BottomSheet.SelectItem = ({
   isSelected,
   onPress,
   isLast = false,
-  renderLabel
+  renderLabel,
+  disabled = false,
 }: {
   label: string
   subtitle?: string
@@ -225,14 +229,15 @@ BottomSheet.SelectItem = ({
   onPress?: () => void
   isLast?: boolean
   renderLabel?: () => React.ReactNode
+  disabled?: boolean
 }) => (
   <TouchableOpacity
-    style={[styles.option, isLast && styles.optionLast]}
-    onPress={onPress}
-    activeOpacity={0.7}
+    style={[styles.option, isLast && styles.optionLast, disabled && styles.optionDisabled]}
+    onPress={disabled ? undefined : onPress}
+    activeOpacity={disabled ? 1 : 0.7}
   >
     <View style={styles.optionContent}>
-      {renderLabel ? renderLabel() : <Text style={styles.optionLabel}>{label}</Text>}
+      {renderLabel ? renderLabel() : <Text style={[styles.optionLabel, disabled && styles.optionLabelDisabled]}>{label}</Text>}
       {subtitle && !renderLabel && <Text style={styles.optionSubtitle}>{subtitle}</Text>}
     </View>
     {isSelected && <Ionicons name='checkmark' size={20} color='#2463EB' />}
@@ -361,6 +366,8 @@ const styles = StyleSheet.create({
   optionContent: { flex: 1, marginRight: 12 },
   optionLabel: { fontSize: 16, color: '#1F2937', lineHeight: 24 },
   optionSubtitle: { fontSize: 14, color: '#6B7280', marginTop: 2 },
+  optionDisabled: { opacity: 0.4 },
+  optionLabelDisabled: { color: '#9CA3AF' },
   radioList: { paddingHorizontal: 5 },
   radioOptionRow: {
     flexDirection: 'row',

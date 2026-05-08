@@ -1,12 +1,21 @@
 import { View, ActivityIndicator } from 'react-native'
 import { Text } from '@/components/ui'
 import { ProfileInfoLayout, s } from '@/components/features/profile/ProfileInfoLayout'
-import { useDoctorProfile, useDoctorRequestsList } from '@/hooks/useDoctor'
+import { useDoctorProfile, useDoctorRequestsList, useDoctorDqs } from '@/hooks/useDoctor'
 import { DOCTOR_TYPE_LABEL, REGISTRATION_STATUS_CONFIG } from '@/constants/doctor'
+import type { DoctorTier } from '@/types/doctor'
+
+const TIER_CONFIG: Record<DoctorTier, { bg: string; color: string }> = {
+  PLATINUM: { bg: '#EDE9FE', color: '#7C3AED' },
+  GOLD:     { bg: '#FEF3C7', color: '#D97706' },
+  SILVER:   { bg: '#F3F4F6', color: '#6B7280' },
+  BRONZE:   { bg: '#FEF9C3', color: '#92400E' },
+}
 
 export default function DoctorProfileInfoScreen() {
   const { data: profile, isLoading: profileLoading } = useDoctorProfile()
   const { data: requestsData } = useDoctorRequestsList()
+  const { data: dqs } = useDoctorDqs()
 
   const latestRequest = requestsData?.data?.[0]
   const registrationStatus = latestRequest?.registrationStatus
@@ -20,24 +29,28 @@ export default function DoctorProfileInfoScreen() {
   return (
     <ProfileInfoLayout editPath='/(app)/edit-doctor-profile'>
       <View style={s.section}>
-        <Text style={s.sectionTitle}>Trạng thái đăng ký</Text>
+        <Text style={s.sectionTitle}>Thứ hạng chất lượng</Text>
         <View style={s.infoRow}>
-          <Text style={s.infoLabel}>Trạng thái</Text>
-          <View style={[s.statusBadge, { backgroundColor: statusConfig?.bg ?? '#F3F4F6' }]}>
-            <Text style={[s.statusText, { color: statusConfig?.color ?? '#6B7280' }]}>
-              {statusConfig?.label ?? 'Chưa gửi yêu cầu'}
-            </Text>
-          </View>
+          <Text style={s.infoLabel}>Hạng</Text>
+          {dqs?.latest ? (
+            <View style={[s.statusBadge, { backgroundColor: TIER_CONFIG[dqs.latest.tier].bg }]}>
+              <Text style={[s.statusText, { color: TIER_CONFIG[dqs.latest.tier].color }]}>
+                {dqs.latest.tier}
+              </Text>
+            </View>
+          ) : (
+            <Text style={[s.infoValue, s.infoValueGray]}>Chưa có dữ liệu</Text>
+          )}
         </View>
-        {latestRequest?.reason ? (
+        {dqs?.latest && (
           <>
             <View style={s.divider} />
             <View style={s.infoRow}>
-              <Text style={s.infoLabel}>Lý do</Text>
-              <Text style={[s.infoValue, { color: '#991B1B' }]}>{latestRequest.reason}</Text>
+              <Text style={s.infoLabel}>Điểm tổng</Text>
+              <Text style={s.infoValue}>{dqs.latest.totalScore.toFixed(1)}</Text>
             </View>
           </>
-        ) : null}
+        )}
       </View>
 
       <View style={s.section}>
@@ -83,6 +96,27 @@ export default function DoctorProfileInfoScreen() {
         ) : (
           <Text style={s.emptyText}>Chưa có hồ sơ chuyên môn. Nhấn chỉnh sửa để tạo hồ sơ.</Text>
         )}
+      </View>
+
+      <View style={s.section}>
+        <Text style={s.sectionTitle}>Trạng thái đăng ký</Text>
+        <View style={s.infoRow}>
+          <Text style={s.infoLabel}>Trạng thái</Text>
+          <View style={[s.statusBadge, { backgroundColor: statusConfig?.bg ?? '#F3F4F6' }]}>
+            <Text style={[s.statusText, { color: statusConfig?.color ?? '#6B7280' }]}>
+              {statusConfig?.label ?? 'Chưa gửi yêu cầu'}
+            </Text>
+          </View>
+        </View>
+        {latestRequest?.reason ? (
+          <>
+            <View style={s.divider} />
+            <View style={s.infoRow}>
+              <Text style={s.infoLabel}>Lý do</Text>
+              <Text style={[s.infoValue, { color: '#991B1B' }]}>{latestRequest.reason}</Text>
+            </View>
+          </>
+        ) : null}
       </View>
     </ProfileInfoLayout>
   )

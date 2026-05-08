@@ -35,6 +35,7 @@ export type IncidentTicket = {
   description: string
   createdAt: string
   updatedAt: string
+  assignedAt: string | null
   createdBy: string
   assignedTo: string | null
   farmId: string | null
@@ -47,6 +48,7 @@ export type IncidentTicket = {
   // v2 fields
   categoryConfigId: string | null
   unitPriceSnapshot: number | null
+  commissionPercentSnapshot: number | null
   source: TicketSource | null
   sourceLedgerId: string | null
 }
@@ -63,4 +65,16 @@ export type CreateIncidentBody = {
 export type ListIncidentTicketsRes = {
   data: IncidentTicket[]
   meta: { page: number; limit: number; totalItems: number; totalPages: number }
+}
+
+export type TicketBalanceItem = {
+  categoryConfigId: string
+  categoryCode: string
+  categoryName: string
+  featureCode: string
+  creditType: string
+  unitPrice: number
+  fromSubscription: number
+  fromPurchased: number
+  total: number
 }

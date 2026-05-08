@@ -135,8 +135,8 @@ export default function IncidentsScreen() {
   const isBroadcastTab = isDoctor && doctorFilter === 'broadcasts'
 
   const farmerQuery = useIncidentList()
-  const doctorQuery = useDoctorIncidentList(1, endedParam)
-  const broadcastQuery = usePendingBroadcasts()
+  const doctorQuery = useDoctorIncidentList(1, endedParam, isDoctor)
+  const broadcastQuery = usePendingBroadcasts(isDoctor)
   const { data, isLoading, isError, refetch } = isDoctor
     ? (isBroadcastTab ? { data: null, isLoading: false, isError: false, refetch: broadcastQuery.refetch } : doctorQuery)
     : farmerQuery
@@ -147,7 +147,7 @@ export default function IncidentsScreen() {
     [categories],
   )
 
-  const { data: doctorProfile } = useDoctorProfile()
+  const { data: doctorProfile } = useDoctorProfile(isDoctor)
   const rawTickets = (data as any)?.data ?? []
   // Doctor "Đang xử lý": chỉ show ticket doctor đã accept (assignee là mình)
   // Farmer: client-side filter theo status

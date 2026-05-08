@@ -27,6 +27,9 @@ export function IncidentInfoList({ ticket, isDoctor }: IncidentInfoListProps) {
         <Row label='Bác sĩ phụ trách' value={ticket.assignee.fullName} />
       )}
       <Row label='Ngày tạo' value={formatDateTime(ticket.createdAt)} />
+      {isDoctor && ticket.commissionPercentSnapshot != null && (
+        <Row label='Hoa hồng' value={`${ticket.commissionPercentSnapshot}%`} />
+      )}
     </View>
   )
 }

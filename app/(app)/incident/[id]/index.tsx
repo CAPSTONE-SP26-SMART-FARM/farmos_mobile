@@ -33,6 +33,21 @@ import type { AbandonResolution } from '@/types/ticketLifecycle'
 
 const CLOSED_STATUSES = ['closed', 'cancelled'] as const
 const PRESCRIBABLE_STATUSES = ['assigned', 'in_progress'] as const
+
+const INACTIVITY_LIMIT_MS: Record<string, number> = {
+  critical: 60 * 60 * 1000,
+  high: 45 * 60 * 1000,
+  medium: 30 * 60 * 1000,
+  low: 30 * 60 * 1000,
+}
+
+function formatCountdown(ms: number) {
+  const total = Math.floor(ms / 1000)
+  const m = Math.floor(total / 60)
+  const s = total % 60
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}
+
 const SOURCE_LABEL: Record<string, string> = {
   SUBSCRIPTION_GRANT: 'Từ gói',
   PURCHASED: 'Mua lẻ',
@@ -52,6 +67,7 @@ export default function IncidentDetailScreen() {
   const [abandonModalVisible, setAbandonModalVisible] = useState(false)
   const [addendumVisible, setAddendumVisible] = useState(false)
   const [addendumContent, setAddendumContent] = useState('')
+  const [timeLeft, setTimeLeft] = useState<number | null>(null)
 
   const { data: categories = [] } = useActiveTicketCategories(!isDoctor)
   const { mutate: cancelIncident, isPending: isCancelling } = useCancelIncident()
@@ -106,6 +122,18 @@ export default function IncidentDetailScreen() {
       socketService.off('ticket.fallback-required', onFallback)
     }
   }, [id, qc, showToast])
+
+  useEffect(() => {
+    const isAssignee = isDoctor && data?.assignee?.id === user?.id
+    const active = isAssignee && data?.assignedAt && PRESCRIBABLE_STATUSES.includes(data?.status as any)
+    if (!active) { setTimeLeft(null); return }
+    const limit = INACTIVITY_LIMIT_MS[data!.severity] ?? 30 * 60 * 1000
+    const deadline = new Date(data!.assignedAt!).getTime() + limit
+    const tick = () => setTimeLeft(Math.max(0, deadline - Date.now()))
+    tick()
+    const timer = setInterval(tick, 1000)
+    return () => clearInterval(timer)
+  }, [isDoctor, user?.id, data?.assignee?.id, data?.assignedAt, data?.severity, data?.status])
 
   const status = data?.status ?? ''
   const isAssignee = isDoctor && data?.assignee?.id === user?.id
@@ -273,6 +301,14 @@ export default function IncidentDetailScreen() {
               </View>
             ) : null}
           </View>
+          {timeLeft !== null && (
+            <View style={[styles.timerBanner, timeLeft < 10 * 60 * 1000 && styles.timerBannerUrgent]}>
+              <Text style={[styles.timerText, timeLeft < 10 * 60 * 1000 && styles.timerTextUrgent]}>
+                ⏱  Còn lại: {formatCountdown(timeLeft)}
+              </Text>
+            </View>
+          )}
+
           <View style={styles.divider} />
           <Text style={styles.cardLabel}>Mô tả</Text>
           <Text style={styles.description}>{data.description}</Text>
@@ -423,6 +459,13 @@ const styles = StyleSheet.create({
 
   attachRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   attachThumb: { width: 80, height: 80, borderRadius: 10, backgroundColor: '#F3F4F6' },
+
+  timerBanner: {
+    marginBottom: 12,
+  },
+  timerBannerUrgent: {},
+  timerText: { fontSize: 13, fontFamily: 'Inter_500Medium', color: '#059669' },
+  timerTextUrgent: { color: '#D97706' },
 
   withdrawalBanner: {
     backgroundColor: '#FEF2F2',

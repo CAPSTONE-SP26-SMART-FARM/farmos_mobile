@@ -81,3 +81,21 @@ export interface ListDoctorAssignmentsRes {
   data: DoctorAssignmentWithOwner[]
   meta: { page: number; limit: number; totalItems: number; totalPages: number }
 }
+
+export type DoctorTier = 'PLATINUM' | 'GOLD' | 'SILVER' | 'BRONZE'
+
+export interface DoctorDqsSnapshot {
+  tier: DoctorTier
+  totalScore: number
+  ratingScore: number
+  frequencyScore: number
+  slaScore: number
+  acceptanceScore: number
+  onlineScore: number
+  snapshotDate: string
+}
+
+export interface DoctorDqs {
+  doctorId: string
+  latest: DoctorDqsSnapshot | null
+}

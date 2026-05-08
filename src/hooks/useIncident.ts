@@ -53,3 +53,11 @@ export function useMyAssignments() {
     queryFn: () => incidentApi.myAssignments(),
   })
 }
+
+export function useTicketBalance() {
+  return useQuery({
+    queryKey: queryKeys.ticketBalance,
+    queryFn: () => incidentApi.getTicketBalance(),
+    staleTime: 60_000,
+  })
+}
