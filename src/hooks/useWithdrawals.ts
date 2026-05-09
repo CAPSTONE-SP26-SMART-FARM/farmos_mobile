@@ -76,17 +76,20 @@ export function useWithdrawalListeners() {
   const { showToast } = useToast()
 
   useEffect(() => {
-    const onApproved = () => {
+    const onApproved = (payload: { withdrawalId?: string }) => {
       qc.invalidateQueries({ queryKey: queryKeys.withdrawal.list() })
+      if (payload?.withdrawalId) qc.invalidateQueries({ queryKey: queryKeys.withdrawal.detail(payload.withdrawalId) })
       showToast.success({ message: 'Yêu cầu rút đã được duyệt' })
     }
-    const onPaid = (payload: { transferReference?: string }) => {
+    const onPaid = (payload: { withdrawalId?: string; transferReference?: string }) => {
       qc.invalidateQueries({ queryKey: queryKeys.withdrawal.list() })
+      if (payload?.withdrawalId) qc.invalidateQueries({ queryKey: queryKeys.withdrawal.detail(payload.withdrawalId) })
       const ref = payload?.transferReference || 'N/A'
       showToast.success({ message: `Đã chuyển khoản: ${ref}` })
     }
-    const onRejected = (payload: { rejectReason?: string }) => {
+    const onRejected = (payload: { withdrawalId?: string; rejectReason?: string }) => {
       qc.invalidateQueries({ queryKey: queryKeys.withdrawal.list() })
+      if (payload?.withdrawalId) qc.invalidateQueries({ queryKey: queryKeys.withdrawal.detail(payload.withdrawalId) })
       const reason = payload?.rejectReason || 'Không rõ'
       showToast.error({ message: `Từ chối: ${reason}` })
     }
