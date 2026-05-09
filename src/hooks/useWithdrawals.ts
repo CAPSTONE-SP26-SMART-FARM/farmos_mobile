@@ -31,6 +31,8 @@ export function useCreateWithdrawal() {
     mutationFn: (body: CreateWithdrawalBody) => withdrawalApi.create(body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.withdrawal.list() })
+      qc.invalidateQueries({ queryKey: queryKeys.doctorWallet.summary })
+      qc.invalidateQueries({ queryKey: queryKeys.doctorWallet.transactions() })
     },
   })
 }
