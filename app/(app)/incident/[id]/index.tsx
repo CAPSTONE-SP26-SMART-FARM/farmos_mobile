@@ -115,11 +115,20 @@ export default function IncidentDetailScreen() {
     const onFallback = ({ ticketId }: any) => {
       if (ticketId === id) setAbandonModalVisible(true)
     }
+    const onClosed = ({ ticketId }: any) => {
+      if (ticketId !== id) return
+      qc.invalidateQueries({ queryKey: queryKeys.incident.detail(id) })
+      qc.invalidateQueries({ queryKey: queryKeys.incident.doctorDetail(id) })
+      qc.invalidateQueries({ queryKey: queryKeys.incident.list() })
+      qc.invalidateQueries({ queryKey: queryKeys.incident.doctorList() })
+    }
     socketService.on('ticket.resolved', onResolved)
     socketService.on('ticket.fallback-required', onFallback)
+    socketService.on('ticket.closed', onClosed)
     return () => {
       socketService.off('ticket.resolved', onResolved)
       socketService.off('ticket.fallback-required', onFallback)
+      socketService.off('ticket.closed', onClosed)
     }
   }, [id, qc, showToast])
 
