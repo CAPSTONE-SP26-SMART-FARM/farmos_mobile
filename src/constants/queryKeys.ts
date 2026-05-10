@@ -19,6 +19,7 @@ export const queryKeys = {
     requestDetail: (id: string) => ['doctor', 'request', id] as const,
     myAssignments: (page?: number) => ['doctor', 'my-assignments', page] as const,
     assignmentDetail: (id: string) => ['doctor', 'assignment', id] as const,
+    dqs: ['doctor', 'dqs'] as const,
   },
   productionMilestone: {
     myMilestones: ['production-milestone', 'my-milestones'] as const,
@@ -46,6 +47,7 @@ export const queryKeys = {
   ticketCategory: {
     active: ['ticket-category', 'active'] as const,
   },
+  ticketBalance: ['ticket-balance'] as const,
   broadcast: {
     pending: ['broadcast', 'pending'] as const,
   },

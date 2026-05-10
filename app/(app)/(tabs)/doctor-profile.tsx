@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
 import { useDoctorProfile, useDoctorRequestsList, useUpdateDoctorOnlineStatus } from '@/hooks/useDoctor'
 
+
 export default function DoctorProfileScreen() {
   const { user, logout } = useAuth()
   const { showToast } = useToast()
@@ -56,7 +57,7 @@ export default function DoctorProfileScreen() {
           <Text style={styles.sub}>{user?.email ?? ''}</Text>
         </View>
 
-        <View style={styles.menuContainer}>
+<View style={styles.menuContainer}>
           <View style={styles.menuCard}>
             <View style={styles.menuLeft}>
               <MaterialIcons
@@ -134,4 +135,5 @@ const styles = StyleSheet.create({
   menuLabel: { fontSize: 15, color: '#111827', fontFamily: 'Inter_500Medium' },
   menuSub: { fontSize: 12, color: '#6B7280', fontFamily: 'Inter_400Regular', marginTop: 1 },
   menuLabelDanger: { fontSize: 15, color: '#EF4444', fontFamily: 'Inter_500Medium' },
+
 })

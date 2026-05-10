@@ -61,6 +61,7 @@ export interface SelectFieldProps {
   selectedValue?: string | number | null
   onSelect?: (item: any) => void
   renderLabel?: (item: any) => React.ReactNode
+  disabledExtractor?: (item: any) => boolean
   height?: DimensionValue
 }
 
@@ -91,6 +92,7 @@ export const SelectField = forwardRef<View, SelectFieldProps>(
       selectedValue,
       onSelect,
       renderLabel,
+      disabledExtractor,
       height
     },
     ref
@@ -150,7 +152,7 @@ export const SelectField = forwardRef<View, SelectFieldProps>(
             containerStyle={
               variant === 'radio'
                 ? { height: height || '80%', paddingHorizontal: 16 }
-                : { height: height || '50%' }
+                : height ? { height } : {}
             }
           >
             <BottomSheet.Header
@@ -190,6 +192,7 @@ export const SelectField = forwardRef<View, SelectFieldProps>(
                   valueExtractor={valueExtractor as any}
                   selectedValue={selectedValue as string | number}
                   renderLabel={renderLabel}
+                  disabledExtractor={disabledExtractor}
                   onSelect={handleSelectOption}
                 />
               </BottomSheet.ScrollView>

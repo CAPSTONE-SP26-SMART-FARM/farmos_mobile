@@ -9,11 +9,12 @@ import type {
 } from '@/types/doctor'
 
 // Get my doctor profile
-export function useDoctorProfile() {
+export function useDoctorProfile(enabled = true) {
   return useQuery({
     queryKey: queryKeys.doctor.myProfile,
     queryFn: () => doctorApi.getMyProfile(),
     retry: 1,
+    enabled,
   })
 }
 
@@ -88,10 +89,11 @@ export function useDoctorAssignmentDetail(id: string) {
 }
 
 // List incidents for doctor. `ended` === true → chỉ đã kết thúc; false → chỉ đang mở; undefined → tất cả.
-export function useDoctorIncidentList(page = 1, ended?: boolean) {
+export function useDoctorIncidentList(page = 1, ended?: boolean, enabled = true) {
   return useQuery({
     queryKey: queryKeys.incident.doctorList(page, ended),
     queryFn: () => incidentApi.doctorList(page, 20, ended),
+    enabled,
   })
 }
 
@@ -108,6 +110,15 @@ export function useDoctorIncidentDetail(ticketId: string) {
       return error?.response?.status === 403
     },
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
+  })
+}
+
+// Get doctor DQS tier snapshot
+export function useDoctorDqs() {
+  return useQuery({
+    queryKey: queryKeys.doctor.dqs,
+    queryFn: () => doctorApi.getDqs(),
+    staleTime: 5 * 60_000,
   })
 }
 
