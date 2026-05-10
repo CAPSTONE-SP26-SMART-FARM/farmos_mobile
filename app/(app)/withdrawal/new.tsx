@@ -53,7 +53,7 @@ export default function WithdrawalNewScreen() {
   }, [defaultBank, setValue])
 
   const amountStr = watch('amount')
-  const amount = parseInt(amountStr || '0', 10)
+  const amount = parseInt((amountStr || '0').replace(/\./g, ''), 10)
   const amountError =
     amount > 0 && amount < WD_MIN_AMOUNT
       ? `Tối thiểu ${formatVnd(WD_MIN_AMOUNT)}`
@@ -71,7 +71,7 @@ export default function WithdrawalNewScreen() {
 
   const onSubmit = (data: FormData) => {
     Keyboard.dismiss()
-    const amountNum = parseInt(data.amount, 10)
+    const amountNum = parseInt(data.amount.replace(/\./g, ''), 10)
     create(
       {
         amount: amountNum,
@@ -132,7 +132,10 @@ export default function WithdrawalNewScreen() {
                     showClear={false}
                     keyboardType='number-pad'
                     autoFocus
-                    transform={(t) => t.replace(/[^0-9]/g, '')}
+                    transform={(t) => {
+                      const digits = t.replace(/[^0-9]/g, '')
+                      return digits ? Number(digits).toLocaleString('vi-VN') : ''
+                    }}
                   />
                   {!!amountError && <Text style={styles.errorText}>{amountError}</Text>}
 

@@ -57,7 +57,7 @@ export function IncidentFooterActions({
     return (
       <View style={[styles.wrap, styles.wrapStack]}>
         <TouchableOpacity style={[styles.btn, { backgroundColor: '#7C3AED' }]} onPress={onResolve}>
-          <Text style={styles.btnText}>Resolve & Kê đơn thuốc</Text>
+          <Text style={styles.btnText}>Giải quyết & Kê đơn thuốc</Text>
         </TouchableOpacity>
         {canChat && (
           <TouchableOpacity style={[styles.btn, styles.btnSecondary]} onPress={onOpenChat}>
