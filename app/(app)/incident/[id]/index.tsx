@@ -350,7 +350,7 @@ export default function IncidentDetailScreen() {
           <PrescriptionSection
             prescriptions={prescriptions}
             isLoading={rxLoading}
-            canPrescribe={canPrescribe}
+            canPrescribe={false}
             onAdd={() => setRxModalVisible(true)}
             onPressItem={() => router.push(`/(app)/incident/${id}/prescription`)}
           />

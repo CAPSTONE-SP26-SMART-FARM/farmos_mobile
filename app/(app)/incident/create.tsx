@@ -182,7 +182,7 @@ export default function CreateIncidentScreen() {
               <View style={styles.fields}>
                 <SelectField
                   label='Loại sự cố'
-                  value={category ? `${category.name} · ${(category.unitPrice / 1000).toFixed(0)}k` : ''}
+                  value={category ? category.name : ''}
                   options={categoryOptions}
                   bottomSheetTitle='Chọn loại sự cố'
                   disabled={isLoadingCategories}
