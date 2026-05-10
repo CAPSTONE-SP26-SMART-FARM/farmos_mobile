@@ -14,7 +14,7 @@ const SENSOR_UNITS: Record<string, string> = {
   soil_moisture: '%',
   air_temperature: '°C',
   air_humidity: '%',
-  light_intensity: 'lux',
+  light_intensity: '%',
 }
 
 function clamp01(n: number) {
