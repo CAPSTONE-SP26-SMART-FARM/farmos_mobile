@@ -1,36 +1,39 @@
 import { View, StyleSheet } from 'react-native'
+import { MaterialIcons } from '@expo/vector-icons'
 import { Text } from '@/components/ui'
 import { formatRelativeTime } from '@/utils/date'
 import type { SensorReading } from '@/services/api/sensorReading'
 
-const SENSOR_LABELS: Record<string, string> = {
-  soil_moisture: 'Độ ẩm đất',
-  air_temperature: 'Nhiệt độ không khí',
-  air_humidity: 'Độ ẩm không khí',
-  light_intensity: 'Cường độ ánh sáng',
+type SensorMeta = {
+  label: string
+  unit: string
+  icon: React.ComponentProps<typeof MaterialIcons>['name']
+  domain: [number, number]
 }
 
-const SENSOR_UNITS: Record<string, string> = {
-  soil_moisture: '%',
-  air_temperature: '°C',
-  air_humidity: '%',
-  light_intensity: '%',
+const SENSOR_META: Record<string, SensorMeta> = {
+  soil_moisture:    { label: 'Độ ẩm đất',          unit: '%',  icon: 'grass',          domain: [0, 100] },
+  air_temperature:  { label: 'Nhiệt độ không khí', unit: '°C', icon: 'device-thermostat', domain: [0, 50] },
+  air_humidity:     { label: 'Độ ẩm không khí',    unit: '%',  icon: 'water-drop',     domain: [0, 100] },
+  light_intensity:  { label: 'Cường độ ánh sáng',  unit: '%',  icon: 'wb-sunny',       domain: [0, 100] },
 }
+
+const FALLBACK_META: SensorMeta = { label: '', unit: '', icon: 'sensors', domain: [0, 100] }
 
 function clamp01(n: number) {
   if (Number.isNaN(n)) return 0
   return Math.max(0, Math.min(1, n))
 }
 
-const STALE_THRESHOLD_MS = 30 * 60 * 1000 // 30 phút
+const STALE_THRESHOLD_MS = 30 * 60 * 1000
 function isStale(iso: string): boolean {
   const t = new Date(iso).getTime()
   return !Number.isNaN(t) && Date.now() - t > STALE_THRESHOLD_MS
 }
 
 export function SensorCard({ item }: { item: SensorReading }) {
-  const label = SENSOR_LABELS[item.sensorType] ?? item.sensorType
-  const unit = SENSOR_UNITS[item.sensorType] ?? ''
+  const meta = SENSOR_META[item.sensorType] ?? { ...FALLBACK_META, label: item.sensorType }
+  const [domMin, domMax] = meta.domain
 
   const status =
     item.isSafe === null
@@ -44,53 +47,70 @@ export function SensorCard({ item }: { item: SensorReading }) {
   const hasRange = typeof optMin === 'number' && typeof optMax === 'number' && optMax > optMin
   const value = item.value
 
-  // Khi an toàn → fill = vị trí value trong range optimal.
-  // Khi value ngoài range → fill = 100% màu cảnh báo (rõ ràng visually).
-  let progress = 0
-  if (hasRange && value !== null) {
-    if (item.isSafe) {
-      progress = clamp01((value - optMin!) / (optMax! - optMin!))
-    } else {
-      progress = 1
-    }
-  }
+  const optStart = hasRange ? clamp01((optMin! - domMin) / (domMax - domMin)) : 0
+  const optEnd = hasRange ? clamp01((optMax! - domMin) / (domMax - domMin)) : 0
+  const markerPos = value !== null ? clamp01((value - domMin) / (domMax - domMin)) : null
 
   return (
     <View style={styles.card}>
       <View style={styles.headerRow}>
-        <Text style={styles.label}>{label}</Text>
+        <View style={styles.labelRow}>
+          <MaterialIcons name={meta.icon} size={18} color='#4B5563' />
+          <Text style={styles.label}>{meta.label}</Text>
+        </View>
         <View style={[styles.badge, { backgroundColor: status.badgeBg }]}>
           <Text style={[styles.badgeText, { color: status.badgeText }]}>{status.label}</Text>
         </View>
       </View>
 
       <Text style={styles.value}>
-        {value !== null ? `${value}${unit}` : '—'}
+        {value !== null ? `${value}${meta.unit}` : '—'}
       </Text>
 
-      {hasRange && (
-        <View style={styles.progressTrack}>
+      <View style={styles.track}>
+        {hasRange && (
           <View
-            style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: status.color }]}
+            style={[
+              styles.optZone,
+              {
+                left: `${optStart * 100}%`,
+                width: `${(optEnd - optStart) * 100}%`,
+              },
+            ]}
           />
-        </View>
-      )}
+        )}
+        {markerPos !== null && (
+          <View
+            style={[
+              styles.marker,
+              { left: `${markerPos * 100}%`, backgroundColor: status.color },
+            ]}
+          />
+        )}
+      </View>
 
-      {hasRange && (
-        <View style={styles.metaRow}>
+      <View style={styles.scaleRow}>
+        <Text style={styles.scaleText}>{domMin}{meta.unit}</Text>
+        <Text style={styles.scaleText}>{domMax}{meta.unit}</Text>
+      </View>
+
+      <View style={styles.metaRow}>
+        {hasRange ? (
           <Text style={styles.metaText}>
-            Tối ưu {optMin}–{optMax}{unit}
+            Tối ưu {optMin}–{optMax}{meta.unit}
           </Text>
-          {item.timestamp && (
-            <Text style={[styles.metaText, isStale(item.timestamp) && styles.metaStale]}>
-              {formatRelativeTime(item.timestamp)}
-            </Text>
-          )}
-        </View>
-      )}
+        ) : <View />}
+        {item.timestamp && (
+          <Text style={[styles.metaText, isStale(item.timestamp) && styles.metaStale]}>
+            {formatRelativeTime(item.timestamp)}
+          </Text>
+        )}
+      </View>
     </View>
   )
 }
+
+const MARKER_SIZE = 14
 
 const styles = StyleSheet.create({
   card: {
@@ -110,8 +130,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 6,
+    gap: 8,
   },
-  label: { fontSize: 14, lineHeight: 20, color: '#374151', fontFamily: 'Inter_600SemiBold', flex: 1 },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+  },
+  label: { fontSize: 14, lineHeight: 20, color: '#374151', fontFamily: 'Inter_600SemiBold', flexShrink: 1 },
   badge: { height: 24, borderRadius: 8, paddingHorizontal: 8, justifyContent: 'center', alignItems: 'center' },
   badgeText: { fontSize: 13, fontFamily: 'Inter_500Medium' },
   value: {
@@ -121,14 +148,42 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
     marginBottom: 10,
   },
-  progressTrack: {
+  track: {
+    position: 'relative',
     height: 6,
     backgroundColor: '#E5E7EB',
     borderRadius: 999,
-    overflow: 'hidden',
-    marginBottom: 8,
+    marginBottom: 6,
+    marginHorizontal: MARKER_SIZE / 2,
   },
-  progressFill: { height: 6, borderRadius: 999 },
+  optZone: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    backgroundColor: '#DCFCE7',
+    borderRadius: 999,
+  },
+  marker: {
+    position: 'absolute',
+    top: (6 - MARKER_SIZE) / 2,
+    width: MARKER_SIZE,
+    height: MARKER_SIZE,
+    borderRadius: MARKER_SIZE / 2,
+    marginLeft: -MARKER_SIZE / 2,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  scaleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  scaleText: {
+    fontSize: 11,
+    lineHeight: 14,
+    color: '#9CA3AF',
+    fontFamily: 'Inter_500Medium',
+  },
   metaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
