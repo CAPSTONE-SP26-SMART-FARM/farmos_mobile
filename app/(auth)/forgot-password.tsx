@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import Ionicons from '@expo/vector-icons/Ionicons'
+import { LinearGradient } from 'expo-linear-gradient'
 import { useAuthStore } from '@/stores/authStore'
 import { authApi } from '@/services/api/auth'
 import { useToast } from '@/hooks/useToast'
@@ -59,52 +60,56 @@ export default function ForgotPasswordScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps='handled' showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => step > 1 ? setStep((step - 1) as 1 | 2 | 3) : router.back()} style={styles.backBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-            <Ionicons name='arrow-back' size={22} color='#111827' />
-          </TouchableOpacity>
-          <Text style={styles.title}>Quên mật khẩu</Text>
-          <Text style={styles.subtitle}>
-            {step === 1 && 'Nhập email để nhận mã xác thực'}
-            {step === 2 && `Nhập mã OTP đã gửi đến ${email}`}
-            {step === 3 && 'Nhập mật khẩu mới'}
-          </Text>
-        </View>
-
-        {step === 1 && (
-          <View style={styles.form}>
-            <FormTextField control={step1Form.control} name='email' label='Email' keyboardType='email-address' autoCapitalize='none' />
-            <PrimaryButton title='Gửi mã OTP' loading={isSendingOtp} onPress={step1Form.handleSubmit(handleSendOtp)} />
+    <LinearGradient colors={['#E0F2FF', '#FFFFFF']} style={styles.flex}>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps='handled' showsVerticalScrollIndicator={false}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => step > 1 ? setStep((step - 1) as 1 | 2 | 3) : router.back()} style={styles.backBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+              <Ionicons name='arrow-back' size={22} color='#111827' />
+            </TouchableOpacity>
+            <Text style={styles.brand}>FarmOS</Text>
+            <Text style={styles.title}>Quên mật khẩu</Text>
+            <Text style={styles.subtitle}>
+              {step === 1 && 'Nhập email để nhận mã xác thực'}
+              {step === 2 && `Nhập mã OTP đã gửi đến ${email}`}
+              {step === 3 && 'Nhập mật khẩu mới'}
+            </Text>
           </View>
-        )}
 
-        {step === 2 && (
-          <View style={styles.form}>
-            <FormTextField control={step2Form.control} name='code' label='Mã OTP (6 chữ số)' keyboardType='number-pad' maxLength={6} autoFocus />
-            <PrimaryButton title='Tiếp tục' onPress={step2Form.handleSubmit(handleVerifyOtp)} />
-          </View>
-        )}
+          {step === 1 && (
+            <View style={styles.form}>
+              <FormTextField control={step1Form.control} name='email' label='Email' keyboardType='email-address' autoCapitalize='none' />
+              <PrimaryButton title='Gửi mã OTP' loading={isSendingOtp} onPress={step1Form.handleSubmit(handleSendOtp)} />
+            </View>
+          )}
 
-        {step === 3 && (
-          <View style={styles.form}>
-            <FormTextField control={step3Form.control} name='newPassword' label='Mật khẩu mới' secureTextEntry showClear={false} />
-            <FormTextField control={step3Form.control} name='confirmNewPassword' label='Xác nhận mật khẩu mới' secureTextEntry showClear={false} />
-            <PrimaryButton title='Đổi mật khẩu' loading={isLoading} onPress={step3Form.handleSubmit(handleResetPassword)} />
-          </View>
-        )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+          {step === 2 && (
+            <View style={styles.form}>
+              <FormTextField control={step2Form.control} name='code' label='Mã OTP (6 chữ số)' keyboardType='number-pad' maxLength={6} autoFocus />
+              <PrimaryButton title='Tiếp tục' onPress={step2Form.handleSubmit(handleVerifyOtp)} />
+            </View>
+          )}
+
+          {step === 3 && (
+            <View style={styles.form}>
+              <FormTextField control={step3Form.control} name='newPassword' label='Mật khẩu mới' secureTextEntry showClear={false} />
+              <FormTextField control={step3Form.control} name='confirmNewPassword' label='Xác nhận mật khẩu mới' secureTextEntry showClear={false} />
+              <PrimaryButton title='Đổi mật khẩu' loading={isLoading} onPress={step3Form.handleSubmit(handleResetPassword)} />
+            </View>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </LinearGradient>
   )
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#FFFFFF' },
-  scroll: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 48 },
-  header: { marginBottom: 32, gap: 8 },
-  backBtn: { marginBottom: 4 },
-  title: { fontSize: 28, fontFamily: 'Inter_700Bold', color: '#111827' },
-  subtitle: { fontSize: 15, color: '#6B7280' },
+  flex: { flex: 1 },
+  scroll: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 36 },
+  header: { alignItems: 'center', marginBottom: 24, gap: 8 },
+  backBtn: { alignSelf: 'flex-start', marginBottom: 4 },
+  brand: { fontSize: 32, lineHeight: 40, fontFamily: 'Inter_700Bold', color: '#2463EB', textAlign: 'center' },
+  title: { fontSize: 24, lineHeight: 32, fontFamily: 'Inter_700Bold', color: '#111827', textAlign: 'center' },
+  subtitle: { fontSize: 15, lineHeight: 22, color: '#6B7280', textAlign: 'center' },
   form: { gap: 16 },
 })

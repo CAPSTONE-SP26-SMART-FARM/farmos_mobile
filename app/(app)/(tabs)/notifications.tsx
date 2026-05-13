@@ -4,9 +4,10 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
-import { Text, TopBar } from '@/components/ui'
+import { Text, TopBar, EmptyState } from '@/components/ui'
 import { useNotifications, useMarkNotificationRead } from '@/hooks/useNotification'
 import { formatRelativeTime } from '@/utils/date'
+import { icons } from '@/constants/icon'
 import type { Notification } from '@/types/notification'
 
 const TYPE_META: Record<string, { icon: string; color: string; bg: string }> = {
@@ -94,10 +95,7 @@ export default function NotificationsScreen() {
             </TouchableOpacity>
           </View>
         ) : notifications.length === 0 ? (
-          <View style={styles.emptyBox}>
-            <Text style={styles.emptyEmoji}>🔔</Text>
-            <Text style={styles.emptyText}>Chưa có thông báo nào.</Text>
-          </View>
+          <EmptyState message='Chưa có thông báo nào.' Icon={icons.emptyCartSvg} />
         ) : (
           <FlatList
             data={notifications}
@@ -142,7 +140,6 @@ const styles = StyleSheet.create({
   },
   separator: { height: 1, backgroundColor: '#F3F4F6' },
   emptyBox: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 8 },
-  emptyEmoji: { fontSize: 40 },
   emptyText: { fontSize: 14, color: '#9CA3AF', fontFamily: 'Inter_400Regular' },
   retryBtn: { paddingHorizontal: 20, paddingVertical: 8, backgroundColor: '#EFF6FF', borderRadius: 8, marginTop: 4 },
   retryText: { color: '#2463EB', fontFamily: 'Inter_500Medium', fontSize: 14 },

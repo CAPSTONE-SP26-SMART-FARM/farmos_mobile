@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react'
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { View, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -117,18 +116,20 @@ function TasksTab() {
 }
 
 export default function FarmScreen() {
+  const router = useRouter()
   const { tab } = useLocalSearchParams<{ tab?: string }>()
-  const [activeTab, setActiveTab] = useState<FarmTab>('sensors')
-
-  useEffect(() => {
-    if (tab === 'tasks') setActiveTab('tasks')
-  }, [tab])
+  const activeTab: FarmTab = tab === 'tasks' ? 'tasks' : 'sensors'
 
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.title}>Trang trại</Text>
-        <PillTabs items={TABS} value={activeTab} onChange={setActiveTab} style={styles.tabs} />
+        <PillTabs
+          items={TABS}
+          value={activeTab}
+          onChange={(next) => router.setParams({ tab: next })}
+          style={styles.tabs}
+        />
         {activeTab === 'sensors' ? <SensorsTab /> : <TasksTab />}
       </ScrollView>
     </SafeAreaView>

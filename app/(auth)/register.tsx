@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import Ionicons from '@expo/vector-icons/Ionicons'
+import { LinearGradient } from 'expo-linear-gradient'
 import { useAuthStore } from '@/stores/authStore'
 import { authApi } from '@/services/api/auth'
 import { useToast } from '@/hooks/useToast'
@@ -51,6 +52,7 @@ function StepHeader({ step, email, onBack }: { step: Step; email: string; onBack
           <Ionicons name='arrow-back' size={22} color='#111827' />
         </TouchableOpacity>
       )}
+      <Text style={styles.brand}>FarmOS</Text>
       <Text style={styles.title}>Đăng ký</Text>
       <Text style={styles.subtitle}>{subtitles[step]}</Text>
       <View style={styles.stepRow}>
@@ -131,12 +133,13 @@ export default function RegisterScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps='handled'
-        showsVerticalScrollIndicator={false}
-      >
+    <LinearGradient colors={['#E0F2FF', '#FFFFFF']} style={styles.flex}>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps='handled'
+          showsVerticalScrollIndicator={false}
+        >
         <StepHeader step={step} email={email} onBack={() => setStep((step - 1) as Step)} />
 
         {step === 1 && (
@@ -195,29 +198,31 @@ export default function RegisterScreen() {
           </View>
         )}
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Đã có tài khoản? </Text>
-          <Link href='/(auth)/login'>
-            <Text style={styles.footerLink}>Đăng nhập</Text>
-          </Link>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Đã có tài khoản? </Text>
+            <Link href='/(auth)/login'>
+              <Text style={styles.footerLink}>Đăng nhập</Text>
+            </Link>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </LinearGradient>
   )
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#FFFFFF' },
-  scroll: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 48 },
-  header: { marginBottom: 32, gap: 8 },
-  backBtn: { marginBottom: 4 },
-  title: { fontSize: 28, fontFamily: 'Inter_700Bold', color: '#111827' },
-  subtitle: { fontSize: 15, color: '#6B7280' },
+  flex: { flex: 1 },
+  scroll: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 36 },
+  header: { alignItems: 'center', marginBottom: 24, gap: 8 },
+  backBtn: { alignSelf: 'flex-start', marginBottom: 4 },
+  brand: { fontSize: 32, lineHeight: 40, fontFamily: 'Inter_700Bold', color: '#2463EB', textAlign: 'center' },
+  title: { fontSize: 24, lineHeight: 32, fontFamily: 'Inter_700Bold', color: '#111827', textAlign: 'center' },
+  subtitle: { fontSize: 15, lineHeight: 22, color: '#6B7280', textAlign: 'center' },
   stepRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
   stepDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#E5E7EB' },
   stepDotActive: { backgroundColor: '#2463EB' },
   form: { gap: 16 },
-  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 32 },
+  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 28, flexWrap: 'wrap' },
   footerText: { fontSize: 14, color: '#6B7280' },
   footerLink: { fontSize: 14, color: '#2463EB', fontFamily: 'Inter_600SemiBold' },
 })
