@@ -1,11 +1,14 @@
 import { View, ScrollView, StyleSheet, TouchableOpacity } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
+import * as WebBrowser from 'expo-web-browser'
 import { Text } from '@/components/ui'
 import { useAuth } from '@/hooks/useAuth'
 import { icons } from '@/constants/icon'
+import { CONFIG } from '@/constants/config'
 import { useDoctorIncidentList } from '@/hooks/useDoctor'
 import { useIncidentList } from '@/hooks/useIncident'
+import { useTasksForDailyLog } from '@/hooks/useDailyLog'
 import { EarningsCard } from '@/components/features/home/EarningsCard'
 import { DoctorStatusCard } from '@/components/features/home/DoctorStatusCard'
 import { IncidentSummaryCard } from '@/components/features/home/IncidentSummaryCard'
@@ -17,10 +20,8 @@ import { TipsCard } from '@/components/features/home/TipsCard'
 const NotiIcon = icons.notiBgSvg
 const EditProfileBgIcon = icons.editProfileBgSvg
 const IncidentIcon = icons.incidentSvg
-const StorefrontIcon = icons.storefrontSvg
 const AlertIcon = icons.alertSvg
 const PlusIcon = icons.plusSvg
-const DiaryIcon = icons.diarySvg
 
 const DOCTOR_QUICK_ACTIONS: QuickActionItem[] = [
   {
@@ -38,11 +39,6 @@ const DOCTOR_QUICK_ACTIONS: QuickActionItem[] = [
 
 const FARMER_QUICK_ACTIONS: QuickActionItem[] = [
   {
-    Icon: StorefrontIcon,
-    label: 'Trang trại',
-    onPress: () => router.push('/(app)/(tabs)/farm'),
-  },
-  {
     Icon: PlusIcon,
     label: 'Tạo sự cố',
     onPress: () => router.push('/(app)/incident/create'),
@@ -56,11 +52,6 @@ const FARMER_QUICK_ACTIONS: QuickActionItem[] = [
     Icon: AlertIcon,
     label: 'Cảnh báo',
     onPress: () => router.push('/(app)/(tabs)/alerts'),
-  },
-  {
-    Icon: DiaryIcon,
-    label: 'Nhật ký',
-    onPress: () => router.push({ pathname: '/(app)/(tabs)/farm', params: { tab: 'tasks' } }),
   },
 ]
 
@@ -79,7 +70,13 @@ function DoctorHome({ isApproved, userName }: { isApproved: boolean; userName: s
       <TipsCard
         title='Hướng dẫn bác sĩ FarmOS'
         description='Tìm hiểu cách nhận và xử lý sự cố từ nông dân hiệu quả'
-        onPress={() => router.push('/(app)/(tabs)/profile')}
+        onPress={() =>
+          WebBrowser.openBrowserAsync(CONFIG.HELP_DOCTOR_URL, {
+            presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+            toolbarColor: '#FFFFFF',
+            controlsColor: '#2463EB',
+          })
+        }
         delay={250}
       />
       <View style={styles.bottomSpacer} />
@@ -90,17 +87,25 @@ function DoctorHome({ isApproved, userName }: { isApproved: boolean; userName: s
 function FarmerHome({ userName }: { userName: string }) {
   const { data } = useIncidentList()
   const tickets = data?.data ?? []
+  const { data: tasksData } = useTasksForDailyLog()
+  const tasksCount = tasksData?.data?.length ?? 0
 
   return (
     <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
       <IncidentSummaryCard tickets={tickets} />
-      <TodayScheduleCard userName={userName} tickets={tickets} delay={150} />
+      <TodayScheduleCard userName={userName} tickets={tickets} tasksCount={tasksCount} delay={150} />
       <FarmStatusCard />
       <QuickActionsCard items={FARMER_QUICK_ACTIONS} delay={200} />
       <TipsCard
         title='Hướng dẫn báo cáo sự cố'
         description='Mô tả chi tiết và chọn đúng mức độ để được hỗ trợ nhanh nhất'
-        onPress={() => router.push('/(app)/incident/create')}
+        onPress={() =>
+          WebBrowser.openBrowserAsync(CONFIG.HELP_INCIDENT_URL, {
+            presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+            toolbarColor: '#FFFFFF',
+            controlsColor: '#2463EB',
+          })
+        }
         delay={250}
       />
       <View style={styles.bottomSpacer} />
