@@ -21,13 +21,12 @@ function formatToday() {
 }
 
 interface Props {
-  userName: string
   tickets: IncidentTicket[]
   tasksCount?: number
   delay?: number
 }
 
-export function TodayScheduleCard({ userName, tickets, tasksCount, delay = 150 }: Props) {
+export function TodayScheduleCard({ tickets, tasksCount, delay = 150 }: Props) {
   const isTaskMode = tasksCount !== undefined
 
   const todayTickets = tickets.filter((t) => isToday(t.createdAt))
@@ -87,7 +86,6 @@ export function TodayScheduleCard({ userName, tickets, tasksCount, delay = 150 }
           </View>
         ) : (
           <View style={styles.content}>
-            <Text style={styles.orgName} numberOfLines={1}>{userName}</Text>
             <Text style={styles.period}>{progressLabel}</Text>
             <View style={styles.deadlineRow}>
               <Text style={styles.deadline}>{formatToday()}</Text>
@@ -146,13 +144,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-  },
-  orgName: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontFamily: 'Inter_600SemiBold',
-    color: '#111827',
-    marginBottom: 2,
   },
   period: {
     fontSize: 13,

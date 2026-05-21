@@ -27,7 +27,15 @@ export const queryKeys = {
   sensorReading: {
     latestByAssignment: (assignmentId: string) =>
       ['sensor-reading', 'latest', assignmentId] as const,
-    myAssignments: ['sensor-reading', 'my-assignments'] as const,
+    series: (assignmentId: string, sensorId: string, query?: object) =>
+      ['sensor-reading', 'series', assignmentId, sensorId, query ?? {}] as const,
+    stats: (assignmentId: string, sensorId: string, query?: object) =>
+      ['sensor-reading', 'stats', assignmentId, sensorId, query ?? {}] as const,
+  },
+  farmerMilestone: {
+    currentUpcoming: ['farmer-milestone', 'current-upcoming'] as const,
+    assignments: (milestoneId: string, query?: object) =>
+      ['farmer-milestone', 'assignments', milestoneId, query ?? {}] as const,
   },
   ticketMessages: {
     list: (ticketId: string) => ['ticket-messages', ticketId] as const,

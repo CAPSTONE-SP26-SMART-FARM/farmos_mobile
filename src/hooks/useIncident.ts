@@ -47,12 +47,6 @@ export function useMyMilestones() {
   })
 }
 
-export function useMyAssignments() {
-  return useQuery({
-    queryKey: queryKeys.sensorReading.myAssignments,
-    queryFn: () => incidentApi.myAssignments(),
-  })
-}
 
 export function useTicketBalance() {
   return useQuery({

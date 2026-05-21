@@ -7,13 +7,16 @@ import { useLocalSearchParams } from 'expo-router'
 import { Text, TopBar, EmptyState } from '@/components/ui'
 import { SensorCard } from '@/components/features/sensor/SensorCard'
 import { useSensorReadings } from '@/hooks/useSensorReadings'
-import { useMyAssignments } from '@/hooks/useIncident'
+import { useFarmerMilestoneAssignments } from '@/hooks/useFarmerMilestones'
 
 export default function AssignmentDetailScreen() {
-  const { assignmentId } = useLocalSearchParams<{ assignmentId: string }>()
+  const { assignmentId, milestoneId } = useLocalSearchParams<{
+    assignmentId: string
+    milestoneId?: string
+  }>()
 
-  const { data: assignments = [] } = useMyAssignments()
-  const assignment = assignments.find((a) => a.assignmentId === assignmentId)
+  const { data: assignmentsRes } = useFarmerMilestoneAssignments(milestoneId ?? '', { page: 1, limit: 50 })
+  const assignment = assignmentsRes?.data.find((a) => a.assignmentId === assignmentId)
 
   const { data, isLoading, refetch } = useSensorReadings(assignmentId ?? '')
   const readings = data?.data ?? []
@@ -39,7 +42,9 @@ export default function AssignmentDetailScreen() {
         {assignment && (
           <View style={styles.summaryCard}>
             <View style={styles.summaryCol}>
-              <Text style={styles.summaryLabel}>Thiết bị</Text>
+              <Text style={styles.summaryLabel}>
+                Thiết bị{assignment.device.label ? ` · ${assignment.device.label}` : ''}
+              </Text>
               <Text style={styles.summaryValue} numberOfLines={1}>
                 {assignment.device.deviceName}
               </Text>

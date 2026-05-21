@@ -12,6 +12,7 @@ export type FarmerMyMilestone = {
 export type FarmerDevice = {
   iotDeviceId: string
   deviceName: string
+  label: string | null
   deviceType: string
   macAddress: string | null
   status: string

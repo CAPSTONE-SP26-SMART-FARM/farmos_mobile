@@ -1,16 +1,16 @@
 import { View, StyleSheet, TouchableOpacity } from 'react-native'
 import { Text } from '@/components/ui'
 import { icons } from '@/constants/icon'
-import { useMyAssignments } from '@/hooks/useIncident'
+import { useFarmerCurrentUpcomingMilestones } from '@/hooks/useFarmerMilestones'
 import { router } from 'expo-router'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 
 const StorefrontIcon = icons.storefrontSvg
 
 export function FarmStatusCard() {
-  const { data: assignments = [], isLoading } = useMyAssignments()
-  const deviceCount = assignments.length
-  const totalSensors = assignments.reduce((sum, a) => sum + (a.sensors?.length ?? 0), 0)
+  const { data: milestones = [], isLoading } = useFarmerCurrentUpcomingMilestones()
+  const inProgress = milestones.filter((m) => m.status === 'in_progress')
+  const upcoming = milestones.filter((m) => m.status === 'pending')
 
   return (
     <Animated.View
@@ -29,15 +29,20 @@ export function FarmStatusCard() {
         <View style={styles.content}>
           {isLoading ? (
             <Text style={styles.statusText}>Đang tải...</Text>
-          ) : deviceCount === 0 ? (
+          ) : milestones.length === 0 ? (
             <>
-              <Text style={styles.statusText}>Chưa có thiết bị</Text>
-              <Text style={styles.subText}>Liên hệ admin để được cấp thiết bị</Text>
+              <Text style={styles.statusText}>Chưa có giai đoạn nào</Text>
+              <Text style={styles.subText}>Liên hệ chủ trang trại để được phân công</Text>
             </>
           ) : (
             <>
-              <Text style={styles.statusText}>{deviceCount} thiết bị đang quản lý</Text>
-              <Text style={styles.subText}>{totalSensors} cảm biến · Nhấn để xem chi tiết</Text>
+              <Text style={styles.statusText}>
+                {inProgress.length} giai đoạn đang diễn ra
+              </Text>
+              <Text style={styles.subText}>
+                {upcoming.length > 0 ? `${upcoming.length} sắp tới · ` : ''}
+                Nhấn để xem chi tiết
+              </Text>
             </>
           )}
         </View>
