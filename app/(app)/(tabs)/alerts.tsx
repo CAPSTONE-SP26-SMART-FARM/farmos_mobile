@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Text, EmptyState } from '@/components/ui'
 import { AlertCard } from '@/components/features/alert/AlertCard'
 import { useAlertList } from '@/hooks/useAlert'
+import { icons } from '@/constants/icon'
 
 export default function AlertsScreen() {
   const { data, isLoading, refetch } = useAlertList()
@@ -26,7 +27,7 @@ export default function AlertsScreen() {
         {isLoading ? (
           <ActivityIndicator style={{ marginTop: 24 }} color='#2463EB' />
         ) : alerts.length === 0 ? (
-          <EmptyState message='Không có cảnh báo nào' />
+          <EmptyState message='Không có cảnh báo nào' Icon={icons.emptyCartSvg} />
         ) : (
           <FlatList
             data={alerts}

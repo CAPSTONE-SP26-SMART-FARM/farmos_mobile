@@ -55,7 +55,7 @@ const FARMER_QUICK_ACTIONS: QuickActionItem[] = [
   },
 ]
 
-function DoctorHome({ isApproved, userName }: { isApproved: boolean; userName: string }) {
+function DoctorHome({ isApproved }: { isApproved: boolean }) {
   const { data: activeData } = useDoctorIncidentList(1, false)
   const { data: resolvedData } = useDoctorIncidentList(1, true)
   const allTickets = [...(activeData?.data ?? []), ...(resolvedData?.data ?? [])]
@@ -64,7 +64,7 @@ function DoctorHome({ isApproved, userName }: { isApproved: boolean; userName: s
   return (
     <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
       <EarningsCard />
-      <TodayScheduleCard userName={userName} tickets={allTickets} delay={150} />
+      <TodayScheduleCard tickets={allTickets} delay={150} />
       <DoctorStatusCard isApproved={isApproved} activeCount={activeCount} />
       <QuickActionsCard items={DOCTOR_QUICK_ACTIONS} delay={200} />
       <TipsCard
@@ -84,7 +84,7 @@ function DoctorHome({ isApproved, userName }: { isApproved: boolean; userName: s
   )
 }
 
-function FarmerHome({ userName }: { userName: string }) {
+function FarmerHome() {
   const { data } = useIncidentList()
   const tickets = data?.data ?? []
   const { data: tasksData } = useTasksForDailyLog()
@@ -93,7 +93,7 @@ function FarmerHome({ userName }: { userName: string }) {
   return (
     <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
       <IncidentSummaryCard tickets={tickets} />
-      <TodayScheduleCard userName={userName} tickets={tickets} tasksCount={tasksCount} delay={150} />
+      <TodayScheduleCard tickets={tickets} tasksCount={tasksCount} delay={150} />
       <FarmStatusCard />
       <QuickActionsCard items={FARMER_QUICK_ACTIONS} delay={200} />
       <TipsCard
@@ -136,8 +136,8 @@ export default function HomeScreen() {
       </View>
 
       {isDoctor
-        ? <DoctorHome isApproved={isApproved} userName={userName} />
-        : <FarmerHome userName={userName} />
+        ? <DoctorHome isApproved={isApproved} />
+        : <FarmerHome />
       }
     </SafeAreaView>
   )

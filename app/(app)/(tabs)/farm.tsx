@@ -1,12 +1,14 @@
+import { useMemo } from 'react'
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { View, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Text, EmptyState, PillTabs } from '@/components/ui'
 import type { PillTabItem } from '@/components/ui'
-import { useMyAssignments } from '@/hooks/useIncident'
+import { useFarmerCurrentUpcomingMilestones } from '@/hooks/useFarmerMilestones'
 import { useTasksForDailyLog } from '@/hooks/useDailyLog'
 import { icons } from '@/constants/icon'
 import type { TaskForDailyLog } from '@/types/dailyLog'
+import type { FarmerCurrentUpcomingMilestone } from '@/types/farmerIot'
 
 const DiaryIcon = icons.diarySvg
 
@@ -54,26 +56,64 @@ function TaskCard({ task, onPress }: { task: TaskForDailyLog; onPress: () => voi
 
 function SensorsTab() {
   const router = useRouter()
-  const { data: assignments = [], isLoading } = useMyAssignments()
+  const { data: milestones = [], isLoading } = useFarmerCurrentUpcomingMilestones()
+
+  const byZone = useMemo(() => {
+    const acc: Record<string, FarmerCurrentUpcomingMilestone[]> = {}
+    for (const m of milestones) {
+      (acc[m.zoneName] ??= []).push(m)
+    }
+    for (const zone in acc) {
+      acc[zone].sort((a, b) => a.milestoneOrder - b.milestoneOrder)
+    }
+    return acc
+  }, [milestones])
 
   if (isLoading) return <ActivityIndicator style={{ marginTop: 24 }} color='#2463EB' />
-  if (assignments.length === 0) return <EmptyState message='Bạn chưa được gán thiết bị nào.' />
+  if (milestones.length === 0) {
+    return <EmptyState message='Chưa có giai đoạn nào.' Icon={icons.emptyCartSvg} />
+  }
 
   return (
     <View style={styles.list}>
-      {assignments.map((a) => (
-        <TouchableOpacity
-          key={a.assignmentId}
-          style={styles.card}
-          onPress={() => router.push(`/(app)/farm/${a.assignmentId}`)}
-          activeOpacity={0.85}
-        >
-          <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>{a.device.deviceName}</Text>
-            <Text style={styles.cardSubtitle}>{a.sensors.length} cảm biến</Text>
-          </View>
-          <Text style={styles.chevron}>›</Text>
-        </TouchableOpacity>
+      {Object.entries(byZone).map(([zoneName, items]) => (
+        <View key={zoneName} style={styles.zoneGroup}>
+          <Text style={styles.zoneHeader}>{zoneName}</Text>
+          {items.map((m) => (
+            <TouchableOpacity
+              key={m.id}
+              style={styles.card}
+              activeOpacity={0.85}
+              onPress={() =>
+                router.push({
+                  pathname: '/(app)/farm/milestone/[milestoneId]',
+                  params: { milestoneId: m.id, stageName: m.stageName },
+                })
+              }
+            >
+              <View style={styles.cardContent}>
+                <Text style={styles.cardTitle}>{m.stageName}</Text>
+                <View style={styles.cardMeta}>
+                  <View
+                    style={[
+                      styles.priorityDot,
+                      { backgroundColor: m.status === 'in_progress' ? '#16A34A' : '#D97706' },
+                    ]}
+                  />
+                  <Text
+                    style={[
+                      styles.priorityLabel,
+                      { color: m.status === 'in_progress' ? '#16A34A' : '#D97706' },
+                    ]}
+                  >
+                    {m.status === 'in_progress' ? 'Đang diễn ra' : 'Sắp tới'}
+                  </Text>
+                </View>
+              </View>
+              <Text style={styles.chevron}>›</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       ))}
     </View>
   )
@@ -89,6 +129,7 @@ function TasksTab() {
     return (
       <EmptyState
         message='Không có công việc nào cần ghi nhật ký hôm nay.'
+        Icon={icons.emptyCartSvg}
       />
     )
   }
@@ -121,15 +162,22 @@ export default function FarmScreen() {
   const activeTab: FarmTab = tab === 'tasks' ? 'tasks' : 'sensors'
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
+      <View style={styles.header}>
         <Text style={styles.title}>Trang trại</Text>
+        <Text style={styles.subtitle}>Thiết bị và công việc nông trại</Text>
         <PillTabs
           items={TABS}
           value={activeTab}
           onChange={(next) => router.setParams({ tab: next })}
           style={styles.tabs}
         />
+      </View>
+      <ScrollView
+        style={styles.body}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         {activeTab === 'sensors' ? <SensorsTab /> : <TasksTab />}
       </ScrollView>
     </SafeAreaView>
@@ -137,11 +185,16 @@ export default function FarmScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F3F4F6' },
+  safe: { flex: 1, backgroundColor: '#FFFFFF' },
+  header: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12, backgroundColor: '#FFFFFF' },
+  title: { fontSize: 24, lineHeight: 32, color: '#111827', fontFamily: 'Inter_600SemiBold' },
+  subtitle: { fontSize: 13, color: '#9CA3AF', fontFamily: 'Inter_400Regular', marginTop: 2 },
+  body: { flex: 1, backgroundColor: '#F3F4F6' },
   content: { padding: 16, paddingBottom: 32 },
-  title: { fontSize: 24, color: '#111827', fontFamily: 'Inter_600SemiBold', marginBottom: 16 },
-  tabs: { marginBottom: 20 },
+  tabs: { marginTop: 12 },
   list: { gap: 12 },
+  zoneGroup: { gap: 8 },
+  zoneHeader: { fontSize: 13, color: '#6B7280', fontFamily: 'Inter_500Medium', marginTop: 4 },
 
   card: {
     padding: 16,

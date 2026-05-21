@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/constants/queryKeys'
 import { sensorReadingApi } from '@/services/api/sensorReading'
 import { socketService } from '@/services/socket/socketService'
+import type { SensorSeriesQuery, SensorStatsQuery } from '@/types/farmerIot'
 
 type SocketPayload = {
   assignmentId: string
@@ -46,4 +47,30 @@ export function useSensorReadings(assignmentId: string) {
   }, [assignmentId, qc])
 
   return query
+}
+
+export function useSensorSeries(
+  assignmentId: string,
+  sensorId: string,
+  query: SensorSeriesQuery = {},
+) {
+  return useQuery({
+    queryKey: queryKeys.sensorReading.series(assignmentId, sensorId, query),
+    queryFn: () => sensorReadingApi.getSeries(assignmentId, sensorId, query),
+    enabled: !!assignmentId && !!sensorId,
+    refetchInterval: 30_000,
+  })
+}
+
+export function useSensorStats(
+  assignmentId: string,
+  sensorId: string,
+  query: SensorStatsQuery = {},
+) {
+  return useQuery({
+    queryKey: queryKeys.sensorReading.stats(assignmentId, sensorId, query),
+    queryFn: () => sensorReadingApi.getStats(assignmentId, sensorId, query),
+    enabled: !!assignmentId && !!sensorId,
+    refetchInterval: 30_000,
+  })
 }
