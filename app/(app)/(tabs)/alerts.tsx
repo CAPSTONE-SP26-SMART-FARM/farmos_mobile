@@ -1,14 +1,36 @@
-import { useCallback, useState } from 'react'
-import { View, FlatList, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native'
+import { useCallback, useMemo, useState } from 'react'
+import { View, SectionList, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { MaterialIcons } from '@expo/vector-icons'
 import { Text, EmptyState } from '@/components/ui'
 import { AlertCard } from '@/components/features/alert/AlertCard'
 import { useAlertList } from '@/hooks/useAlert'
 import { icons } from '@/constants/icon'
+import type { Alert } from '@/types/alert'
+
+const NO_BOARD_KEY = '__no_board__'
+
+function groupByBoard(alerts: Alert[]): { title: string; data: Alert[] }[] {
+  const map = new Map<string, { title: string; data: Alert[] }>()
+  for (const a of alerts) {
+    const key = a.deviceId ?? NO_BOARD_KEY
+    if (!map.has(key)) {
+      const title =
+        a.deviceId === null
+          ? 'Cảnh báo khác'
+          : a.deviceLabel ?? a.deviceName ?? 'Thiết bị không tên'
+      map.set(key, { title, data: [] })
+    }
+    map.get(key)!.data.push(a)
+  }
+  return [...map.values()]
+}
 
 export default function AlertsScreen() {
   const { data, isLoading, refetch } = useAlertList()
   const alerts = data?.data ?? []
+
+  const sections = useMemo(() => groupByBoard(alerts), [alerts])
 
   const [isRefreshing, setIsRefreshing] = useState(false)
   const handleRefresh = useCallback(async () => {
@@ -29,12 +51,27 @@ export default function AlertsScreen() {
         ) : alerts.length === 0 ? (
           <EmptyState message='Không có cảnh báo nào' Icon={icons.emptyCartSvg} />
         ) : (
-          <FlatList
-            data={alerts}
+          <SectionList
+            sections={sections}
             keyExtractor={(a) => a.id}
-            renderItem={({ item }) => <AlertCard item={item} />}
+            renderItem={({ item }) => (
+              <View style={styles.itemWrap}>
+                <AlertCard item={item} />
+              </View>
+            )}
+            renderSectionHeader={({ section }) => (
+              <View style={styles.sectionHeader}>
+                <View style={styles.boardChip}>
+                  <MaterialIcons name='memory' size={18} color='#2463EB' />
+                  <Text style={styles.boardChipText}>{section.title}</Text>
+                </View>
+                <Text style={styles.sectionCount}>{section.data.length} cảnh báo</Text>
+              </View>
+            )}
             ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+            SectionSeparatorComponent={() => <View style={{ height: 8 }} />}
             contentContainerStyle={styles.list}
+            stickySectionHeadersEnabled={false}
             showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor='#2463EB' />
@@ -53,4 +90,38 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 13, color: '#9CA3AF', fontFamily: 'Inter_400Regular', marginTop: 2 },
   body: { flex: 1, backgroundColor: '#F3F4F6' },
   list: { padding: 16, paddingBottom: 24 },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 6,
+    marginBottom: 10,
+  },
+  boardChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#EFF6FF',
+    paddingLeft: 10,
+    paddingRight: 14,
+    paddingVertical: 7,
+    borderRadius: 100,
+  },
+  boardChipText: {
+    fontSize: 15,
+    lineHeight: 20,
+    color: '#2463EB',
+    fontFamily: 'Inter_700Bold',
+  },
+  sectionCount: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: '#9CA3AF',
+    fontFamily: 'Inter_500Medium',
+  },
+  itemWrap: {
+    paddingLeft: 12,
+    borderLeftWidth: 2,
+    borderLeftColor: '#E5E7EB',
+  },
 })

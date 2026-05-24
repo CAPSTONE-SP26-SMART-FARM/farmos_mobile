@@ -1,6 +1,7 @@
 import { View, StyleSheet } from 'react-native'
+import { MaterialIcons } from '@expo/vector-icons'
 import { Text } from '@/components/ui'
-import { formatRelativeTime } from '@/utils/date'
+import { formatRelativeTime, formatDateTime } from '@/utils/date'
 import type { Alert, AlertSeverity } from '@/types/alert'
 
 const SEVERITY_META: Record<AlertSeverity, { label: string; color: string; badgeBg: string; badgeText: string }> = {
@@ -12,11 +13,31 @@ const SEVERITY_META: Record<AlertSeverity, { label: string; color: string; badge
 
 const RESOLVED_META = { label: 'Đã xử lý', badgeBg: '#F3F4F6', badgeText: '#4B5563' }
 
-// Bỏ "Cảm biến " ở đầu + " an toàn" ở cuối cho gọn:
-// "Cảm biến Nhiệt độ vượt ngưỡng an toàn" → "Nhiệt độ vượt ngưỡng"
+const SENSOR_UNIT: Record<string, string> = {
+  soil_moisture: '%',
+  air_temperature: '°C',
+  air_humidity: '%',
+  light_intensity: '%',
+}
+
+const SENSOR_ICON: Record<string, React.ComponentProps<typeof MaterialIcons>['name']> = {
+  soil_moisture: 'grass',
+  air_temperature: 'device-thermostat',
+  air_humidity: 'water-drop',
+  light_intensity: 'wb-sunny',
+}
+
+function capitalize(s: string): string {
+  if (!s) return s
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+// Rút gọn title — board/zone đã hiện ở dòng meta dưới:
+// "Cảm biến độ ẩm đất cao hơn ngưỡng tại Khu Ớt Chuông" → "độ ẩm đất cao hơn ngưỡng"
 function shortTitle(title: string): string {
   return title
     .replace(/^Cảm biến\s+/i, '')
+    .replace(/\s+(tại|ở)\s+.+$/i, '')
     .replace(/\s+an toàn$/i, '')
     .trim()
 }
@@ -24,45 +45,57 @@ function shortTitle(title: string): string {
 export function AlertCard({ item }: { item: Alert }) {
   const severity = SEVERITY_META[item.severity] ?? SEVERITY_META.medium
   const resolved = item.isResolved
-  const status = resolved ? RESOLVED_META : { label: severity.label, badgeBg: severity.badgeBg, badgeText: severity.badgeText }
+  const status = resolved
+    ? RESOLVED_META
+    : { label: severity.label, badgeBg: severity.badgeBg, badgeText: severity.badgeText }
 
-  const actual = item.actualValue ? Number(item.actualValue) : null
-  const threshold = item.thresholdValue ? Number(item.thresholdValue) : null
-  // max threshold: actual/threshold (87/85 → full). min threshold: threshold/actual (22/20.5 → full)
-  const progress = actual !== null && threshold !== null && threshold > 0
-    ? Math.min(actual >= threshold ? actual / threshold : threshold / actual, 1)
-    : 1
+  const unit = item.sensorType ? SENSOR_UNIT[item.sensorType] ?? '' : ''
+  const iconName = item.sensorType ? SENSOR_ICON[item.sensorType] : undefined
+  const actual = item.actualValue ?? null
+  const hasRange =
+    typeof item.optimalMin === 'number' && typeof item.optimalMax === 'number'
 
   return (
     <View style={styles.card}>
       <View style={styles.headerRow}>
-        <Text style={styles.title} numberOfLines={1}>{shortTitle(item.title)}</Text>
+        <View style={styles.titleRow}>
+          {iconName ? (
+            <MaterialIcons name={iconName} size={18} color='#4B5563' />
+          ) : null}
+          <Text style={styles.title} numberOfLines={1}>
+            {capitalize(shortTitle(item.title))}
+          </Text>
+        </View>
         <View style={[styles.badge, { backgroundColor: status.badgeBg }]}>
           <Text style={[styles.badgeText, { color: status.badgeText }]}>{status.label}</Text>
         </View>
       </View>
 
-      {actual !== null && (
-        <Text style={styles.value}>{actual}</Text>
-      )}
-
-      <View style={styles.progressTrack}>
-        <View
-          style={[
-            styles.progressFill,
-            {
-              width: `${progress * 100}%`,
-              backgroundColor: resolved ? '#9CA3AF' : severity.color,
-            },
-          ]}
-        />
+      <View style={styles.statRow}>
+        <View style={styles.statCol}>
+          <Text style={styles.statLabel}>Giá trị ghi nhận</Text>
+          <Text style={[styles.statValue, { color: resolved ? '#111827' : severity.color }]}>
+            {actual !== null ? `${actual}${unit}` : '—'}
+          </Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statCol}>
+          <Text style={styles.statLabel}>Ngưỡng an toàn</Text>
+          <Text style={styles.statValue}>
+            {hasRange
+              ? `${item.optimalMin}–${item.optimalMax}${unit}`
+              : item.thresholdValue !== null
+                ? `${item.thresholdValue}${unit}`
+                : '—'}
+          </Text>
+        </View>
       </View>
 
       <View style={styles.metaRow}>
+        <Text style={styles.metaText}>{item.zoneName}</Text>
         <Text style={styles.metaText}>
-          {threshold !== null ? `${item.zoneName} · Ngưỡng ${threshold}` : item.zoneName}
+          {formatRelativeTime(item.createdAt)} · {formatDateTime(item.createdAt)}
         </Text>
-        <Text style={styles.metaText}>{formatRelativeTime(item.createdAt)}</Text>
       </View>
     </View>
   )
@@ -73,8 +106,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 12,
+    paddingVertical: 14,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
@@ -84,32 +116,48 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 8,
-    marginBottom: 6,
+    marginBottom: 12,
   },
-  title: { flex: 1, fontSize: 14, lineHeight: 20, color: '#374151', fontFamily: 'Inter_600SemiBold' },
-  badge: { height: 24, borderRadius: 8, paddingHorizontal: 8, justifyContent: 'center', alignItems: 'center' },
-  badgeText: { fontSize: 13, fontFamily: 'Inter_500Medium' },
-  value: {
-    fontSize: 26,
-    lineHeight: 34,
-    color: '#111827',
-    fontFamily: 'Inter_700Bold',
+  titleRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  title: { flex: 1, fontSize: 14, lineHeight: 20, color: '#111827', fontFamily: 'Inter_600SemiBold' },
+  badge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  badgeText: { fontSize: 12, lineHeight: 16, fontFamily: 'Inter_500Medium' },
+
+  statRow: {
+    flexDirection: 'row',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    paddingVertical: 10,
     marginBottom: 10,
   },
-  progressTrack: {
-    height: 6,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 999,
-    overflow: 'hidden',
-    marginBottom: 8,
+  statCol: { flex: 1, paddingHorizontal: 14 },
+  statDivider: { width: 1, backgroundColor: '#E5E7EB', marginVertical: 2 },
+  statLabel: {
+    fontSize: 11,
+    lineHeight: 14,
+    color: '#9CA3AF',
+    fontFamily: 'Inter_500Medium',
+    marginBottom: 3,
   },
-  progressFill: { height: 6, borderRadius: 999 },
+  statValue: {
+    fontSize: 17,
+    lineHeight: 22,
+    color: '#111827',
+    fontFamily: 'Inter_700Bold',
+  },
+
   metaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
   },
-  metaText: { fontSize: 12, lineHeight: 16, color: '#4B5563', fontFamily: 'Inter_500Medium' },
+  metaText: { fontSize: 11, lineHeight: 16, color: '#9CA3AF', fontFamily: 'Inter_500Medium' },
 })
