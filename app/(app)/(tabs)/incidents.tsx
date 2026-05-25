@@ -1,4 +1,4 @@
-import { View, FlatList, TouchableOpacity, ActivityIndicator, StyleSheet, Pressable } from 'react-native'
+import { View, FlatList, TouchableOpacity, ActivityIndicator, StyleSheet, Pressable, Alert } from 'react-native'
 import { MaterialIcons } from '@expo/vector-icons'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
@@ -14,10 +14,12 @@ import { useActiveTicketCategories } from '@/hooks/useTicketCategory'
 import { useDoctorIncidentList, useDoctorProfile } from '@/hooks/useDoctor'
 import { usePendingBroadcasts } from '@/hooks/useBroadcast'
 import { useRejectTicket } from '@/hooks/useTicketLifecycle'
+import { ticketLifecycleApi } from '@/services/api/ticketLifecycle'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
 import { getErrorMessage } from '@/utils/error'
 import { socketService } from '@/services/socket/socketService'
+import { useActiveTicketStore } from '@/stores/activeTicketStore'
 import { SEVERITY_META } from '@/constants/incident'
 import { icons } from '@/constants/icon'
 import { queryKeys } from '@/constants/queryKeys'
@@ -176,13 +178,50 @@ export default function IncidentsScreen() {
       qc.invalidateQueries({ queryKey: queryKeys.incident.list() })
       showToast.success({ message: 'Bác sĩ vừa giải quyết một sự cố' })
     }
+    const onAiResolved = () => {
+      if (isDoctor) return
+      qc.invalidateQueries({ queryKey: queryKeys.incident.list() })
+      showToast.success({ message: 'AI đã xử lý xong sự cố' })
+    }
+    // BE sau X phút không có doctor accept → bắn event này hỏi user.
+    // Show native Alert với 2 lựa chọn — Có (FALLBACK_AI) / Không (REFUND_TICKET).
+    // Nếu user không bấm trong USER_CONSENT_TIMEOUT (10 phút) BE auto cancel + refund.
+    //
+    // Guard: nếu user đang ở detail screen của CÙNG ticket → skip Alert, để detail
+    // screen tự handle qua AbandonModal (đẹp hơn + có context). Tránh hiện duplicate UI.
+    const onAiOffered = (payload: { ticketId: string; title?: string }) => {
+      if (isDoctor) return
+      if (useActiveTicketStore.getState().activeTicketId === payload.ticketId) return
+      const respond = async (resolution: 'FALLBACK_AI' | 'REFUND_TICKET', successMsg: string) => {
+        try {
+          await ticketLifecycleApi.abandon(payload.ticketId, { resolution })
+          qc.invalidateQueries({ queryKey: queryKeys.incident.list() })
+          showToast.success({ message: successMsg })
+        } catch (e) {
+          showToast.error({ message: getErrorMessage(e, 'Có lỗi xảy ra, vui lòng thử lại') })
+        }
+      }
+      Alert.alert(
+        'Chưa có bác sĩ tiếp nhận',
+        `Sự cố${payload.title ? ` "${payload.title}"` : ''} vẫn chưa có bác sĩ nào tiếp nhận. Bạn có muốn AI xử lý ngay?`,
+        [
+          { text: 'Hoàn lại', style: 'cancel', onPress: () => respond('REFUND_TICKET', 'Đã hoàn lại sự cố') },
+          { text: 'Dùng AI', onPress: () => respond('FALLBACK_AI', 'AI đang xử lý sự cố…') },
+        ],
+        { cancelable: false }
+      )
+    }
     socketService.on('ticket.broadcast', onBroadcast)
     socketService.on('ticket.incident.created', onCreated)
     socketService.on('ticket.resolved', onResolved)
+    socketService.on('ticket.ai.resolved', onAiResolved)
+    socketService.on('ticket.ai.fallback.offered', onAiOffered)
     return () => {
       socketService.off('ticket.broadcast', onBroadcast)
       socketService.off('ticket.incident.created', onCreated)
       socketService.off('ticket.resolved', onResolved)
+      socketService.off('ticket.ai.resolved', onAiResolved)
+      socketService.off('ticket.ai.fallback.offered', onAiOffered)
     }
   }, [isDoctor, qc, showToast])
 

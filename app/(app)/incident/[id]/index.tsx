@@ -17,10 +17,12 @@ import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
 import { SEVERITY_META } from '@/constants/incident'
 import { socketService } from '@/services/socket/socketService'
+import { useActiveTicketStore } from '@/stores/activeTicketStore'
 import { queryKeys } from '@/constants/queryKeys'
 import { IncidentStatusBadge } from '@/components/features/incident/IncidentStatusBadge'
 import { PrescriptionModal } from '@/components/features/incident/PrescriptionModal'
 import { PrescriptionSection } from '@/components/features/incident/PrescriptionSection'
+import { AiSolutionSection } from '@/components/features/incident/AiSolutionSection'
 import { IncidentInfoList } from '@/components/features/incident/IncidentInfoList'
 import { IncidentFooterActions } from '@/components/features/incident/IncidentFooterActions'
 import { CloseRateModal } from '@/components/features/incident/CloseRateModal'
@@ -98,6 +100,16 @@ export default function IncidentDetailScreen() {
   const refreshAll = useCallback(() => { refetch(); refetchRx() }, [refetch, refetchRx])
   useFocusEffect(refreshAll)
 
+  // Tell the list-screen socket listener which ticket we're currently viewing,
+  // so it can skip showing a duplicate native Alert for this same ticket.
+  const setActiveTicketId = useActiveTicketStore((s) => s.setActiveTicketId)
+  useFocusEffect(
+    useCallback(() => {
+      setActiveTicketId(id)
+      return () => setActiveTicketId(null)
+    }, [id, setActiveTicketId])
+  )
+
   const [isRefreshing, setIsRefreshing] = useState(false)
   const handlePullRefresh = useCallback(async () => {
     setIsRefreshing(true)
@@ -112,36 +124,51 @@ export default function IncidentDetailScreen() {
   }, [data?.id])
 
   useEffect(() => {
-    const onResolved = ({ ticketId }: any) => {
-      if (ticketId === id) {
-        qc.invalidateQueries({ queryKey: queryKeys.incident.detail(id) })
-        qc.invalidateQueries({ queryKey: queryKeys.incident.doctorDetail(id) })
-        qc.invalidateQueries({ queryKey: queryKeys.prescriptions.list(id) })
-        qc.invalidateQueries({ queryKey: ['incident', 'list'] })
-        showToast.success({ message: 'Sự cố đã được giải quyết' })
-      }
-    }
-    const onFallback = ({ ticketId }: any) => {
-      if (ticketId === id) {
-        setAbandonModalVisible(true)
-        qc.invalidateQueries({ queryKey: queryKeys.ticketFull(id) })
-      }
-    }
-    const onClosed = ({ ticketId }: any) => {
-      if (ticketId !== id) return
+    // Mọi handler đều chỉ chạy cho ticket đang xem + invalidate cùng tập query.
+    // Wrap bằng helper để tránh lặp `if (ticketId !== id) return` + invalidate boilerplate.
+    const invalidateDetail = () => {
       qc.invalidateQueries({ queryKey: queryKeys.incident.detail(id) })
       qc.invalidateQueries({ queryKey: queryKeys.incident.doctorDetail(id) })
+      qc.invalidateQueries({ queryKey: queryKeys.ticketFull(id) })
       qc.invalidateQueries({ queryKey: queryKeys.incident.list() })
       qc.invalidateQueries({ queryKey: queryKeys.incident.doctorList() })
     }
-    socketService.on('ticket.resolved', onResolved)
-    socketService.on('ticket.fallback-required', onFallback)
-    socketService.on('ticket.closed', onClosed)
-    return () => {
-      socketService.off('ticket.resolved', onResolved)
-      socketService.off('ticket.fallback-required', onFallback)
-      socketService.off('ticket.closed', onClosed)
+    const onlyThisTicket = (fn: () => void) => ({ ticketId }: { ticketId: string }) => {
+      if (ticketId === id) fn()
     }
+
+    const onResolved = onlyThisTicket(() => {
+      invalidateDetail()
+      qc.invalidateQueries({ queryKey: queryKeys.prescriptions.list(id) })
+      showToast.success({ message: 'Sự cố đã được giải quyết' })
+    })
+    const onClosed = onlyThisTicket(invalidateDetail)
+    const onAiResolved = onlyThisTicket(() => {
+      invalidateDetail()
+      showToast.success({ message: 'AI đã xử lý xong sự cố' })
+    })
+    const onAbandonRefunded = onlyThisTicket(() => {
+      invalidateDetail()
+      showToast.success({ message: 'Sự cố đã được hoàn lại' })
+    })
+    // Open AbandonModal khi nhận fallback offer / required (cũ).
+    // Detail screen dùng modal có context, list screen dùng native Alert (xem incidents.tsx).
+    const openAbandonModal = onlyThisTicket(() => {
+      setAbandonModalVisible(true)
+      qc.invalidateQueries({ queryKey: queryKeys.ticketFull(id) })
+    })
+
+    const listeners = [
+      ['ticket.resolved', onResolved],
+      ['ticket.fallback-required', openAbandonModal],
+      ['ticket.closed', onClosed],
+      ['ticket.ai.resolved', onAiResolved],
+      ['ticket.ai.fallback.offered', openAbandonModal],
+      ['ticket.abandon.refunded', onAbandonRefunded],
+    ] as const
+
+    listeners.forEach(([event, handler]) => socketService.on(event, handler))
+    return () => listeners.forEach(([event, handler]) => socketService.off(event, handler))
   }, [id, qc, showToast])
 
   useEffect(() => {
@@ -356,6 +383,10 @@ export default function IncidentDetailScreen() {
               ⚠️ Thuốc trong đơn có thời gian ngừng thuốc trước thu hoạch. Vui lòng tuân thủ hướng dẫn của bác sĩ.
             </Text>
           </View>
+        )}
+
+        {ticketFullQuery.data?.solution?.source === 'AI' && (
+          <AiSolutionSection solution={ticketFullQuery.data.solution} />
         )}
 
         {status !== 'open' && (
