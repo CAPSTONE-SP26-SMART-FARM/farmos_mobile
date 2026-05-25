@@ -39,6 +39,7 @@ export function useAbandonResolution(ticketId: string) {
     mutationFn: (body: AbandonResolutionBody) => ticketLifecycleApi.abandon(ticketId, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.incident.detail(ticketId) })
+      qc.invalidateQueries({ queryKey: queryKeys.ticketFull(ticketId) })
       qc.invalidateQueries({ queryKey: ['incident', 'list'] })
     },
   })

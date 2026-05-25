@@ -89,10 +89,15 @@ export function useDoctorAssignmentDetail(id: string) {
 }
 
 // List incidents for doctor. `ended` === true → chỉ đã kết thúc; false → chỉ đang mở; undefined → tất cả.
-export function useDoctorIncidentList(page = 1, ended?: boolean, enabled = true) {
+export function useDoctorIncidentList(
+  page = 1,
+  ended?: boolean,
+  enabled = true,
+  filter: { dateRange?: 'today' | '3d' | '1w' | '1m' | 'all' } = {},
+) {
   return useQuery({
-    queryKey: queryKeys.incident.doctorList(page, ended),
-    queryFn: () => incidentApi.doctorList(page, 20, ended),
+    queryKey: queryKeys.incident.doctorList(page, ended, filter),
+    queryFn: () => incidentApi.doctorList(page, 20, { ended, ...filter }),
     enabled,
   })
 }

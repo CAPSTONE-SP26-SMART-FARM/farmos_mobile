@@ -2,6 +2,16 @@ export type IncidentSeverity = 'low' | 'medium' | 'high' | 'critical'
 export type TicketStatus = 'open' | 'assigned' | 'in_progress' | 'resolved' | 'closed' | 'cancelled'
 export type TicketPriority = 'low' | 'normal' | 'high' | 'urgent'
 export type TicketSource = 'SUBSCRIPTION_GRANT' | 'PURCHASED' | 'ADMIN_GIFT'
+export type TicketDateRange = 'today' | '3d' | '1w' | '1m' | 'all'
+
+export type ListTicketsFilter = {
+  status?: TicketStatus
+  dateRange?: TicketDateRange
+}
+
+export type ListDoctorTicketsFilter = ListTicketsFilter & {
+  ended?: boolean
+}
 
 export type UserBrief = {
   id: string

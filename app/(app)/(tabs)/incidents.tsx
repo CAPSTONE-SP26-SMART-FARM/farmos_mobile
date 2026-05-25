@@ -21,31 +21,18 @@ import { socketService } from '@/services/socket/socketService'
 import { SEVERITY_META } from '@/constants/incident'
 import { icons } from '@/constants/icon'
 import { queryKeys } from '@/constants/queryKeys'
-import type { IncidentSeverity } from '@/types/incident'
+import type { IncidentSeverity, TicketDateRange } from '@/types/incident'
 
 type DoctorFilter = 'broadcasts' | 'active' | 'resolved'
 type FarmerFilter = 'active' | 'resolved'
-type DateFilter = 'today' | '3days' | 'week' | 'month' | 'all'
 
-const DATE_OPTIONS: readonly { value: DateFilter; label: string }[] = [
-  { value: 'today', label: 'Hôm nay' },
-  { value: '3days', label: '3 ngày gần đây' },
-  { value: 'week', label: '1 tuần' },
-  { value: 'month', label: '1 tháng' },
+const DATE_OPTIONS: readonly { value: TicketDateRange; label: string }[] = [
   { value: 'all', label: 'Tất cả' },
+  { value: 'today', label: 'Hôm nay' },
+  { value: '3d', label: '3 ngày gần đây' },
+  { value: '1w', label: '1 tuần' },
+  { value: '1m', label: '1 tháng' },
 ]
-
-function isWithinDateRange(createdAt: string, filter: DateFilter): boolean {
-  if (filter === 'all') return true
-  const date = new Date(createdAt)
-  const now = new Date()
-  if (filter === 'today') return date.toDateString() === now.toDateString()
-  const diffDays = (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)
-  if (filter === '3days') return diffDays <= 3
-  if (filter === 'week') return diffDays <= 7
-  if (filter === 'month') return diffDays <= 30
-  return true
-}
 
 const DOCTOR_OPTIONS: readonly { value: DoctorFilter; label: string }[] = [
   { value: 'broadcasts', label: 'Yêu cầu mới' },
@@ -129,13 +116,15 @@ export default function IncidentsScreen() {
 
   const [doctorFilter, setDoctorFilter] = useState<DoctorFilter>('broadcasts')
   const [farmerFilter, setFarmerFilter] = useState<FarmerFilter>('active')
-  const [dateFilter, setDateFilter] = useState<DateFilter>('all')
+  const [dateFilter, setDateFilter] = useState<TicketDateRange>('all')
   const endedParam = doctorFilter === 'resolved'
 
   const isBroadcastTab = isDoctor && doctorFilter === 'broadcasts'
 
-  const farmerQuery = useIncidentList()
-  const doctorQuery = useDoctorIncidentList(1, endedParam, isDoctor)
+  // dateRange → server-side filter (BE handle); status farmer/doctor → vẫn client
+  // vì BE chỉ nhận 1 status đơn, mà active/resolved của farmer = group nhiều status.
+  const farmerQuery = useIncidentList(1, { dateRange: dateFilter })
+  const doctorQuery = useDoctorIncidentList(1, endedParam, isDoctor, { dateRange: dateFilter })
   const broadcastQuery = usePendingBroadcasts(isDoctor)
   const { data, isLoading, isError, refetch } = isDoctor
     ? (isBroadcastTab ? { data: null, isLoading: false, isError: false, refetch: broadcastQuery.refetch } : doctorQuery)
@@ -150,8 +139,8 @@ export default function IncidentsScreen() {
   const { data: doctorProfile } = useDoctorProfile(isDoctor)
   const rawTickets = (data as any)?.data ?? []
   // Doctor "Đang xử lý": chỉ show ticket doctor đã accept (assignee là mình)
-  // Farmer: client-side filter theo status
-  const statusFilteredTickets = isDoctor
+  // Farmer: client-side filter theo status (active = nhóm 4 status, BE chỉ filter 1 status đơn)
+  const tickets = isDoctor
     ? (doctorFilter === 'active'
         ? rawTickets.filter((t: any) => t.assignee?.id === user?.id)
         : rawTickets)
@@ -160,7 +149,6 @@ export default function IncidentsScreen() {
           ? FARMER_ACTIVE_STATUSES.includes(t.status)
           : FARMER_ENDED_STATUSES.includes(t.status),
       )
-  const tickets = statusFilteredTickets.filter((t: any) => isWithinDateRange(t.createdAt, dateFilter))
   const isOnline = doctorProfile?.isOnline
   const isApproved = user?.isActive
 

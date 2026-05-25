@@ -4,24 +4,13 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
+import { MaterialIcons } from '@expo/vector-icons'
 import { Text, TopBar, EmptyState } from '@/components/ui'
 import { useNotifications, useMarkNotificationRead } from '@/hooks/useNotification'
 import { formatRelativeTime } from '@/utils/date'
+import { resolveNotificationIcon } from '@/utils/notification'
 import { icons } from '@/constants/icon'
 import type { Notification } from '@/types/notification'
-
-const TYPE_META: Record<string, { icon: string; color: string; bg: string }> = {
-  incident_accepted:          { icon: '🩺', color: '#059669', bg: '#D1FAE5' },
-  incident_assigned:          { icon: '📋', color: '#2463EB', bg: '#EFF6FF' },
-  prescription_created:       { icon: '💊', color: '#7C3AED', bg: '#EDE9FE' },
-  ticket_message:             { icon: '💬', color: '#0891B2', bg: '#CFFAFE' },
-  production_request_replied: { icon: '✅', color: '#16A34A', bg: '#DCFCE7' },
-  production_request_created: { icon: '📤', color: '#D97706', bg: '#FEF3C7' },
-  alert_triggered:            { icon: '⚠️', color: '#DC2626', bg: '#FEE2E2' },
-  system:                     { icon: '🔔', color: '#6B7280', bg: '#F3F4F6' },
-}
-
-const getTypeMeta = (type: string) => TYPE_META[type] ?? TYPE_META.system
 
 // BE redirectUrl `/tickets/:id` → FE route `/(app)/incident/:id`
 function resolveRedirect(redirectUrl: string | null | undefined): string | null {
@@ -38,7 +27,7 @@ function NotificationItem({
   item: Notification
   onPress: (item: Notification) => void
 }) {
-  const meta = getTypeMeta(item.type)
+  const meta = resolveNotificationIcon(item.type, item.title)
 
   return (
     <TouchableOpacity
@@ -47,7 +36,7 @@ function NotificationItem({
       activeOpacity={0.7}
     >
       <View style={[styles.iconWrap, { backgroundColor: meta.bg }]}>
-        <Text style={styles.iconText}>{meta.icon}</Text>
+        <MaterialIcons name={meta.icon} size={20} color={meta.color} />
       </View>
       <View style={styles.itemContent}>
         <View style={styles.itemHeader}>
@@ -127,7 +116,6 @@ const styles = StyleSheet.create({
     width: 40, height: 40, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  iconText: { fontSize: 18 },
   itemContent: { flex: 1, gap: 3 },
   itemHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   itemTitle: { fontSize: 14, color: '#374151', fontFamily: 'Inter_400Regular', flex: 1 },

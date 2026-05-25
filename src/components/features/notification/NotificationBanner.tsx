@@ -3,9 +3,12 @@ import { Animated, TouchableOpacity, StyleSheet, Platform, View } from 'react-na
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter, usePathname } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
+import { MaterialIcons } from '@expo/vector-icons'
 import { Text } from '@/components/ui'
 import { socketService } from '@/services/socket/socketService'
 import { queryKeys } from '@/constants/queryKeys'
+import { resolveNotificationIcon } from '@/utils/notification'
+import { capitalize, shortAlertTitle, shortAlertContent } from '@/utils/text'
 
 type IncomingNotif = {
   type: string
@@ -17,16 +20,6 @@ type IncomingNotif = {
 
 const HIDDEN_Y = -160
 const AUTO_DISMISS_MS = 4500
-
-const TYPE_ICON: Record<string, string> = {
-  incident_accepted: '🩺',
-  incident_assigned: '📋',
-  prescription_created: '💊',
-  production_request_replied: '✅',
-  production_request_created: '📤',
-  alert_triggered: '⚠️',
-  system: '🔔',
-}
 
 export function NotificationBanner() {
   const insets = useSafeAreaInsets()
@@ -91,7 +84,7 @@ export function NotificationBanner() {
   // Return null when idle — no native views = no layout interference
   if (!notif) return null
 
-  const icon = TYPE_ICON[notif.type ?? 'system'] ?? '🔔'
+  const meta = resolveNotificationIcon(notif.type, notif.title)
 
   return (
     <Animated.View
@@ -102,15 +95,15 @@ export function NotificationBanner() {
       pointerEvents='box-none'
     >
       <TouchableOpacity style={styles.card} onPress={handlePress} activeOpacity={0.92}>
-        <View style={styles.icon}>
-          <Text style={styles.iconText}>{icon}</Text>
+        <View style={[styles.icon, { backgroundColor: meta.bg }]}>
+          <MaterialIcons name={meta.icon} size={20} color={meta.color} />
         </View>
         <View style={styles.body}>
           <Text style={styles.title} numberOfLines={1}>
-            {notif.title}
+            {capitalize(shortAlertTitle(notif.title))}
           </Text>
-          <Text style={styles.sub} numberOfLines={2}>
-            {notif.content}
+          <Text style={styles.sub} numberOfLines={1}>
+            {capitalize(shortAlertContent(notif.content))}
           </Text>
         </View>
       </TouchableOpacity>
@@ -122,17 +115,17 @@ const styles = StyleSheet.create({
   container: { position: 'absolute', left: 16, right: 16, zIndex: 9999 },
   card: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#1F2937', borderRadius: 16,
+    backgroundColor: '#FFFFFF', borderRadius: 16,
     paddingHorizontal: 14, paddingVertical: 12, gap: 12,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25, shadowRadius: 12, elevation: 10,
+    borderWidth: 1, borderColor: '#E5E7EB',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08, shadowRadius: 16, elevation: 10,
   },
   icon: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: '#374151', justifyContent: 'center', alignItems: 'center',
+    width: 36, height: 36, borderRadius: 18,
+    justifyContent: 'center', alignItems: 'center',
   },
-  iconText: { fontSize: 20 },
   body: { flex: 1 },
-  title: { fontSize: 14, color: '#F9FAFB', fontFamily: 'Inter_600SemiBold' },
-  sub: { fontSize: 12, color: '#9CA3AF', fontFamily: 'Inter_400Regular', marginTop: 2, lineHeight: 16 },
+  title: { fontSize: 14, lineHeight: 20, color: '#111827', fontFamily: 'Inter_600SemiBold' },
+  sub: { fontSize: 12, lineHeight: 16, color: '#6B7280', fontFamily: 'Inter_400Regular', marginTop: 2 },
 })

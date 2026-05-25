@@ -10,6 +10,10 @@ export type TicketFullRes = {
   rating: unknown
   broadcasts: unknown[]
   abandonLogs: unknown[]
+  // BE flag P2-2: true khi worker abandon-detect đã reset ticket nhưng owner chưa chọn
+  // FALLBACK_AI / REFUND_TICKET. Mobile tự mở modal khi mở screen mà flag = true (cover
+  // case offline → mất WS event `ticket.fallback-required`).
+  pendingFallbackChoice: boolean
 }
 
 export const ticketLifecycleApi = {

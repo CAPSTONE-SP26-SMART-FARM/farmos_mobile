@@ -12,7 +12,7 @@ import { usePrescriptions, useCreatePrescription } from '@/hooks/usePrescription
 import { useAcceptIncident, useDoctorIncidentDetail } from '@/hooks/useDoctor'
 import { useIncidentDetail, useCancelIncident } from '@/hooks/useIncident'
 import { useActiveTicketCategories } from '@/hooks/useTicketCategory'
-import { useCloseTicket, useRateTicket, useAbandonResolution } from '@/hooks/useTicketLifecycle'
+import { useCloseTicket, useRateTicket, useAbandonResolution, useTicketFull } from '@/hooks/useTicketLifecycle'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
 import { SEVERITY_META } from '@/constants/incident'
@@ -81,6 +81,15 @@ export default function IncidentDetailScreen() {
   const doctorQuery = useDoctorIncidentDetail(isDoctor ? id : '')
   const { data, isLoading, isError, refetch } = isDoctor ? doctorQuery : farmerQuery
 
+  // Farmer-only: gọi /full để đọc pendingFallbackChoice — auto-open AbandonModal nếu
+  // owner mở screen mà worker đã reset ticket (offline → mất WS event).
+  const ticketFullQuery = useTicketFull(id, !isDoctor)
+  useEffect(() => {
+    if (!isDoctor && ticketFullQuery.data?.pendingFallbackChoice) {
+      setAbandonModalVisible(true)
+    }
+  }, [isDoctor, ticketFullQuery.data?.pendingFallbackChoice])
+
   const { data: rxData, isLoading: rxLoading, refetch: refetchRx } = usePrescriptions(id)
   const { mutate: acceptIncident, isPending: isAccepting } = useAcceptIncident()
   const { mutate: createPrescription, isPending: isCreatingRx } = useCreatePrescription(id)
@@ -113,7 +122,10 @@ export default function IncidentDetailScreen() {
       }
     }
     const onFallback = ({ ticketId }: any) => {
-      if (ticketId === id) setAbandonModalVisible(true)
+      if (ticketId === id) {
+        setAbandonModalVisible(true)
+        qc.invalidateQueries({ queryKey: queryKeys.ticketFull(id) })
+      }
     }
     const onClosed = ({ ticketId }: any) => {
       if (ticketId !== id) return

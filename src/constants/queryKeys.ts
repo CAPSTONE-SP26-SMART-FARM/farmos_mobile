@@ -7,11 +7,17 @@ export const queryKeys = {
     detail: (id: string) => ['users', id] as const,
   },
   incident: {
-    list: (page?: number) => ['incident', 'list', page] as const,
+    list: (page?: number, filter?: object) => ['incident', 'list', page, filter ?? {}] as const,
     detail: (id: string) => ['incident', id] as const,
     doctorDetail: (id: string) => ['incident', 'doctor-detail', id] as const,
-    doctorList: (page?: number, ended?: boolean) =>
-      ['incident', 'doctor-list', page, ended === undefined ? 'all' : ended ? 'ended' : 'active'] as const,
+    doctorList: (page?: number, ended?: boolean, filter?: object) =>
+      [
+        'incident',
+        'doctor-list',
+        page,
+        ended === undefined ? 'all' : ended ? 'ended' : 'active',
+        filter ?? {},
+      ] as const,
   },
   doctor: {
     myProfile: ['doctor', 'my-profile'] as const,
