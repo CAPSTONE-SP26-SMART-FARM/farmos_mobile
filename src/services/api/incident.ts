@@ -1,13 +1,20 @@
 import { apiClient } from './client'
-import type { CreateIncidentBody, IncidentTicket, ListIncidentTicketsRes, TicketBalanceItem } from '@/types/incident'
+import type {
+  CreateIncidentBody, IncidentTicket, ListIncidentTicketsRes, TicketBalanceItem,
+  ListTicketsFilter, ListDoctorTicketsFilter,
+} from '@/types/incident'
 import type { FarmerMyMilestone } from '@/types/production'
 
 export const incidentApi = {
   // Farmer endpoints — v2
-  list: (page = 1, limit = 20) =>
-    apiClient
-      .get<{ data: ListIncidentTicketsRes }>(`/tickets?page=${page}&limit=${limit}`)
-      .then((r) => r.data.data),
+  list: (page = 1, limit = 20, filter: ListTicketsFilter = {}) => {
+    const q = new URLSearchParams({ page: String(page), limit: String(limit) })
+    if (filter.status) q.set('status', filter.status)
+    if (filter.dateRange) q.set('dateRange', filter.dateRange)
+    return apiClient
+      .get<{ data: ListIncidentTicketsRes }>(`/tickets?${q.toString()}`)
+      .then((r) => r.data.data)
+  },
 
   detail: (ticketId: string) =>
     apiClient
@@ -36,9 +43,11 @@ export const incidentApi = {
       .then((r) => r.data.data.data),
 
   // Doctor endpoints — giữ v1
-  doctorList: (page = 1, limit = 20, ended?: boolean) => {
+  doctorList: (page = 1, limit = 20, filter: ListDoctorTicketsFilter = {}) => {
     const q = new URLSearchParams({ page: String(page), limit: String(limit) })
-    if (ended !== undefined) q.set('ended', String(ended))
+    if (filter.ended !== undefined) q.set('ended', String(filter.ended))
+    if (filter.status) q.set('status', filter.status)
+    if (filter.dateRange) q.set('dateRange', filter.dateRange)
     return apiClient
       .get<{ data: ListIncidentTicketsRes }>(`/ticket/incident/doctor?${q.toString()}`)
       .then((r) => r.data.data)

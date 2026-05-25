@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { View, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { MaterialIcons } from '@expo/vector-icons'
 import { Text, EmptyState, PillTabs } from '@/components/ui'
 import type { PillTabItem } from '@/components/ui'
 import { useFarmerCurrentUpcomingMilestones } from '@/hooks/useFarmerMilestones'
@@ -9,8 +10,6 @@ import { useTasksForDailyLog } from '@/hooks/useDailyLog'
 import { icons } from '@/constants/icon'
 import type { TaskForDailyLog } from '@/types/dailyLog'
 import type { FarmerCurrentUpcomingMilestone } from '@/types/farmerIot'
-
-const DiaryIcon = icons.diarySvg
 
 type FarmTab = 'sensors' | 'tasks'
 
@@ -35,11 +34,8 @@ const PRIORITY_LABEL: Record<string, string> = {
 function TaskCard({ task, onPress }: { task: TaskForDailyLog; onPress: () => void }) {
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
-      <View style={styles.cardIconWrap}>
-        <DiaryIcon width={22} height={22} color='#2463EB' />
-      </View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.cardTitle} numberOfLines={2}>{task.title}</Text>
+        <Text style={styles.cardTitle} numberOfLines={1}>{task.title}</Text>
         <View style={styles.cardMeta}>
           <View style={[styles.priorityDot, { backgroundColor: PRIORITY_COLOR[task.priority] ?? '#2463EB' }]} />
           <Text style={[styles.priorityLabel, { color: PRIORITY_COLOR[task.priority] ?? '#2463EB' }]}>
@@ -47,9 +43,7 @@ function TaskCard({ task, onPress }: { task: TaskForDailyLog; onPress: () => voi
           </Text>
         </View>
       </View>
-      <View style={styles.logBadge}>
-        <Text style={styles.logBadgeText}>Ghi nhật ký</Text>
-      </View>
+      <Text style={styles.chevron}>›</Text>
     </TouchableOpacity>
   )
 }
@@ -78,41 +72,49 @@ function SensorsTab() {
     <View style={styles.list}>
       {Object.entries(byZone).map(([zoneName, items]) => (
         <View key={zoneName} style={styles.zoneGroup}>
-          <Text style={styles.zoneHeader}>{zoneName}</Text>
-          {items.map((m) => (
-            <TouchableOpacity
-              key={m.id}
-              style={styles.card}
-              activeOpacity={0.85}
-              onPress={() =>
-                router.push({
-                  pathname: '/(app)/farm/milestone/[milestoneId]',
-                  params: { milestoneId: m.id, stageName: m.stageName },
-                })
-              }
-            >
-              <View style={styles.cardContent}>
-                <Text style={styles.cardTitle}>{m.stageName}</Text>
-                <View style={styles.cardMeta}>
-                  <View
-                    style={[
-                      styles.priorityDot,
-                      { backgroundColor: m.status === 'in_progress' ? '#16A34A' : '#D97706' },
-                    ]}
-                  />
-                  <Text
-                    style={[
-                      styles.priorityLabel,
-                      { color: m.status === 'in_progress' ? '#16A34A' : '#D97706' },
-                    ]}
-                  >
-                    {m.status === 'in_progress' ? 'Đang diễn ra' : 'Sắp tới'}
-                  </Text>
+          <View style={styles.sectionHeader}>
+            <View style={styles.zoneChip}>
+              <MaterialIcons name='place' size={16} color='#2463EB' />
+              <Text style={styles.zoneChipText}>{zoneName}</Text>
+            </View>
+            <Text style={styles.sectionCount}>{items.length} giai đoạn</Text>
+          </View>
+          <View style={styles.zoneItems}>
+            {items.map((m) => (
+              <TouchableOpacity
+                key={m.id}
+                style={styles.card}
+                activeOpacity={0.85}
+                onPress={() =>
+                  router.push({
+                    pathname: '/(app)/farm/milestone/[milestoneId]',
+                    params: { milestoneId: m.id, stageName: m.stageName },
+                  })
+                }
+              >
+                <View style={styles.cardContent}>
+                  <Text style={styles.cardTitle}>{m.stageName}</Text>
+                  <View style={styles.cardMeta}>
+                    <View
+                      style={[
+                        styles.priorityDot,
+                        { backgroundColor: m.status === 'in_progress' ? '#16A34A' : '#D97706' },
+                      ]}
+                    />
+                    <Text
+                      style={[
+                        styles.priorityLabel,
+                        { color: m.status === 'in_progress' ? '#16A34A' : '#D97706' },
+                      ]}
+                    >
+                      {m.status === 'in_progress' ? 'Đang diễn ra' : 'Sắp tới'}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-              <Text style={styles.chevron}>›</Text>
-            </TouchableOpacity>
-          ))}
+                <Text style={styles.chevron}>›</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
       ))}
     </View>
@@ -193,8 +195,41 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 32 },
   tabs: { marginTop: 12 },
   list: { gap: 12 },
-  zoneGroup: { gap: 8 },
-  zoneHeader: { fontSize: 13, color: '#6B7280', fontFamily: 'Inter_500Medium', marginTop: 4 },
+  zoneGroup: { gap: 10 },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 6,
+  },
+  zoneChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#EFF6FF',
+    paddingLeft: 8,
+    paddingRight: 14,
+    paddingVertical: 7,
+    borderRadius: 100,
+  },
+  zoneChipText: {
+    fontSize: 15,
+    lineHeight: 20,
+    color: '#2463EB',
+    fontFamily: 'Inter_700Bold',
+  },
+  sectionCount: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: '#9CA3AF',
+    fontFamily: 'Inter_500Medium',
+  },
+  zoneItems: {
+    gap: 10,
+    paddingLeft: 12,
+    borderLeftWidth: 2,
+    borderLeftColor: '#E5E7EB',
+  },
 
   card: {
     padding: 16,
@@ -209,27 +244,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  cardIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: '#EFF6FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   cardTitle: { fontSize: 14, color: '#111827', fontFamily: 'Inter_600SemiBold', lineHeight: 20 },
-  cardSubtitle: { fontSize: 12, color: '#9CA3AF', fontFamily: 'Inter_400Regular', marginTop: 4 },
   cardMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
   priorityDot: { width: 6, height: 6, borderRadius: 3 },
   priorityLabel: { fontSize: 12, fontFamily: 'Inter_500Medium' },
-
-  logBadge: {
-    backgroundColor: '#EFF6FF',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  logBadgeText: { fontSize: 12, color: '#2463EB', fontFamily: 'Inter_500Medium' },
 
   cardContent: { flex: 1 },
   chevron: { fontSize: 22, color: '#9CA3AF' },

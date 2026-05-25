@@ -9,7 +9,23 @@ export type TaskForDailyLog = {
   description: string | null
   priority: TaskPriority
   status: TaskStatus
+  progress: number
   assignedDate: string | null
+}
+
+export type AttachmentItem = {
+  url: string
+  fileName?: string
+  mimeType?: string
+  sizeBytes?: number
+}
+
+export type AttachmentRes = AttachmentItem & {
+  id: string
+  employeeTaskId: string | null
+  dailyLogId: string | null
+  uploadedBy: string
+  createdAt: string
 }
 
 export type TasksForDailyLogRes = {
@@ -21,6 +37,7 @@ export type SubmitDailyLogBody = {
   employeeTaskId: string
   activities: string
   notes?: string
+  attachments?: AttachmentItem[]
 }
 
 export type DailyLogZone = { id: string; name: string }
@@ -51,5 +68,6 @@ export type DailyLog = {
   notes: string | null
   loggedBy: string
   farmer: DailyLogFarmer
+  attachments: AttachmentRes[]
   createdAt: string
 }

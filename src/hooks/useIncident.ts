@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/constants/queryKeys'
 import { incidentApi } from '@/services/api/incident'
-import type { CreateIncidentBody } from '@/types/incident'
+import type { CreateIncidentBody, ListTicketsFilter } from '@/types/incident'
 
-export function useIncidentList(page = 1) {
+export function useIncidentList(page = 1, filter: ListTicketsFilter = {}) {
   return useQuery({
-    queryKey: queryKeys.incident.list(page),
-    queryFn: () => incidentApi.list(page),
+    queryKey: queryKeys.incident.list(page, filter),
+    queryFn: () => incidentApi.list(page, 20, filter),
   })
 }
 

@@ -2,6 +2,8 @@ import { View, StyleSheet } from 'react-native'
 import { MaterialIcons } from '@expo/vector-icons'
 import { Text } from '@/components/ui'
 import { formatRelativeTime, formatDateTime } from '@/utils/date'
+import { detectSensorKind, SENSOR_ICON, SENSOR_UNIT } from '@/utils/sensor'
+import { capitalize, shortAlertTitle } from '@/utils/text'
 import type { Alert, AlertSeverity } from '@/types/alert'
 
 const SEVERITY_META: Record<AlertSeverity, { label: string; color: string; badgeBg: string; badgeText: string }> = {
@@ -13,35 +15,6 @@ const SEVERITY_META: Record<AlertSeverity, { label: string; color: string; badge
 
 const RESOLVED_META = { label: 'Đã xử lý', badgeBg: '#F3F4F6', badgeText: '#4B5563' }
 
-const SENSOR_UNIT: Record<string, string> = {
-  soil_moisture: '%',
-  air_temperature: '°C',
-  air_humidity: '%',
-  light_intensity: '%',
-}
-
-const SENSOR_ICON: Record<string, React.ComponentProps<typeof MaterialIcons>['name']> = {
-  soil_moisture: 'grass',
-  air_temperature: 'device-thermostat',
-  air_humidity: 'water-drop',
-  light_intensity: 'wb-sunny',
-}
-
-function capitalize(s: string): string {
-  if (!s) return s
-  return s.charAt(0).toUpperCase() + s.slice(1)
-}
-
-// Rút gọn title — board/zone đã hiện ở dòng meta dưới:
-// "Cảm biến độ ẩm đất cao hơn ngưỡng tại Khu Ớt Chuông" → "độ ẩm đất cao hơn ngưỡng"
-function shortTitle(title: string): string {
-  return title
-    .replace(/^Cảm biến\s+/i, '')
-    .replace(/\s+(tại|ở)\s+.+$/i, '')
-    .replace(/\s+an toàn$/i, '')
-    .trim()
-}
-
 export function AlertCard({ item }: { item: Alert }) {
   const severity = SEVERITY_META[item.severity] ?? SEVERITY_META.medium
   const resolved = item.isResolved
@@ -49,8 +22,10 @@ export function AlertCard({ item }: { item: Alert }) {
     ? RESOLVED_META
     : { label: severity.label, badgeBg: severity.badgeBg, badgeText: severity.badgeText }
 
-  const unit = item.sensorType ? SENSOR_UNIT[item.sensorType] ?? '' : ''
-  const iconName = item.sensorType ? SENSOR_ICON[item.sensorType] : undefined
+  // Ưu tiên sensorType từ BE; fallback parse từ title (BE đặt format cố định)
+  const kind = (item.sensorType as keyof typeof SENSOR_ICON) ?? detectSensorKind(item.title)
+  const unit = kind ? SENSOR_UNIT[kind] ?? '' : ''
+  const iconName = kind ? SENSOR_ICON[kind] : undefined
   const actual = item.actualValue ?? null
   const hasRange =
     typeof item.optimalMin === 'number' && typeof item.optimalMax === 'number'
@@ -63,7 +38,7 @@ export function AlertCard({ item }: { item: Alert }) {
             <MaterialIcons name={iconName} size={18} color='#4B5563' />
           ) : null}
           <Text style={styles.title} numberOfLines={1}>
-            {capitalize(shortTitle(item.title))}
+            {capitalize(shortAlertTitle(item.title))}
           </Text>
         </View>
         <View style={[styles.badge, { backgroundColor: status.badgeBg }]}>
