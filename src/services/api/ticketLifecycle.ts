@@ -2,9 +2,24 @@ import { apiClient } from './client'
 import type { AbandonResolutionBody, RateTicketBody } from '@/types/ticketLifecycle'
 import type { ResolveTicketBody, AddAddendumBody, PrescriptionFull } from '@/types/medicine'
 
+export type TicketSolution = {
+  id: string
+  ticketId: string
+  authorId: string
+  /** 'AI' khi AI fallback giải quyết, 'DOCTOR' khi doctor giải quyết. */
+  source: 'AI' | 'DOCTOR' | string
+  rootCause: string
+  rootCauseReason: string
+  treatment: string
+  prevention: string
+  severityNote: string | null
+  language: string
+  createdAt: string
+}
+
 export type TicketFullRes = {
   ticket: unknown
-  solution: unknown
+  solution: TicketSolution | null
   prescription: PrescriptionFull | null
   addenda: unknown[]
   rating: unknown
