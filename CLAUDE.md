@@ -1,95 +1,78 @@
-# RN Boilerplate - Claude Instructions
+# FarmOS Mobile — Claude Agent Instructions
 
-## Project Stack
-Expo SDK 55, Expo Router v3, TypeScript strict, NativeWind v4, TanStack Query v5, Zustand, Zod + React Hook Form, Axios, MMKV, SecureStore
+> Bạn đang làm việc với vai trò **Principal Engineer (React Native + Expo + TypeScript)** trên `farmos_mobile`.
+> Đây là Expo (managed workflow) + Expo Router v6 + NativeWind v4 app, **KHÔNG phải Next.js / web React / bare React Native**.
 
-## Project Structure
-```
-app/                    # Expo Router (file-based routing)
-  (auth)/              # Public screens (login, register)
-  (app)/
-    (tabs)/            # Tab screens
-    detail.tsx         # Stack screens
-src/
-  components/ui/       # Base components: Button, Input, Text, LoadingScreen
-  components/features/ # Feature-specific components
-  hooks/               # useAuth, useForm, useNetworkStatus, use[Feature]
-  services/api/        # axios clients: client.ts, auth.ts, [feature].ts
-  services/storage/    # tokenStorage (SecureStore), appStorage (MMKV)
-  stores/              # authStore, appStore (Zustand)
-  types/               # api.ts, auth.ts, [feature].ts
-  constants/           # config.ts, queryKeys.ts
-  lib/                 # queryClient.ts
-```
+## 🚦 Trước khi sửa bất kỳ file nào
 
-## Key Conventions
+1. Đọc file rule **tương ứng task** trong [.claude/rules/](.claude/rules/). Đừng dựa vào trí nhớ — rules có thể đã được update.
+2. Nếu task là "tạo screen mới" / "build feature end-to-end" → bắt buộc theo [06-auto-implementation-protocol.md](.claude/rules/06-auto-implementation-protocol.md).
+3. Tôn trọng "build outside-in": types → API service → query keys → hook (RQ) → screen / component → wire into router.
 
-### Screens
-- `SafeAreaView` từ `react-native-safe-area-context` (KHÔNG dùng từ react-native)
-- NativeWind `className` cho styling
-- `export default` cho screens
-- Named exports cho components
+## 📚 Rule Index
 
-### API Pattern
-```ts
-// API service
-export const [feature]Api = {
-  getAll: () => apiClient.get<ApiResponse<T>>('/path').then(r => r.data.data),
-}
+| # | File | Khi nào đọc |
+|---|------|-------------|
+| 01 | [project-context.md](.claude/rules/01-project-context.md) | **Luôn** — hiểu stack, philosophy, app vs auth vs tabs |
+| 02 | [architecture-layers.md](.claude/rules/02-architecture-layers.md) | **Luôn** — api → hook → store → component layering |
+| 03 | [coding-patterns.md](.claude/rules/03-coding-patterns.md) | **Luôn** — convention khi viết `.ts` / `.tsx` |
+| 04 | [tech-stack.md](.claude/rules/04-tech-stack.md) | Khi thêm/đổi package, không chắc về version compat |
+| 05 | [routing-and-navigation.md](.claude/rules/05-routing-and-navigation.md) | Khi tạo route mới, form-sheet, dynamic `[id]` |
+| 06 | [auto-implementation-protocol.md](.claude/rules/06-auto-implementation-protocol.md) | Khi build feature mới end-to-end |
+| 07 | [realtime-and-socket.md](.claude/rules/07-realtime-and-socket.md) | Khi đụng Socket.IO / live data / push-style update |
+| 08 | [error-handling-and-toast.md](.claude/rules/08-error-handling-and-toast.md) | Khi xử lý lỗi, hiển thị toast, network state |
+| 09 | [auth-and-security.md](.claude/rules/09-auth-and-security.md) | Khi đụng auth flow, token, role-based UI |
+| 10 | [testing-and-verification.md](.claude/rules/10-testing-and-verification.md) | Trước khi báo task done — bắt buộc verify |
 
-// Hook
-export function use[Feature]() {
-  return useQuery({ queryKey: queryKeys.[feature].all, queryFn: [feature]Api.getAll })
-}
-```
+## 📌 Core rules — auto-load
 
-### Form Pattern
-```tsx
-const schema = z.object({ field: z.string() })
-const { control, handleSubmit } = useForm(schema) // từ @/hooks/useForm
-```
+Ba rule "Luôn" dưới đây được **import trực tiếp** vào context mỗi session (không chỉ là link markdown), để chắc chắn luôn có mặt:
 
-### Path Aliases
-- `@/` → `src/`
-- `@app/` → `app/`
+@.claude/rules/01-project-context.md
+@.claude/rules/02-architecture-layers.md
+@.claude/rules/03-coding-patterns.md
 
-## Slash Commands (dùng khi được yêu cầu)
+> Rule 04–10 đọc theo task (xem bảng trên) — cố tình **không** import sẵn để tiết kiệm context.
 
-### /new-screen [ScreenName]
-Tạo Expo Router screen mới. Hỏi: tab hay stack? auth hay protected?
-- Tab: `app/(app)/(tabs)/[name].tsx` + update `_layout.tsx`
-- Stack: `app/(app)/[name].tsx`
-- Dùng template:
-```tsx
-import { View, ScrollView } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import { Text } from '@/components/ui'
+## 🧰 Skills (tự gọi khi gặp pattern tương ứng)
 
-export default function [Name]Screen() {
-  return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      <ScrollView contentContainerClassName="flex-grow px-4 pt-6">
-        <Text variant="h2">[Name]</Text>
-      </ScrollView>
-    </SafeAreaView>
-  )
-}
-```
+| Skill | Trigger |
+|-------|---------|
+| [new-screen](.claude/skills/new-screen/SKILL.md) | "tạo screen X", "thêm tab Y", "add detail screen cho Z" |
+| [new-feature](.claude/skills/new-feature/SKILL.md) | "build feature X end-to-end", "wire up API mới + hook + screen" |
+| [new-form-screen](.claude/skills/new-form-screen/SKILL.md) | "tạo form X" (Zod + RHF + FormTextField + submit + toast) |
+| [new-realtime-listener](.claude/skills/new-realtime-listener/SKILL.md) | "lắng nghe socket event Y", "live update screen X qua realtime" |
 
-### /new-component [ComponentName]
-Tạo reusable component. Base UI → `src/components/ui/`, feature → `src/components/features/[feature]/`.
-Thêm export vào `src/components/ui/index.ts` nếu là base UI.
-Template:
-```tsx
-interface [Name]Props extends ViewProps { }
-export function [Name]({ className, ...props }: [Name]Props) {
-  return <View className={`... ${className ?? ''}`} {...props} />
-}
-```
+## ⚡ Strict rules (cứng — không thương lượng)
 
-### /new-api [featureName]
-Tạo API service + TanStack Query hooks + types. Tạo 3 files:
-1. `src/types/[feature].ts` — Entity, CreateRequest, UpdateRequest
-2. `src/services/api/[feature].ts` — CRUD methods dùng apiClient
-3. `src/hooks/use[Feature].ts` — useQuery + useMutation hooks
-Thêm queryKeys vào `src/constants/queryKeys.ts`.
+- ❌ **NEVER** import `SafeAreaView` từ `react-native` — luôn từ `react-native-safe-area-context`.
+- ❌ **NEVER** gọi `axios` trực tiếp — dùng `apiClient` từ `@/services/api/client`.
+- ❌ **NEVER** lưu access/refresh token vào `AsyncStorage` — chỉ qua `tokenStorage` (SecureStore).
+- ❌ **NEVER** đặt API URL hardcode — đọc `CONFIG.API_URL` từ `@/constants/config`.
+- ❌ **NEVER** put data fetching trực tiếp trong component — qua hook TanStack Query (`useXxx`).
+- ❌ **NEVER** mutate Zustand store khi cần server state — server state thuộc React Query, store chỉ giữ auth + UI-cross-screen state.
+- ❌ **NEVER** quên invalidate query sau mutation (cả broad key + specific detail key).
+- ❌ **NEVER** thêm socket listener mà quên `off()` trong cleanup `useEffect`.
+- ✅ **ALWAYS** dùng `tokenStorage` cho token, `SecureStore` direct chỉ cho key mới.
+- ✅ **ALWAYS** dùng `showToast.error/.success/.info/.warning` thay vì `Alert.alert` cho feedback chung.
+- ✅ **ALWAYS** Zod schema + `zodResolver` cho mọi form — KHÔNG dùng `yup`/`joi`/custom regex inline.
+- ✅ **ALWAYS** path alias `@/` cho `src/` (không relative `../../`).
+
+## 🗣️ Communication
+
+- User là Vietnamese — **user-facing strings tiếng Việt** (label, placeholder, toast message, error copy). Code identifier / comment kỹ thuật tiếng Anh.
+- Khi không chắc copy → viết tiếng Việt tự nhiên, không Google-translate cứng.
+- Sau khi fix bug → tự update doc liên quan (nếu có) — không hỏi lại.
+
+## 🧠 Domain Quick Reference
+
+- Roles trong app: `farmer | rancher | doctor` (admin / owner / manager dùng web back-office, **không** vào app mobile này).
+- Doctor flow: nhận incident ticket → chat → kê đơn (prescription) → resolve → rating + commission.
+- Farmer/Rancher flow: tạo incident → đợi doctor → nhận prescription → daily log → milestone tracking.
+- Wallet flow (doctor): earn từ ticket → withdraw qua bank account đã verify.
+- Realtime: namespace `/realtime`, room theo `zoneId` / `ticketId` / `farmId`.
+- IoT: app **chỉ hiển thị** sensor reading + alert. Mọi provisioning / control flow ở web admin.
+
+## 🗂️ Khi nào output thay vì sửa code
+
+User hỏi "X hoạt động thế nào?", "có nên...?" — trả lời ngắn (2-3 câu), recommend + tradeoff. **Không implement cho tới khi user đồng ý.**

@@ -11,6 +11,7 @@ export const incidentApi = {
     const q = new URLSearchParams({ page: String(page), limit: String(limit) })
     if (filter.status) q.set('status', filter.status)
     if (filter.dateRange) q.set('dateRange', filter.dateRange)
+    if (filter.search) q.set('search', filter.search)
     return apiClient
       .get<{ data: ListIncidentTicketsRes }>(`/tickets?${q.toString()}`)
       .then((r) => r.data.data)
@@ -48,6 +49,7 @@ export const incidentApi = {
     if (filter.ended !== undefined) q.set('ended', String(filter.ended))
     if (filter.status) q.set('status', filter.status)
     if (filter.dateRange) q.set('dateRange', filter.dateRange)
+    if (filter.search) q.set('search', filter.search)
     return apiClient
       .get<{ data: ListIncidentTicketsRes }>(`/ticket/incident/doctor?${q.toString()}`)
       .then((r) => r.data.data)

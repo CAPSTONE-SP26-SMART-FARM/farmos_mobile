@@ -7,6 +7,7 @@ import type {
   SubmitDoctorRequestRequest,
   UpdateDoctorOnlineStatusRequest,
 } from '@/types/doctor'
+import type { TicketDateRange } from '@/types/incident'
 
 // Get my doctor profile
 export function useDoctorProfile(enabled = true) {
@@ -93,7 +94,7 @@ export function useDoctorIncidentList(
   page = 1,
   ended?: boolean,
   enabled = true,
-  filter: { dateRange?: 'today' | '3d' | '1w' | '1m' | 'all' } = {},
+  filter: { dateRange?: TicketDateRange; search?: string } = {},
 ) {
   return useQuery({
     queryKey: queryKeys.incident.doctorList(page, ended, filter),
