@@ -1,4 +1,6 @@
-import { View, ActivityIndicator } from 'react-native'
+import { View, ActivityIndicator, Pressable, StyleSheet } from 'react-native'
+import { useRouter } from 'expo-router'
+import { MaterialIcons } from '@expo/vector-icons'
 import { Text } from '@/components/ui'
 import { ProfileInfoLayout, s } from '@/components/features/profile/ProfileInfoLayout'
 import { useDoctorProfile, useDoctorRequestsList, useDoctorDqs } from '@/hooks/useDoctor'
@@ -13,6 +15,7 @@ const TIER_CONFIG: Record<DoctorTier, { bg: string; color: string }> = {
 }
 
 export default function DoctorProfileInfoScreen() {
+  const router = useRouter()
   const { data: profile, isLoading: profileLoading } = useDoctorProfile()
   const { data: requestsData } = useDoctorRequestsList()
   const { data: dqs } = useDoctorDqs()
@@ -28,8 +31,14 @@ export default function DoctorProfileInfoScreen() {
 
   return (
     <ProfileInfoLayout editPath='/(app)/edit-doctor-profile'>
-      <View style={s.section}>
-        <Text style={s.sectionTitle}>Thứ hạng chất lượng</Text>
+      <Pressable
+        style={({ pressed }) => [s.section, pressed && { opacity: 0.7 }]}
+        onPress={() => router.push('/(app)/doctor-dqs')}
+      >
+        <View style={local.sectionHeader}>
+          <Text style={s.sectionTitle}>Thứ hạng chất lượng</Text>
+          <MaterialIcons name='chevron-right' size={22} color='#9CA3AF' />
+        </View>
         <View style={s.infoRow}>
           <Text style={s.infoLabel}>Hạng</Text>
           {dqs?.latest ? (
@@ -51,7 +60,7 @@ export default function DoctorProfileInfoScreen() {
             </View>
           </>
         )}
-      </View>
+      </Pressable>
 
       <View style={s.section}>
         <Text style={s.sectionTitle}>Thông tin chuyên môn</Text>
@@ -121,3 +130,10 @@ export default function DoctorProfileInfoScreen() {
     </ProfileInfoLayout>
   )
 }
+
+const local = StyleSheet.create({
+  sectionHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+})
