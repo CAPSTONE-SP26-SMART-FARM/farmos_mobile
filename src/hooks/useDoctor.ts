@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/constants/queryKeys'
 import { doctorApi } from '@/services/api/doctor'
 import { incidentApi } from '@/services/api/incident'
@@ -100,6 +100,7 @@ export function useDoctorIncidentList(
     queryKey: queryKeys.incident.doctorList(page, ended, filter),
     queryFn: () => incidentApi.doctorList(page, 20, { ended, ...filter }),
     enabled,
+    placeholderData: keepPreviousData,
   })
 }
 

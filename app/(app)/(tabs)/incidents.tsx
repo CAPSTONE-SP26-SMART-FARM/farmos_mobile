@@ -148,11 +148,15 @@ export default function IncidentsScreen() {
   const endedParam = doctorFilter === 'resolved'
   const isBroadcastTab = isDoctor && doctorFilter === 'broadcasts'
 
-  const farmerQuery = useIncidentList(1, {
-    status: farmerStatusFilter !== 'all' ? farmerStatusFilter : undefined,
-    dateRange: dateFilter,
-    search: debouncedSearch || undefined,
-  })
+  const farmerQuery = useIncidentList(
+    1,
+    {
+      status: farmerStatusFilter !== 'all' ? farmerStatusFilter : undefined,
+      dateRange: dateFilter,
+      search: debouncedSearch || undefined,
+    },
+    !isDoctor,
+  )
 
   const doctorQuery = useDoctorIncidentList(1, endedParam, isDoctor, {
     dateRange: dateFilter,
@@ -327,12 +331,14 @@ export default function IncidentsScreen() {
               title='Trạng thái'
             />
           )}
-          <IncidentStatusFilter
-            value={dateFilter}
-            options={DATE_OPTIONS}
-            onChange={setDateFilter}
-            title='Lọc theo thời gian'
-          />
+          {!isBroadcastTab && (
+            <IncidentStatusFilter
+              value={dateFilter}
+              options={DATE_OPTIONS}
+              onChange={setDateFilter}
+              title='Lọc theo thời gian'
+            />
+          )}
         </View>
       </View>
 
