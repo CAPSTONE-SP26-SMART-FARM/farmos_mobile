@@ -32,6 +32,7 @@ export default function AppLayout() {
       <Stack.Screen name='edit-doctor-profile' />
       <Stack.Screen name='farmer-profile-info' />
       <Stack.Screen name='doctor-profile-info' />
+      <Stack.Screen name='doctor-dqs' options={formSheetOptions} />
     </Stack>
   )
 }
