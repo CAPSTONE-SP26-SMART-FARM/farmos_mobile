@@ -7,6 +7,7 @@ import {
   Pressable,
   Alert,
   TextInput,
+  ScrollView,
 } from 'react-native'
 import { MaterialIcons, Ionicons } from '@expo/vector-icons'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -15,12 +16,14 @@ import { useFocusEffect } from '@react-navigation/native'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { DoctorBroadcast } from '@/types/broadcast'
-import { Text, EmptyState } from '@/components/ui'
+import { Text, EmptyState, PillTabs } from '@/components/ui'
+import type { PillTabItem } from '@/components/ui'
 import { IncidentCard } from '@/components/features/incident/IncidentCard'
 import { IncidentStatusFilter } from '@/components/features/incident/IncidentStatusFilter'
 import { useIncidentList } from '@/hooks/useIncident'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { useActiveTicketCategories } from '@/hooks/useTicketCategory'
-import { useDoctorIncidentList, useDoctorProfile } from '@/hooks/useDoctor'
+import { useDoctorProfile } from '@/hooks/useDoctor'
 import { usePendingBroadcasts } from '@/hooks/useBroadcast'
 import { useRejectTicket } from '@/hooks/useTicketLifecycle'
 import { ticketLifecycleApi } from '@/services/api/ticketLifecycle'
@@ -29,36 +32,39 @@ import { useToast } from '@/hooks/useToast'
 import { getErrorMessage } from '@/utils/error'
 import { socketService } from '@/services/socket/socketService'
 import { useActiveTicketStore } from '@/stores/activeTicketStore'
-import { SEVERITY_META } from '@/constants/incident'
+import { SEVERITY_META, STATUS_META } from '@/constants/incident'
 import { icons } from '@/constants/icon'
 import { queryKeys } from '@/constants/queryKeys'
 import type { IncidentSeverity, TicketDateRange, TicketStatus } from '@/types/incident'
 
-type DoctorFilter = 'broadcasts' | 'active' | 'resolved'
-type FarmerStatusFilter = TicketStatus | 'all'
+// Doctor có 2 view: broadcasts (yêu cầu chờ tiếp nhận) vs my-tickets (sự cố đã/đang xử lý).
+// Broadcasts dùng endpoint khác (/ticket/broadcast/pending) nên không gộp vào status filter được.
+type DoctorView = 'broadcasts' | 'my-tickets'
+type StatusFilter = TicketStatus | 'all'
 
 const DATE_OPTIONS: readonly { value: TicketDateRange; label: string }[] = [
   { value: 'all', label: 'Tất cả' },
   { value: 'today', label: 'Hôm nay' },
-  { value: '3d', label: '3 ngày gần đây' },
+  { value: '3d', label: '3 ngày' },
   { value: '1w', label: '1 tuần' },
   { value: '1m', label: '1 tháng' },
 ]
 
-const DOCTOR_OPTIONS: readonly { value: DoctorFilter; label: string }[] = [
-  { value: 'broadcasts', label: 'Yêu cầu mới' },
-  { value: 'active', label: 'Đang xử lý' },
-  { value: 'resolved', label: 'Đã giải quyết' },
+// Status filter — đồng bộ với API: open | assigned | in_progress | resolved | closed | cancelled.
+// Label lấy từ STATUS_META để đồng bộ với badge.
+const STATUS_FILTER_OPTIONS: readonly { value: StatusFilter; label: string }[] = [
+  { value: 'all', label: 'Tất cả' },
+  { value: 'open', label: STATUS_META.open.label },
+  { value: 'assigned', label: STATUS_META.assigned.label },
+  { value: 'in_progress', label: STATUS_META.in_progress.label },
+  { value: 'resolved', label: STATUS_META.resolved.label },
+  { value: 'closed', label: STATUS_META.closed.label },
+  { value: 'cancelled', label: STATUS_META.cancelled.label },
 ]
 
-const FARMER_STATUS_OPTIONS: readonly { value: FarmerStatusFilter; label: string }[] = [
-  { value: 'all', label: 'Tất cả' },
-  { value: 'open', label: 'Đang mở' },
-  { value: 'assigned', label: 'Đã tiếp nhận' },
-  { value: 'in_progress', label: 'Đang xử lý' },
-  { value: 'resolved', label: 'Đã giải quyết' },
-  { value: 'closed', label: 'Đã đóng' },
-  { value: 'cancelled', label: 'Đã hủy' },
+const DOCTOR_VIEW_TABS: readonly PillTabItem<DoctorView>[] = [
+  { key: 'broadcasts', label: 'Yêu cầu mới' },
+  { key: 'my-tickets', label: 'Sự cố của tôi' },
 ]
 
 function DoctorGuardScreen({ message }: { message: string }) {
@@ -134,42 +140,33 @@ export default function IncidentsScreen() {
   const qc = useQueryClient()
   const isDoctor = user?.role === 'doctor'
 
-  const [doctorFilter, setDoctorFilter] = useState<DoctorFilter>('broadcasts')
-  const [farmerStatusFilter, setFarmerStatusFilter] = useState<FarmerStatusFilter>('all')
+  const [doctorView, setDoctorView] = useState<DoctorView>('broadcasts')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [dateFilter, setDateFilter] = useState<TicketDateRange>('all')
   const [searchText, setSearchText] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const debouncedSearch = useDebouncedValue(searchText.trim(), 400)
+  // Hiện spinner mini trong search bar khi text đã thay đổi nhưng debounce chưa flush.
+  const isDebouncing = searchText.trim() !== debouncedSearch
 
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(searchText.trim()), 400)
-    return () => clearTimeout(timer)
-  }, [searchText])
+  const isBroadcastTab = isDoctor && doctorView === 'broadcasts'
 
-  const endedParam = doctorFilter === 'resolved'
-  const isBroadcastTab = isDoctor && doctorFilter === 'broadcasts'
-
-  const farmerQuery = useIncidentList(
+  // /tickets dùng chung cho cả farmer + doctor — BE filter theo role qua auth token.
+  // Doctor "Sự cố của tôi" và farmer ticket list cùng endpoint, chỉ enable khi không ở tab broadcasts.
+  const ticketQuery = useIncidentList(
     1,
     {
-      status: farmerStatusFilter !== 'all' ? farmerStatusFilter : undefined,
+      status: statusFilter !== 'all' ? statusFilter : undefined,
       dateRange: dateFilter,
       search: debouncedSearch || undefined,
     },
-    !isDoctor,
+    !isBroadcastTab,
   )
-
-  const doctorQuery = useDoctorIncidentList(1, endedParam, isDoctor, {
-    dateRange: dateFilter,
-    search: debouncedSearch || undefined,
-  })
 
   const broadcastQuery = usePendingBroadcasts(isDoctor)
 
-  const { data, isLoading, isError, refetch } = isDoctor
-    ? isBroadcastTab
-      ? { data: null, isLoading: false, isError: false, refetch: broadcastQuery.refetch }
-      : doctorQuery
-    : farmerQuery
+  const { data, isLoading, isError, refetch } = isBroadcastTab
+    ? { data: null, isLoading: false, isError: false, refetch: broadcastQuery.refetch }
+    : ticketQuery
 
   const { data: categories = [] } = useActiveTicketCategories(!isDoctor)
   const categoryMap = useMemo(
@@ -178,13 +175,7 @@ export default function IncidentsScreen() {
   )
 
   const { data: doctorProfile } = useDoctorProfile(isDoctor)
-  const rawTickets = (data as any)?.data ?? []
-
-  // Doctor "Đang xử lý": chỉ show ticket doctor đã accept (assignee là mình)
-  const tickets =
-    isDoctor && doctorFilter === 'active'
-      ? rawTickets.filter((t: any) => t.assignee?.id === user?.id)
-      : rawTickets
+  const tickets = (data as any)?.data ?? []
 
   const isOnline = doctorProfile?.isOnline
   const isApproved = user?.isActive
@@ -261,6 +252,21 @@ export default function IncidentsScreen() {
     }
   }, [isDoctor, qc, showToast])
 
+  // Broadcasts endpoint không support search param → filter client-side theo title / description / ticketNumber.
+  // Dataset broadcasts thường nhỏ (chỉ pending) nên cost OK.
+  // ⚠ Phải đặt useMemo TRƯỚC các early return (rules-of-hooks).
+  const broadcasts = useMemo(() => {
+    const list = broadcastQuery.data ?? []
+    if (!debouncedSearch) return list
+    const q = debouncedSearch.toLocaleLowerCase('vi')
+    return list.filter(
+      (b) =>
+        b.title.toLocaleLowerCase('vi').includes(q) ||
+        b.description.toLocaleLowerCase('vi').includes(q) ||
+        b.ticketNumber.toLowerCase().includes(q),
+    )
+  }, [broadcastQuery.data, debouncedSearch])
+
   if (isDoctor && !isApproved)
     return (
       <DoctorGuardScreen message='Hồ sơ chưa được phê duyệt. Vào tab Hồ sơ để hoàn tất.' />
@@ -270,7 +276,6 @@ export default function IncidentsScreen() {
       <DoctorGuardScreen message='Bạn đang offline. Bật online ở tab Hồ sơ để nhận sự cố.' />
     )
 
-  const broadcasts = broadcastQuery.data ?? []
   const showLoading = isBroadcastTab ? broadcastQuery.isLoading : isLoading
   const showError = !isBroadcastTab && isError
   const itemCount = isBroadcastTab ? broadcasts.length : tickets.length
@@ -292,54 +297,61 @@ export default function IncidentsScreen() {
           )}
         </View>
 
-        {/* Search bar — ẩn trên tab broadcasts vì endpoint không hỗ trợ search */}
-        {!isBroadcastTab && (
-          <View style={styles.searchBar}>
-            <Ionicons name='search-outline' size={18} color='#9CA3AF' />
-            <TextInput
-              style={styles.searchInput}
-              placeholder='Tìm kiếm sự cố...'
-              placeholderTextColor='#9CA3AF'
-              value={searchText}
-              onChangeText={setSearchText}
-              returnKeyType='search'
-              autoCapitalize='none'
-              autoCorrect={false}
-            />
-            {searchText.length > 0 && (
-              <Pressable onPress={() => setSearchText('')} hitSlop={8}>
-                <Ionicons name='close-circle' size={18} color='#9CA3AF' />
-              </Pressable>
-            )}
-          </View>
+        {/* Doctor view switcher: broadcasts (yêu cầu mới chưa tiếp nhận) vs sự cố của tôi */}
+        {isDoctor && (
+          <PillTabs
+            items={DOCTOR_VIEW_TABS}
+            value={doctorView}
+            onChange={setDoctorView}
+            style={styles.doctorTabs}
+          />
         )}
 
-        {/* Filter row */}
-        <View style={styles.filterRow}>
-          {isDoctor ? (
+        {/* Search bar — hiện ở mọi tab. Broadcasts filter client-side, ticket list filter server-side. */}
+        <View style={styles.searchBar}>
+          <Ionicons name='search-outline' size={18} color='#9CA3AF' />
+          <TextInput
+            style={styles.searchInput}
+            placeholder='Tìm kiếm sự cố...'
+            placeholderTextColor='#9CA3AF'
+            value={searchText}
+            onChangeText={setSearchText}
+            returnKeyType='search'
+            autoCapitalize='none'
+            autoCorrect={false}
+          />
+          {isDebouncing ? (
+            <ActivityIndicator size='small' color='#9CA3AF' />
+          ) : searchText.length > 0 ? (
+            <Pressable onPress={() => setSearchText('')} hitSlop={8}>
+              <Ionicons name='close-circle' size={18} color='#9CA3AF' />
+            </Pressable>
+          ) : null}
+        </View>
+
+        {/* Filter row — horizontal scroll để pill luôn cùng 1 dòng, không bị wrap xếp chồng */}
+        {!isBroadcastTab && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterRow}
+          >
             <IncidentStatusFilter
-              value={doctorFilter}
-              options={DOCTOR_OPTIONS}
-              onChange={setDoctorFilter}
-              title='Trạng thái'
+              value={statusFilter}
+              options={STATUS_FILTER_OPTIONS}
+              onChange={setStatusFilter}
+              title='Lọc theo trạng thái'
+              prefix='Trạng thái'
             />
-          ) : (
-            <IncidentStatusFilter
-              value={farmerStatusFilter}
-              options={FARMER_STATUS_OPTIONS}
-              onChange={setFarmerStatusFilter}
-              title='Trạng thái'
-            />
-          )}
-          {!isBroadcastTab && (
             <IncidentStatusFilter
               value={dateFilter}
               options={DATE_OPTIONS}
               onChange={setDateFilter}
               title='Lọc theo thời gian'
+              prefix='Thời gian'
             />
-          )}
-        </View>
+          </ScrollView>
+        )}
       </View>
 
       <View style={styles.body}>
@@ -355,18 +367,24 @@ export default function IncidentsScreen() {
         ) : itemCount === 0 ? (
           <EmptyState
             message={
-              debouncedSearch
-                ? `Không tìm thấy kết quả cho "${debouncedSearch}".`
-                : isBroadcastTab
-                  ? 'Không có yêu cầu mới nào.'
-                  : isDoctor
-                    ? 'Chưa có sự cố nào.'
-                    : 'Chưa có sự cố nào được báo cáo.'
+              isBroadcastTab
+                ? 'Không có yêu cầu mới nào.'
+                : debouncedSearch
+                  ? `Không tìm thấy kết quả cho "${debouncedSearch}".`
+                  : statusFilter !== 'all' || dateFilter !== 'all'
+                    ? 'Không có sự cố nào khớp bộ lọc hiện tại.'
+                    : isDoctor
+                      ? 'Chưa có sự cố nào.'
+                      : 'Chưa có sự cố nào được báo cáo.'
             }
             Icon={icons.emptyCartSvg}
-            actionLabel={!isDoctor && !debouncedSearch ? 'Tạo sự cố mới' : undefined}
+            actionLabel={
+              !isDoctor && !debouncedSearch && statusFilter === 'all' && dateFilter === 'all'
+                ? 'Tạo sự cố mới'
+                : undefined
+            }
             onAction={
-              !isDoctor && !debouncedSearch
+              !isDoctor && !debouncedSearch && statusFilter === 'all' && dateFilter === 'all'
                 ? () => router.push('/(app)/incident/create')
                 : undefined
             }
@@ -433,6 +451,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   createBtnText: { fontSize: 14, fontFamily: 'Inter_500Medium', color: '#2463EB' },
+  doctorTabs: { marginBottom: 10 },
 
   searchBar: {
     flexDirection: 'row',
@@ -456,9 +475,9 @@ const styles = StyleSheet.create({
 
   filterRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 8,
-    flexWrap: 'wrap',
+    paddingRight: 16,
   },
 
   body: { flex: 1, backgroundColor: '#F3F4F6', paddingTop: 16 },
