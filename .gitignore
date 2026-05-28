@@ -43,3 +43,6 @@ yarn-error.*
 
 # docs
 /docs
+
+# env
+.env
