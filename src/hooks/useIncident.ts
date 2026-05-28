@@ -1,12 +1,14 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/constants/queryKeys'
 import { incidentApi } from '@/services/api/incident'
 import type { CreateIncidentBody, ListTicketsFilter } from '@/types/incident'
 
-export function useIncidentList(page = 1, filter: ListTicketsFilter = {}) {
+export function useIncidentList(page = 1, filter: ListTicketsFilter = {}, enabled = true) {
   return useQuery({
     queryKey: queryKeys.incident.list(page, filter),
     queryFn: () => incidentApi.list(page, 20, filter),
+    enabled,
+    placeholderData: keepPreviousData,
   })
 }
 

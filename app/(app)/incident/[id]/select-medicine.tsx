@@ -11,6 +11,7 @@ import { Text, EmptyState } from '@/components/ui'
 import { icons } from '@/constants/icon'
 import { SheetHeader } from '@/components/features/incident/SheetHeader'
 import { useMedicineCatalog } from '@/hooks/useMedicine'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { useResolveStore, type RxItem } from '@/stores/resolveStore'
 import { useToast } from '@/hooks/useToast'
 import type { Medicine } from '@/types/medicine'
@@ -32,7 +33,9 @@ export default function SelectMedicineScreen() {
   )
 
   const [search, setSearch] = useState('')
-  const { data, isLoading } = useMedicineCatalog(search)
+  const debouncedSearch = useDebouncedValue(search.trim(), 400)
+  const isDebouncing = search.trim() !== debouncedSearch
+  const { data, isLoading } = useMedicineCatalog(debouncedSearch)
   const medicines = data?.data ?? []
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -84,7 +87,10 @@ export default function SelectMedicineScreen() {
           value={search}
           onChangeText={setSearch}
           returnKeyType='search'
+          autoCorrect={false}
+          autoCapitalize='none'
         />
+        {isDebouncing && <ActivityIndicator size='small' color='#9CA3AF' />}
       </View>
 
       <FlatList
@@ -100,7 +106,11 @@ export default function SelectMedicineScreen() {
           ) : (
             <EmptyState
               Icon={icons.emptySearchSvg}
-              message={search ? `Không tìm thấy thuốc "${search}"` : 'Chưa có thuốc trong danh mục'}
+              message={
+                debouncedSearch
+                  ? `Không tìm thấy thuốc "${debouncedSearch}"`
+                  : 'Chưa có thuốc trong danh mục'
+              }
             />
           )
         }

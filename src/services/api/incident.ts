@@ -7,14 +7,18 @@ import type { FarmerMyMilestone } from '@/types/production'
 
 export const incidentApi = {
   // Farmer endpoints — v2
-  list: (page = 1, limit = 20, filter: ListTicketsFilter = {}) => {
-    const q = new URLSearchParams({ page: String(page), limit: String(limit) })
-    if (filter.status) q.set('status', filter.status)
-    if (filter.dateRange) q.set('dateRange', filter.dateRange)
-    return apiClient
-      .get<{ data: ListIncidentTicketsRes }>(`/tickets?${q.toString()}`)
-      .then((r) => r.data.data)
-  },
+  list: (page = 1, limit = 20, filter: ListTicketsFilter = {}) =>
+    apiClient
+      .get<{ data: ListIncidentTicketsRes }>('/tickets', {
+        params: {
+          page,
+          limit,
+          ...(filter.status && { status: filter.status }),
+          ...(filter.dateRange && { dateRange: filter.dateRange }),
+          ...(filter.search && { search: filter.search }),
+        },
+      })
+      .then((r) => r.data.data),
 
   detail: (ticketId: string) =>
     apiClient
@@ -43,15 +47,19 @@ export const incidentApi = {
       .then((r) => r.data.data.data),
 
   // Doctor endpoints — giữ v1
-  doctorList: (page = 1, limit = 20, filter: ListDoctorTicketsFilter = {}) => {
-    const q = new URLSearchParams({ page: String(page), limit: String(limit) })
-    if (filter.ended !== undefined) q.set('ended', String(filter.ended))
-    if (filter.status) q.set('status', filter.status)
-    if (filter.dateRange) q.set('dateRange', filter.dateRange)
-    return apiClient
-      .get<{ data: ListIncidentTicketsRes }>(`/ticket/incident/doctor?${q.toString()}`)
-      .then((r) => r.data.data)
-  },
+  doctorList: (page = 1, limit = 20, filter: ListDoctorTicketsFilter = {}) =>
+    apiClient
+      .get<{ data: ListIncidentTicketsRes }>('/ticket/incident/doctor', {
+        params: {
+          page,
+          limit,
+          ...(filter.ended !== undefined && { ended: filter.ended }),
+          ...(filter.status && { status: filter.status }),
+          ...(filter.dateRange && { dateRange: filter.dateRange }),
+          ...(filter.search && { search: filter.search }),
+        },
+      })
+      .then((r) => r.data.data),
 
   doctorDetail: (ticketId: string) =>
     apiClient

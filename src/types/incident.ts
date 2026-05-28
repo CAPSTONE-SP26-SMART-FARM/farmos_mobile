@@ -7,6 +7,7 @@ export type TicketDateRange = 'today' | '3d' | '1w' | '1m' | 'all'
 export type ListTicketsFilter = {
   status?: TicketStatus
   dateRange?: TicketDateRange
+  search?: string
 }
 
 export type ListDoctorTicketsFilter = ListTicketsFilter & {

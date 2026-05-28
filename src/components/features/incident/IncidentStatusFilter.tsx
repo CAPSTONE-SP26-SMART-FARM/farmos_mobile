@@ -15,6 +15,8 @@ interface Props<T extends string> {
   options: readonly FilterOption<T>[]
   onChange: (value: T) => void
   title?: string
+  /** Prefix hiển thị trước value để user biết filter theo cái gì, vd "Trạng thái". */
+  prefix?: string
 }
 
 export function IncidentStatusFilter<T extends string>({
@@ -22,6 +24,7 @@ export function IncidentStatusFilter<T extends string>({
   options,
   onChange,
   title = 'Lọc trạng thái',
+  prefix,
 }: Props<T>) {
   const [visible, setVisible] = useState(false)
   const current = options.find((o) => o.value === value)
@@ -37,6 +40,7 @@ export function IncidentStatusFilter<T extends string>({
         style={({ pressed }) => [styles.dropdown, pressed && { opacity: 0.6 }]}
         onPress={() => setVisible(true)}
       >
+        {prefix ? <Text style={styles.prefix}>{prefix}:</Text> : null}
         <Text style={styles.text}>{current?.label ?? 'Lọc'}</Text>
         <ArrowDownIcon width={20} height={20} color='#4B5563' />
       </Pressable>
@@ -69,8 +73,9 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     borderWidth: 1,
     borderColor: '#F3F4F6',
-    gap: 8,
+    gap: 6,
   },
+  prefix: { fontSize: 13, lineHeight: 20, fontFamily: 'Inter_500Medium', color: '#9CA3AF' },
   text: { fontSize: 14, lineHeight: 20, fontFamily: 'Inter_600SemiBold', color: '#4B5563' },
   options: { gap: 0 },
 })

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/constants/queryKeys'
 import { doctorApi } from '@/services/api/doctor'
 import { incidentApi } from '@/services/api/incident'
@@ -7,6 +7,7 @@ import type {
   SubmitDoctorRequestRequest,
   UpdateDoctorOnlineStatusRequest,
 } from '@/types/doctor'
+import type { TicketDateRange, TicketStatus } from '@/types/incident'
 
 // Get my doctor profile
 export function useDoctorProfile(enabled = true) {
@@ -93,12 +94,13 @@ export function useDoctorIncidentList(
   page = 1,
   ended?: boolean,
   enabled = true,
-  filter: { dateRange?: 'today' | '3d' | '1w' | '1m' | 'all' } = {},
+  filter: { dateRange?: TicketDateRange; search?: string; status?: TicketStatus } = {},
 ) {
   return useQuery({
     queryKey: queryKeys.incident.doctorList(page, ended, filter),
     queryFn: () => incidentApi.doctorList(page, 20, { ended, ...filter }),
     enabled,
+    placeholderData: keepPreviousData,
   })
 }
 
