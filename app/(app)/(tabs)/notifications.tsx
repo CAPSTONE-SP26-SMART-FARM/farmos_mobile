@@ -66,7 +66,13 @@ export default function NotificationsScreen() {
   const handlePress = (item: Notification) => {
     if (!item.isRead) markRead(item.id)
     const target = resolveRedirect(item.redirectUrl)
-    if (target) router.push(target as any)
+    if (target) {
+      router.push(target as any)
+      return
+    }
+    if (item.type === 'alert_triggered' || (item.type as string) === 'sensor_alert') {
+      router.push('/(app)/(tabs)/alerts')
+    }
   }
 
   return (

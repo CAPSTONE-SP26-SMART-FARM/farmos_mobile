@@ -1,10 +1,13 @@
 import { useCallback, useMemo, useState } from 'react'
 import { View, SectionList, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { useRouter } from 'expo-router'
 import { MaterialIcons } from '@expo/vector-icons'
 import { Text, EmptyState } from '@/components/ui'
 import { AlertCard } from '@/components/features/alert/AlertCard'
 import { useAlertList } from '@/hooks/useAlert'
+import { useDeviceAssignmentMap } from '@/hooks/useFarmerMilestones'
+import { useToast } from '@/hooks/useToast'
 import { icons } from '@/constants/icon'
 import type { Alert } from '@/types/alert'
 
@@ -27,7 +30,10 @@ function groupByBoard(alerts: Alert[]): { title: string; data: Alert[] }[] {
 }
 
 export default function AlertsScreen() {
+  const router = useRouter()
+  const { showToast } = useToast()
   const { data, isLoading, refetch } = useAlertList()
+  const deviceAssignmentMap = useDeviceAssignmentMap()
   const alerts = data?.data ?? []
 
   const sections = useMemo(() => groupByBoard(alerts), [alerts])
@@ -37,6 +43,26 @@ export default function AlertsScreen() {
     setIsRefreshing(true)
     try { await refetch() } finally { setIsRefreshing(false) }
   }, [refetch])
+
+  const handleAlertPress = useCallback(
+    (alert: Alert) => {
+      if (!alert.deviceId) {
+        showToast.info({ message: 'Cảnh báo này không gắn với thiết bị cụ thể.' })
+        return
+      }
+      const found = deviceAssignmentMap.get(alert.deviceId)
+      if (found) {
+        router.push({
+          pathname: '/(app)/farm/[assignmentId]',
+          params: { assignmentId: found.assignmentId, milestoneId: found.milestoneId },
+        })
+        return
+      }
+      showToast.info({ message: 'Không tìm thấy thiết bị tương ứng. Mở danh sách trang trại.' })
+      router.push('/(app)/(tabs)/farm')
+    },
+    [deviceAssignmentMap, router, showToast],
+  )
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
@@ -56,7 +82,7 @@ export default function AlertsScreen() {
             keyExtractor={(a) => a.id}
             renderItem={({ item }) => (
               <View style={styles.itemWrap}>
-                <AlertCard item={item} />
+                <AlertCard item={item} onPress={() => handleAlertPress(item)} />
               </View>
             )}
             renderSectionHeader={({ section }) => (

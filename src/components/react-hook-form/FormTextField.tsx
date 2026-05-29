@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Control, Controller, FieldValues, Path, RegisterOptions } from 'react-hook-form'
 import { TextField } from '@/components/ui'
 import { KeyboardTypeOptions, StyleProp, ViewStyle } from 'react-native'
@@ -42,32 +43,40 @@ export const FormTextField = <T extends FieldValues>({
   numberOfLines,
   transform,
   containerStyle,
-}: FormTextFieldProps<T>) => (
-  <Controller
-    control={control}
-    name={name}
-    rules={rules}
-    render={({ field: { onChange, onBlur, value }, fieldState: { error } }) => (
-      <TextField
-        label={label}
-        placeholder={placeholder}
-        value={value ?? ''}
-        onChangeText={(text) => onChange(transform ? transform(text) : text)}
-        onBlur={onBlur}
-        keyboardType={keyboardType}
-        maxLength={maxLength}
-        autoFocus={autoFocus}
-        error={error?.message}
-        readOnly={readOnly}
-        showClear={showClear}
-        showError={showError}
-        secureTextEntry={secureTextEntry}
-        autoCapitalize={autoCapitalize}
-        autoComplete={autoComplete as any}
-        multiline={multiline}
-        numberOfLines={numberOfLines}
-        containerStyle={containerStyle}
-      />
-    )}
-  />
-)
+}: FormTextFieldProps<T>) => {
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false)
+  const isSecureField = !!secureTextEntry
+  const hideText = isSecureField && !isPasswordVisible
+
+  return (
+    <Controller
+      control={control}
+      name={name}
+      rules={rules}
+      render={({ field: { onChange, onBlur, value }, fieldState: { error } }) => (
+        <TextField
+          label={label}
+          placeholder={placeholder}
+          value={value ?? ''}
+          onChangeText={(text) => onChange(transform ? transform(text) : text)}
+          onBlur={onBlur}
+          keyboardType={keyboardType}
+          maxLength={maxLength}
+          autoFocus={autoFocus}
+          error={error?.message}
+          readOnly={readOnly}
+          showClear={showClear}
+          showError={showError}
+          secureTextEntry={hideText}
+          autoCapitalize={autoCapitalize}
+          autoComplete={autoComplete as any}
+          multiline={multiline}
+          numberOfLines={numberOfLines}
+          containerStyle={containerStyle}
+          rightIcon={isSecureField ? (isPasswordVisible ? 'eye-off-outline' : 'eye-outline') : undefined}
+          onRightIconPress={isSecureField ? () => setIsPasswordVisible((v) => !v) : undefined}
+        />
+      )}
+    />
+  )
+}

@@ -78,6 +78,10 @@ export function NotificationBanner() {
         return
       }
     }
+    if (notif?.type === 'sensor_alert' || notif?.type === 'alert_triggered') {
+      router.push('/(app)/(tabs)/alerts')
+      return
+    }
     router.push('/(app)/(tabs)/notifications')
   }
 
@@ -94,7 +98,11 @@ export function NotificationBanner() {
       ]}
       pointerEvents='box-none'
     >
-      <TouchableOpacity style={styles.card} onPress={handlePress} activeOpacity={0.92}>
+      <TouchableOpacity
+        style={[styles.card, { borderLeftWidth: 4, borderLeftColor: meta.color }]}
+        onPress={handlePress}
+        activeOpacity={0.92}
+      >
         <View style={[styles.icon, { backgroundColor: meta.bg }]}>
           <MaterialIcons name={meta.icon} size={20} color={meta.color} />
         </View>
