@@ -32,15 +32,25 @@ const PRIORITY_LABEL: Record<string, string> = {
 }
 
 function TaskCard({ task, onPress }: { task: TaskForDailyLog; onPress: () => void }) {
+  const progress = Math.max(0, Math.min(100, Math.round(task.progress ?? 0)))
+  const progressColor = progress >= 100 ? '#16A34A' : '#2463EB'
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
       <View style={{ flex: 1 }}>
         <Text style={styles.cardTitle} numberOfLines={1}>{task.title}</Text>
         <View style={styles.cardMeta}>
+          <Text style={styles.metaCaption}>Độ ưu tiên:</Text>
           <View style={[styles.priorityDot, { backgroundColor: PRIORITY_COLOR[task.priority] ?? '#2463EB' }]} />
           <Text style={[styles.priorityLabel, { color: PRIORITY_COLOR[task.priority] ?? '#2463EB' }]}>
             {PRIORITY_LABEL[task.priority] ?? task.priority}
           </Text>
+        </View>
+        <View style={styles.progressRow}>
+          <Text style={styles.metaCaption}>Tiến độ:</Text>
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: `${progress}%`, backgroundColor: progressColor }]} />
+          </View>
+          <Text style={[styles.progressText, { color: progressColor }]}>{progress}%</Text>
         </View>
       </View>
       <Text style={styles.chevron}>›</Text>
@@ -149,6 +159,7 @@ function TasksTab() {
                 taskId: task.id,
                 title: task.title,
                 priority: task.priority,
+                progress: String(task.progress ?? 0),
               },
             })
           }
@@ -246,8 +257,26 @@ const styles = StyleSheet.create({
   },
   cardTitle: { fontSize: 14, color: '#111827', fontFamily: 'Inter_600SemiBold', lineHeight: 20 },
   cardMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  metaCaption: { fontSize: 12, color: '#6B7280', fontFamily: 'Inter_400Regular' },
   priorityDot: { width: 6, height: 6, borderRadius: 3 },
   priorityLabel: { fontSize: 12, fontFamily: 'Inter_500Medium' },
+
+  progressRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
+  progressTrack: {
+    flex: 1,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#E5E7EB',
+    overflow: 'hidden',
+  },
+  progressFill: { height: '100%', borderRadius: 3 },
+  progressText: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontFamily: 'Inter_600SemiBold',
+    minWidth: 34,
+    textAlign: 'right',
+  },
 
   cardContent: { flex: 1 },
   chevron: { fontSize: 22, color: '#9CA3AF' },
