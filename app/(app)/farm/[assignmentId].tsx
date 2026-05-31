@@ -36,7 +36,7 @@ export default function AssignmentDetailScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor='#2463EB' />
+          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor='#15803D' />
         }
       >
         {assignment && (
@@ -60,7 +60,7 @@ export default function AssignmentDetailScreen() {
         <Text style={styles.sectionTitle}>Số liệu mới nhất</Text>
 
         {isLoading ? (
-          <ActivityIndicator color='#2463EB' style={{ marginTop: 24 }} />
+          <ActivityIndicator color='#15803D' style={{ marginTop: 24 }} />
         ) : readings.length === 0 ? (
           <EmptyState message='Chưa có dữ liệu cảm biến.' />
         ) : (

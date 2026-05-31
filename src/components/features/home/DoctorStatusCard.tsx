@@ -25,7 +25,7 @@ export function DoctorStatusCard({ isApproved, activeCount }: Props) {
   const statusColor = !isApproved
     ? '#DB7706'
     : isOnline
-    ? '#2463EB'
+    ? '#15803D'
     : '#DC2828'
 
   const subText = !isApproved
@@ -42,7 +42,7 @@ export function DoctorStatusCard({ isApproved, activeCount }: Props) {
       <Text style={styles.sectionTitle}>Lịch hoạt động</Text>
       <View style={styles.itemRow}>
         <View style={styles.iconWrapper}>
-          <IncidentIcon width={22} height={22} color='#2463EB' />
+          <IncidentIcon width={22} height={22} color='#15803D' />
         </View>
         <View style={styles.content}>
           <Text style={styles.nameText}>
@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 10,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#DCFCE7',
     justifyContent: 'center',
     alignItems: 'center',
   },

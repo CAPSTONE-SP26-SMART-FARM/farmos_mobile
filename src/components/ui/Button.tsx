@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   primary: {
-    backgroundColor: '#2463EB'
+    backgroundColor: '#15803D'
   },
   primaryText: {
     color: '#FFFFFF'

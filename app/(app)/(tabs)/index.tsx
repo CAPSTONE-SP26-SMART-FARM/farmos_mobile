@@ -74,7 +74,7 @@ function DoctorHome({ isApproved }: { isApproved: boolean }) {
           WebBrowser.openBrowserAsync(CONFIG.HELP_DOCTOR_URL, {
             presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
             toolbarColor: '#FFFFFF',
-            controlsColor: '#2463EB',
+            controlsColor: '#15803D',
           })
         }
         delay={250}
@@ -103,7 +103,7 @@ function FarmerHome() {
           WebBrowser.openBrowserAsync(CONFIG.HELP_INCIDENT_URL, {
             presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
             toolbarColor: '#FFFFFF',
-            controlsColor: '#2463EB',
+            controlsColor: '#15803D',
           })
         }
         delay={250}

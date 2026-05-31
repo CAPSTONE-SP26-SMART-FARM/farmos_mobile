@@ -81,7 +81,7 @@ export default function NotificationsScreen() {
 
       <View style={styles.body}>
         {isLoading ? (
-          <ActivityIndicator style={{ marginTop: 40 }} color='#2463EB' />
+          <ActivityIndicator style={{ marginTop: 40 }} color='#15803D' />
         ) : isError ? (
           <View style={styles.emptyBox}>
             <Text style={styles.emptyText}>Không thể tải thông báo.</Text>
@@ -130,11 +130,11 @@ const styles = StyleSheet.create({
   itemBody: { fontSize: 13, color: '#6B7280', fontFamily: 'Inter_400Regular', lineHeight: 18 },
   unreadDot: {
     width: 8, height: 8, borderRadius: 4,
-    backgroundColor: '#2463EB', marginTop: 4, flexShrink: 0,
+    backgroundColor: '#15803D', marginTop: 4, flexShrink: 0,
   },
   separator: { height: 1, backgroundColor: '#F3F4F6' },
   emptyBox: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 8 },
   emptyText: { fontSize: 14, color: '#9CA3AF', fontFamily: 'Inter_400Regular' },
-  retryBtn: { paddingHorizontal: 20, paddingVertical: 8, backgroundColor: '#EFF6FF', borderRadius: 8, marginTop: 4 },
-  retryText: { color: '#2463EB', fontFamily: 'Inter_500Medium', fontSize: 14 },
+  retryBtn: { paddingHorizontal: 20, paddingVertical: 8, backgroundColor: '#DCFCE7', borderRadius: 8, marginTop: 4 },
+  retryText: { color: '#15803D', fontFamily: 'Inter_500Medium', fontSize: 14 },
 })

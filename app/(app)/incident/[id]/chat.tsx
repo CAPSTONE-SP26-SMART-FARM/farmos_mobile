@@ -52,7 +52,7 @@ export default function IncidentChatScreen() {
       >
         <View style={styles.flex}>
           {isLoading ? (
-            <ActivityIndicator style={{ marginTop: 40 }} color="#2463EB" />
+            <ActivityIndicator style={{ marginTop: 40 }} color="#15803D" />
           ) : (
             <FlatList<TicketMessage>
               ref={flatListRef}
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     color: '#111827', fontFamily: 'Inter_400Regular', backgroundColor: '#FAFAFA',
   },
   sendBtn: {
-    backgroundColor: '#2463EB', borderRadius: 24,
+    backgroundColor: '#15803D', borderRadius: 24,
     paddingHorizontal: 22, height: 48, minWidth: 72,
     alignItems: 'center', justifyContent: 'center',
   },

@@ -74,11 +74,11 @@ export default function MilestoneAssignmentsScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor='#2463EB' />
+          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor='#15803D' />
         }
       >
         {isLoading ? (
-          <ActivityIndicator style={{ marginTop: 24 }} color='#2463EB' />
+          <ActivityIndicator style={{ marginTop: 24 }} color='#15803D' />
         ) : assignments.length === 0 ? (
           <EmptyState message='Giai đoạn này chưa gắn thiết bị.' Icon={icons.emptyCartSvg} />
         ) : (
@@ -155,9 +155,9 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   kitLabel: {
     fontSize: 13,
-    color: '#2463EB',
+    color: '#15803D',
     fontFamily: 'Inter_700Bold',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#DCFCE7',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,

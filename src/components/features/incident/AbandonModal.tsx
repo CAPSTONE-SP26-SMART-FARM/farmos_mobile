@@ -52,8 +52,8 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     gap: 4,
   },
-  optionAI: { borderColor: '#2463EB', backgroundColor: '#EFF6FF' },
+  optionAI: { borderColor: '#15803D', backgroundColor: '#DCFCE7' },
   optionRefund: { borderColor: '#FCA5A5', backgroundColor: '#FEF2F2' },
-  optionTitle: { fontSize: 15, fontFamily: 'Inter_600SemiBold', color: '#1D4ED8' },
+  optionTitle: { fontSize: 15, fontFamily: 'Inter_600SemiBold', color: '#166534' },
   optionDesc: { fontSize: 13, fontFamily: 'Inter_400Regular', color: '#6B7280' },
 })

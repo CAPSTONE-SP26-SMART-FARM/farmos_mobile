@@ -102,7 +102,7 @@ export default function SelectMedicineScreen() {
         ItemSeparatorComponent={() => <View style={styles.divider} />}
         ListEmptyComponent={
           isLoading ? (
-            <ActivityIndicator color='#2463EB' style={{ marginTop: 40 }} />
+            <ActivityIndicator color='#15803D' style={{ marginTop: 40 }} />
           ) : (
             <EmptyState
               Icon={icons.emptySearchSvg}
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     width: 20, height: 20, borderRadius: 5, borderWidth: 1.5,
     borderColor: '#D1D5DB', justifyContent: 'center', alignItems: 'center',
   },
-  checkboxSelected: { backgroundColor: '#2463EB', borderColor: '#2463EB' },
+  checkboxSelected: { backgroundColor: '#15803D', borderColor: '#15803D' },
   checkboxDisabled: { backgroundColor: '#E5E7EB', borderColor: '#E5E7EB' },
 
   info: { flex: 1, gap: 3 },

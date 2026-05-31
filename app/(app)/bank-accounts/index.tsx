@@ -39,14 +39,14 @@ export default function BankAccountsScreen() {
           <Text style={styles.sectionTitle}>Danh sách tài khoản</Text>
           {accounts.length > 0 && (
             <Pressable style={styles.createLink} onPress={handleAddNew}>
-              <MaterialIcons name="add" size={20} color="#2463EB" />
+              <MaterialIcons name="add" size={20} color="#15803D" />
               <Text style={styles.createLinkText}>Thêm tài khoản NH khác</Text>
             </Pressable>
           )}
         </View>
 
         {isLoading ? (
-          <ActivityIndicator color="#2463EB" style={{ marginTop: 40 }} />
+          <ActivityIndicator color="#15803D" style={{ marginTop: 40 }} />
         ) : accounts.length === 0 ? (
           <Empty onAction={handleAddNew} />
         ) : (
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   createLink: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  createLinkText: { fontSize: 13, lineHeight: 20, fontFamily: 'Inter_500Medium', color: '#2463EB' },
+  createLinkText: { fontSize: 13, lineHeight: 20, fontFamily: 'Inter_500Medium', color: '#15803D' },
 
   cardGroup: { gap: 12 },
   card: {
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   defaultBadge: {
-    backgroundColor: '#DBEAFE',
+    backgroundColor: '#BBF7D0',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 4,
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
   emptyBtn: {
     paddingVertical: 10,
     paddingHorizontal: 20,
-    backgroundColor: '#2463EB',
+    backgroundColor: '#15803D',
     borderRadius: 8,
   },
   emptyBtnText: { color: '#FFFFFF', fontSize: 14, fontFamily: 'Inter_500Medium' },

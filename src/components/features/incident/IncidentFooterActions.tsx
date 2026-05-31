@@ -61,7 +61,7 @@ export function IncidentFooterActions({
         </TouchableOpacity>
         {canChat && (
           <TouchableOpacity style={[styles.btn, styles.btnSecondary]} onPress={onOpenChat}>
-            <Text style={[styles.btnText, { color: '#2463EB' }]}>Chat với Farmer</Text>
+            <Text style={[styles.btnText, { color: '#15803D' }]}>Chat với Farmer</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   btn: {
-    backgroundColor: '#2463EB',
+    backgroundColor: '#15803D',
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 14,
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
   },
   btnDisabled: { backgroundColor: '#E5E7EB' },
   btnCancel: { backgroundColor: '#FEF2F2' },
-  btnSecondary: { backgroundColor: '#EFF6FF' },
+  btnSecondary: { backgroundColor: '#DCFCE7' },
   btnText: { color: '#fff', fontSize: 15, fontFamily: 'Inter_600SemiBold' },
   wrapStack: { gap: 8 },
 })

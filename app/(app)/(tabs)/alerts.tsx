@@ -73,7 +73,7 @@ export default function AlertsScreen() {
 
       <View style={styles.body}>
         {isLoading ? (
-          <ActivityIndicator style={{ marginTop: 24 }} color='#2463EB' />
+          <ActivityIndicator style={{ marginTop: 24 }} color='#15803D' />
         ) : alerts.length === 0 ? (
           <EmptyState message='Không có cảnh báo nào' Icon={icons.emptyCartSvg} />
         ) : (
@@ -88,7 +88,7 @@ export default function AlertsScreen() {
             renderSectionHeader={({ section }) => (
               <View style={styles.sectionHeader}>
                 <View style={styles.boardChip}>
-                  <MaterialIcons name='memory' size={18} color='#2463EB' />
+                  <MaterialIcons name='memory' size={18} color='#15803D' />
                   <Text style={styles.boardChipText}>{section.title}</Text>
                 </View>
                 <Text style={styles.sectionCount}>{section.data.length} cảnh báo</Text>
@@ -100,7 +100,7 @@ export default function AlertsScreen() {
             stickySectionHeadersEnabled={false}
             showsVerticalScrollIndicator={false}
             refreshControl={
-              <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor='#2463EB' />
+              <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor='#15803D' />
             }
           />
         )}
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#DCFCE7',
     paddingLeft: 10,
     paddingRight: 14,
     paddingVertical: 7,
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
   boardChipText: {
     fontSize: 15,
     lineHeight: 20,
-    color: '#2463EB',
+    color: '#15803D',
     fontFamily: 'Inter_700Bold',
   },
   sectionCount: {

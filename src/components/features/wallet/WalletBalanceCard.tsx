@@ -18,7 +18,7 @@ export function WalletBalanceCard({ todayRevenue, balance, loading }: WalletSumm
       <View style={styles.col}>
         <Text style={styles.label}>Doanh thu hôm nay</Text>
         {loading ? (
-          <ActivityIndicator color='#2463EB' style={{ alignSelf: 'flex-start', marginTop: 4 }} />
+          <ActivityIndicator color='#15803D' style={{ alignSelf: 'flex-start', marginTop: 4 }} />
         ) : (
           <Text style={styles.value}>{formatNumber(todayRevenue, 0)}</Text>
         )}
@@ -38,7 +38,7 @@ export function WalletBalanceCard({ todayRevenue, balance, loading }: WalletSumm
           </TouchableOpacity>
         </View>
         {loading ? (
-          <ActivityIndicator color='#2463EB' style={{ alignSelf: 'flex-start', marginTop: 4 }} />
+          <ActivityIndicator color='#15803D' style={{ alignSelf: 'flex-start', marginTop: 4 }} />
         ) : (
           <Text style={styles.value}>
             {visible ? formatNumber(balance, 0) : '********'}
