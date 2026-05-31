@@ -32,11 +32,14 @@ const PRIORITY_COLOR: Record<string, string> = {
 
 export default function DailyLogSubmitScreen() {
   const router = useRouter()
-  const { taskId, title, priority } = useLocalSearchParams<{
+  const { taskId, title, priority, progress } = useLocalSearchParams<{
     taskId: string
     title: string
     priority: string
+    progress?: string
   }>()
+  const progressValue = Math.max(0, Math.min(100, Math.round(Number(progress ?? 0))))
+  const progressColor = progressValue >= 100 ? '#16A34A' : '#2463EB'
   const { showToast } = useToast()
   const { mutate, isPending } = useSubmitDailyLog()
   const justSavedRef = useRef(false)
@@ -126,6 +129,19 @@ export default function DailyLogSubmitScreen() {
                   <Text style={[styles.taskPriority, { color: PRIORITY_COLOR[priority] ?? '#2463EB' }]}>
                     {PRIORITY_LABEL[priority] ?? priority}
                   </Text>
+                  <View style={styles.progressRow}>
+                    <View style={styles.progressTrack}>
+                      <View
+                        style={[
+                          styles.progressFill,
+                          { width: `${progressValue}%`, backgroundColor: progressColor },
+                        ]}
+                      />
+                    </View>
+                    <Text style={[styles.progressText, { color: progressColor }]}>
+                      {progressValue}%
+                    </Text>
+                  </View>
                 </View>
               </View>
 
@@ -208,6 +224,23 @@ const styles = StyleSheet.create({
   taskInfo: { flex: 1, gap: 4 },
   taskTitle: { fontSize: 15, fontFamily: 'Inter_600SemiBold', color: '#111827', lineHeight: 22 },
   taskPriority: { fontSize: 12, fontFamily: 'Inter_500Medium' },
+
+  progressRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  progressTrack: {
+    flex: 1,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#E5E7EB',
+    overflow: 'hidden',
+  },
+  progressFill: { height: '100%', borderRadius: 3 },
+  progressText: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontFamily: 'Inter_600SemiBold',
+    minWidth: 34,
+    textAlign: 'right',
+  },
 
   dateChip: {
     alignSelf: 'flex-start',
