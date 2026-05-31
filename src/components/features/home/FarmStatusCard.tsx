@@ -24,7 +24,7 @@ export function FarmStatusCard() {
         onPress={() => router.push('/(app)/(tabs)/farm')}
       >
         <View style={styles.iconWrapper}>
-          <StorefrontIcon width={22} height={22} color='#2463EB' />
+          <StorefrontIcon width={22} height={22} color='#15803D' />
         </View>
         <View style={styles.content}>
           {isLoading ? (
@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 10,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#DCFCE7',
     justifyContent: 'center',
     alignItems: 'center',
   },

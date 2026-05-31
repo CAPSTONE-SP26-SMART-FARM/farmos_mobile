@@ -22,7 +22,7 @@ export function EarningsCard() {
     >
       <View style={styles.row}>
         <View style={styles.labelRow}>
-          <DolarIcon width={18} height={18} color='#2463EB' />
+          <DolarIcon width={18} height={18} color='#15803D' />
           <Text style={styles.label}>Tổng doanh thu</Text>
           <TouchableOpacity onPress={() => setVisible((v) => !v)} hitSlop={10}>
             <MaterialIcons
@@ -41,7 +41,7 @@ export function EarningsCard() {
         </TouchableOpacity>
       </View>
       {isLoading ? (
-        <ActivityIndicator color='#2463EB' style={{ marginTop: 4 }} />
+        <ActivityIndicator color='#15803D' style={{ marginTop: 4 }} />
       ) : (
         <Text style={styles.amount}>{visible ? formatNumber(balance, 0) : '********'}</Text>
       )}

@@ -287,7 +287,7 @@ export default function IncidentDetailScreen() {
       <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
         <TopBar title='Chi tiết sự cố' />
         <View style={styles.body}>
-          <ActivityIndicator style={{ marginTop: 40 }} color='#2463EB' />
+          <ActivityIndicator style={{ marginTop: 40 }} color='#15803D' />
         </View>
       </SafeAreaView>
     )
@@ -319,7 +319,7 @@ export default function IncidentDetailScreen() {
         style={styles.body}
         contentContainerStyle={styles.bodyContent}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handlePullRefresh} tintColor='#2463EB' />}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handlePullRefresh} tintColor='#15803D' />}
       >
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Thông tin</Text>
@@ -539,6 +539,6 @@ const styles = StyleSheet.create({
     borderRadius: 12, alignItems: 'center',
     borderWidth: 1, borderColor: '#E5E7EB', borderStyle: 'dashed',
   },
-  addendumBtnText: { fontSize: 14, color: '#2463EB', fontFamily: 'Inter_500Medium' },
+  addendumBtnText: { fontSize: 14, color: '#15803D', fontFamily: 'Inter_500Medium' },
   addendumBody: { paddingHorizontal: 16, paddingBottom: 32, gap: 12 },
 })

@@ -20,7 +20,7 @@ const TABS: readonly PillTabItem<FarmTab>[] = [
 
 const PRIORITY_COLOR: Record<string, string> = {
   low: '#6B7280',
-  normal: '#2463EB',
+  normal: '#15803D',
   high: '#D97706',
   urgent: '#DC2626',
 }
@@ -33,15 +33,15 @@ const PRIORITY_LABEL: Record<string, string> = {
 
 function TaskCard({ task, onPress }: { task: TaskForDailyLog; onPress: () => void }) {
   const progress = Math.max(0, Math.min(100, Math.round(task.progress ?? 0)))
-  const progressColor = progress >= 100 ? '#16A34A' : '#2463EB'
+  const progressColor = progress >= 100 ? '#16A34A' : '#15803D'
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
       <View style={{ flex: 1 }}>
         <Text style={styles.cardTitle} numberOfLines={1}>{task.title}</Text>
         <View style={styles.cardMeta}>
           <Text style={styles.metaCaption}>Độ ưu tiên:</Text>
-          <View style={[styles.priorityDot, { backgroundColor: PRIORITY_COLOR[task.priority] ?? '#2463EB' }]} />
-          <Text style={[styles.priorityLabel, { color: PRIORITY_COLOR[task.priority] ?? '#2463EB' }]}>
+          <View style={[styles.priorityDot, { backgroundColor: PRIORITY_COLOR[task.priority] ?? '#15803D' }]} />
+          <Text style={[styles.priorityLabel, { color: PRIORITY_COLOR[task.priority] ?? '#15803D' }]}>
             {PRIORITY_LABEL[task.priority] ?? task.priority}
           </Text>
         </View>
@@ -73,7 +73,7 @@ function SensorsTab() {
     return acc
   }, [milestones])
 
-  if (isLoading) return <ActivityIndicator style={{ marginTop: 24 }} color='#2463EB' />
+  if (isLoading) return <ActivityIndicator style={{ marginTop: 24 }} color='#15803D' />
   if (milestones.length === 0) {
     return <EmptyState message='Chưa có giai đoạn nào.' Icon={icons.emptyCartSvg} />
   }
@@ -84,7 +84,7 @@ function SensorsTab() {
         <View key={zoneName} style={styles.zoneGroup}>
           <View style={styles.sectionHeader}>
             <View style={styles.zoneChip}>
-              <MaterialIcons name='place' size={16} color='#2463EB' />
+              <MaterialIcons name='place' size={16} color='#15803D' />
               <Text style={styles.zoneChipText}>{zoneName}</Text>
             </View>
             <Text style={styles.sectionCount}>{items.length} giai đoạn</Text>
@@ -136,7 +136,7 @@ function TasksTab() {
   const { data, isLoading } = useTasksForDailyLog()
   const tasks = data?.data ?? []
 
-  if (isLoading) return <ActivityIndicator style={{ marginTop: 24 }} color='#2463EB' />
+  if (isLoading) return <ActivityIndicator style={{ marginTop: 24 }} color='#15803D' />
   if (tasks.length === 0) {
     return (
       <EmptyState
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#DCFCE7',
     paddingLeft: 8,
     paddingRight: 14,
     paddingVertical: 7,
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
   zoneChipText: {
     fontSize: 15,
     lineHeight: 20,
-    color: '#2463EB',
+    color: '#15803D',
     fontFamily: 'Inter_700Bold',
   },
   sectionCount: {

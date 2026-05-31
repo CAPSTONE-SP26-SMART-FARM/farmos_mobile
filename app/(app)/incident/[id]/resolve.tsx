@@ -173,7 +173,7 @@ export default function ResolveScreen() {
                 style={({ pressed }) => [styles.actionRow, pressed && { opacity: 0.6 }]}
                 onPress={() => router.push(`/(app)/incident/${id}/select-medicine`)}
               >
-                <MaterialIcons name='add' size={24} color='#2463EB' />
+                <MaterialIcons name='add' size={24} color='#15803D' />
                 <Text style={styles.actionText}>Chọn thuốc từ danh mục</Text>
               </Pressable>
 
@@ -183,7 +183,7 @@ export default function ResolveScreen() {
                 style={({ pressed }) => [styles.actionRow, pressed && { opacity: 0.6 }]}
                 onPress={() => router.push(`/(app)/incident/${id}/custom-medicine`)}
               >
-                <MaterialIcons name='add' size={24} color='#2463EB' />
+                <MaterialIcons name='add' size={24} color='#15803D' />
                 <Text style={styles.actionText}>Thêm thuốc tự nhập</Text>
               </Pressable>
             </View>
@@ -224,5 +224,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingVertical: 12,
   },
-  actionText: { fontSize: 16, lineHeight: 24, fontFamily: 'Inter_500Medium', color: '#2463EB' },
+  actionText: { fontSize: 16, lineHeight: 24, fontFamily: 'Inter_500Medium', color: '#15803D' },
 })

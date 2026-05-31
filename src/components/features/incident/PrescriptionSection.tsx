@@ -26,7 +26,7 @@ export function PrescriptionSection({
       </View>
 
       {isLoading ? (
-        <ActivityIndicator size='small' color='#2463EB' style={{ marginVertical: 12 }} />
+        <ActivityIndicator size='small' color='#15803D' style={{ marginVertical: 12 }} />
       ) : prescriptions.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyText}>
@@ -54,8 +54,8 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   sectionTitle: { fontSize: 13, color: '#6B7280', fontFamily: 'Inter_500Medium' },
-  addBtn: { backgroundColor: '#EFF6FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
-  addText: { fontSize: 13, color: '#2463EB', fontFamily: 'Inter_600SemiBold' },
+  addBtn: { backgroundColor: '#DCFCE7', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  addText: { fontSize: 13, color: '#15803D', fontFamily: 'Inter_600SemiBold' },
   list: { gap: 10 },
   empty: {
     paddingVertical: 20,

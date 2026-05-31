@@ -33,7 +33,7 @@ export default function WithdrawalDetailScreen() {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
         <TopBar title='Chi tiết yêu cầu' />
-        <ActivityIndicator color='#2463EB' style={{ marginTop: 40 }} />
+        <ActivityIndicator color='#15803D' style={{ marginTop: 40 }} />
       </SafeAreaView>
     )
   }
