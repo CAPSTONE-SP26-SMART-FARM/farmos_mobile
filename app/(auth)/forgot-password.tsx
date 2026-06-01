@@ -6,11 +6,12 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { LinearGradient } from 'expo-linear-gradient'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAuthStore } from '@/stores/authStore'
 import { authApi } from '@/services/api/auth'
 import { useToast } from '@/hooks/useToast'
 import { FormTextField } from '@/components/react-hook-form/FormTextField'
-import { PrimaryButton, Text } from '@/components/ui'
+import { PrimaryButton, Text, InlineFieldRow } from '@/components/ui'
 
 const step1Schema = z.object({ email: z.string().email('Email không hợp lệ') })
 const step2Schema = z.object({ code: z.string().length(6, 'Mã OTP gồm 6 chữ số') })
@@ -26,6 +27,7 @@ type Step3Form = z.infer<typeof step3Schema>
 export default function ForgotPasswordScreen() {
   const { forgotPassword, isLoading } = useAuthStore()
   const { showToast } = useToast()
+  const insets = useSafeAreaInsets()
   const [step, setStep] = useState<1 | 2 | 3>(1)
   const [email, setEmail] = useState('')
   const [otpCode, setOtpCode] = useState('')
@@ -60,13 +62,13 @@ export default function ForgotPasswordScreen() {
   }
 
   return (
-    <LinearGradient colors={['#E0F2FF', '#FFFFFF']} style={styles.flex}>
+    <LinearGradient colors={['#DCFCE7', '#FFFFFF']} style={styles.flex}>
+      <TouchableOpacity onPress={() => step > 1 ? setStep((step - 1) as 1 | 2 | 3) : router.back()} style={[styles.backBtn, { top: insets.top + 8 }]} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+        <Ionicons name='arrow-back' size={24} color='#111827' />
+      </TouchableOpacity>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps='handled' showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => step > 1 ? setStep((step - 1) as 1 | 2 | 3) : router.back()} style={styles.backBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-              <Ionicons name='arrow-back' size={22} color='#111827' />
-            </TouchableOpacity>
             <Text style={styles.brand}>FarmOS</Text>
             <Text style={styles.title}>Quên mật khẩu</Text>
             <Text style={styles.subtitle}>
@@ -77,10 +79,10 @@ export default function ForgotPasswordScreen() {
           </View>
 
           {step === 1 && (
-            <View style={styles.form}>
-              <FormTextField control={step1Form.control} name='email' label='Email' keyboardType='email-address' autoCapitalize='none' />
-              <PrimaryButton title='Gửi mã OTP' loading={isSendingOtp} onPress={step1Form.handleSubmit(handleSendOtp)} />
-            </View>
+            <InlineFieldRow
+              field={<FormTextField control={step1Form.control} name='email' label='Email' keyboardType='email-address' autoCapitalize='none' />}
+              action={<PrimaryButton title='Gửi mã' loading={isSendingOtp} onPress={step1Form.handleSubmit(handleSendOtp)} style={styles.inlineButton} />}
+            />
           )}
 
           {step === 2 && (
@@ -107,9 +109,10 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 36 },
   header: { alignItems: 'center', marginBottom: 24, gap: 8 },
-  backBtn: { alignSelf: 'flex-start', marginBottom: 4 },
+  backBtn: { position: 'absolute', left: 20, zIndex: 10 },
   brand: { fontSize: 32, lineHeight: 40, fontFamily: 'Inter_700Bold', color: '#15803D', textAlign: 'center' },
   title: { fontSize: 24, lineHeight: 32, fontFamily: 'Inter_700Bold', color: '#111827', textAlign: 'center' },
   subtitle: { fontSize: 15, lineHeight: 22, color: '#6B7280', textAlign: 'center' },
   form: { gap: 16 },
+  inlineButton: { height: 56, minHeight: 56, paddingVertical: 0, paddingHorizontal: 20 },
 })
