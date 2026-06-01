@@ -2,14 +2,15 @@ import { View, ScrollView, StyleSheet, TouchableOpacity, Switch, Alert } from 'r
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { MaterialIcons } from '@expo/vector-icons'
-import { Text } from '@/components/ui'
+import { Text, AvatarPicker } from '@/components/ui'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
 import { useDoctorProfile, useDoctorRequestsList, useUpdateDoctorOnlineStatus } from '@/hooks/useDoctor'
+import { getDefaultAvatar } from '@/constants/user'
 
 
 export default function DoctorProfileScreen() {
-  const { user, logout } = useAuth()
+  const { user, logout, updateProfile } = useAuth()
   const { showToast } = useToast()
   const router = useRouter()
 
@@ -37,6 +38,15 @@ export default function DoctorProfileScreen() {
     )
   }
 
+  const handleAvatarChange = async (avatarUrl: string | null) => {
+    await updateProfile({
+      fullName: user?.fullName ?? '',
+      phone: user?.phone ?? null,
+      avatarUrl,
+    })
+    showToast.success({ message: avatarUrl ? 'Cập nhật ảnh đại diện thành công!' : 'Đã xoá ảnh đại diện' })
+  }
+
   const handleLogout = () => {
     Alert.alert('Đăng xuất', 'Bạn có chắc muốn đăng xuất không?', [
       { text: 'Hủy', style: 'cancel' },
@@ -49,8 +59,15 @@ export default function DoctorProfileScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
         <View style={styles.profileSection}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{user?.fullName?.charAt(0)?.toUpperCase() ?? 'D'}</Text>
+          <View style={styles.avatarWrapper}>
+            <AvatarPicker
+              uri={user?.avatarUrl ?? null}
+              name={user?.fullName}
+              size={100}
+              fallbackSource={getDefaultAvatar(user?.role)}
+              onUploaded={(url) => handleAvatarChange(url)}
+              onRemoved={() => handleAvatarChange(null)}
+            />
           </View>
           <Text style={styles.name}>{user?.fullName || '—'}</Text>
           <Text style={styles.sub}>Bác sĩ</Text>
@@ -109,10 +126,7 @@ const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 40 },
 
   profileSection: { alignItems: 'center', paddingVertical: 32 },
-  avatar: {
-    width: 100, height: 100, borderRadius: 50,
-    backgroundColor: '#15803D',
-    justifyContent: 'center', alignItems: 'center',
+  avatarWrapper: {
     marginBottom: 16,
     shadowColor: '#15803D',
     shadowOffset: { width: 0, height: 4 },
@@ -120,7 +134,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  avatarText: { fontSize: 48, color: '#FFFFFF', fontFamily: 'Inter_600SemiBold' },
   name: { fontSize: 24, color: '#111827', fontFamily: 'Inter_600SemiBold', marginBottom: 6 },
   sub: { fontSize: 14, color: '#6B7280', fontFamily: 'Inter_400Regular', marginBottom: 2 },
 

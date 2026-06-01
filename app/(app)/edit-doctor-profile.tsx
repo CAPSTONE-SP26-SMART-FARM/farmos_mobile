@@ -5,10 +5,12 @@ import { useRouter } from 'expo-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Text, TopBar, PrimaryButton } from '@/components/ui'
+import { Text, TopBar, PrimaryButton, AvatarPicker } from '@/components/ui'
 import { FormTextField } from '@/components/react-hook-form/FormTextField'
 import { FormSelectField } from '@/components/react-hook-form/FormSelectField'
+import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
+import { getDefaultAvatar } from '@/constants/user'
 import {
   useDoctorProfile,
   useUpsertDoctorProfile,
@@ -37,6 +39,7 @@ type RequestForm = z.infer<typeof requestSchema>
 export default function EditDoctorProfileScreen() {
   const router = useRouter()
   const { showToast } = useToast()
+  const { user, updateProfile } = useAuth()
 
   const { data: profile, isLoading: profileLoading } = useDoctorProfile()
   const { data: requestsData } = useDoctorRequestsList()
@@ -95,6 +98,15 @@ export default function EditDoctorProfileScreen() {
     )
   }
 
+  const handleAvatarChange = async (avatarUrl: string | null) => {
+    await updateProfile({
+      fullName: user?.fullName ?? '',
+      phone: user?.phone ?? null,
+      avatarUrl,
+    })
+    showToast.success({ message: avatarUrl ? 'Cập nhật ảnh đại diện thành công!' : 'Đã xoá ảnh đại diện' })
+  }
+
   const handleSubmitRequest = (data: RequestForm) => {
     submitRequest(data, {
       onSuccess: () => {
@@ -117,6 +129,16 @@ export default function EditDoctorProfileScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps='handled'
         >
+          <View style={styles.avatarSection}>
+            <AvatarPicker
+              uri={user?.avatarUrl ?? null}
+              name={user?.fullName}
+              fallbackSource={getDefaultAvatar(user?.role)}
+              onUploaded={(url) => handleAvatarChange(url)}
+              onRemoved={() => handleAvatarChange(null)}
+            />
+          </View>
+
           {profileLoading ? (
             <ActivityIndicator color='#15803D' style={{ marginTop: 40 }} />
           ) : (
@@ -220,6 +242,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: '#F3F4F6' },
   scrollContent: { padding: 16, paddingBottom: 16, gap: 12 },
   footer: { padding: 20, backgroundColor: '#FFFFFF' },
+  avatarSection: { alignItems: 'center', paddingVertical: 8 },
 
   section: {
     backgroundColor: '#FFFFFF', borderRadius: 16,
