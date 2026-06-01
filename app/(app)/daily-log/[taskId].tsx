@@ -29,7 +29,7 @@ const PRIORITY_LABEL: Record<string, string> = {
 }
 const PRIORITY_COLOR: Record<string, string> = {
   low: '#6B7280',
-  normal: '#2463EB',
+  normal: '#15803D',
   high: '#D97706',
   urgent: '#DC2626',
 }
@@ -42,9 +42,8 @@ export default function DailyLogSubmitScreen() {
     priority: string
     progress?: string
   }>()
-  const initialProgress = Math.max(0, Math.min(100, Math.round(Number(progress ?? 0))))
-  const [progressValue, setProgressValue] = useState(initialProgress)
-  const progressColor = progressValue >= 100 ? '#16A34A' : '#2463EB'
+  const progressValue = Math.max(0, Math.min(100, Math.round(Number(progress ?? 0))))
+  const progressColor = progressValue >= 100 ? '#16A34A' : '#15803D'
   const { showToast } = useToast()
   const { mutate, isPending } = useSubmitDailyLog()
   const { mutateAsync: updateProgress, isPending: isUpdatingProgress } = useUpdateTaskProgress()
@@ -144,11 +143,11 @@ export default function DailyLogSubmitScreen() {
             >
               <View style={styles.taskCard}>
                 <View style={styles.taskIconWrap}>
-                  <DiaryIcon width={24} height={24} color='#2463EB' />
+                  <DiaryIcon width={24} height={24} color='#15803D' />
                 </View>
                 <View style={styles.taskInfo}>
                   <Text style={styles.taskTitle} numberOfLines={2}>{title}</Text>
-                  <Text style={[styles.taskPriority, { color: PRIORITY_COLOR[priority] ?? '#2463EB' }]}>
+                  <Text style={[styles.taskPriority, { color: PRIORITY_COLOR[priority] ?? '#15803D' }]}>
                     {PRIORITY_LABEL[priority] ?? priority}
                   </Text>
                   <TouchableOpacity
@@ -267,7 +266,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 10,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#DCFCE7',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -300,28 +299,12 @@ const styles = StyleSheet.create({
   },
   dateChip: {
     alignSelf: 'flex-start',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#DCFCE7',
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 6,
   },
-  dateChipText: { fontSize: 13, color: '#2463EB', fontFamily: 'Inter_500Medium' },
-  historyBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  historyBtnText: {
-    fontSize: 12,
-    color: '#4B5563',
-    fontFamily: 'Inter_500Medium',
-  },
+  dateChipText: { fontSize: 13, color: '#15803D', fontFamily: 'Inter_500Medium' },
 
   card: {
     backgroundColor: '#FFFFFF',

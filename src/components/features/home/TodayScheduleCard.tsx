@@ -44,7 +44,7 @@ export function TodayScheduleCard({ tickets, tasksCount, delay = 150 }: Props) {
       ? 'Không có sự cố hôm nay'
       : `${resolvedCount}/${totalToday} đã giải quyết`
 
-  const statusColor = remaining > 0 ? '#DB7706' : '#2463EB'
+  const statusColor = remaining > 0 ? '#DB7706' : '#15803D'
   const statusLabel = allDone
     ? null
     : isTaskMode
@@ -71,7 +71,7 @@ export function TodayScheduleCard({ tickets, tasksCount, delay = 150 }: Props) {
         }
       >
         <View style={styles.iconWrapper}>
-          <CalendarIcon width={48} height={48} color='#2463EB' />
+          <CalendarIcon width={48} height={48} color='#15803D' />
         </View>
         {allDone ? (
           <View style={styles.content}>
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 10,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#DCFCE7',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',

@@ -46,14 +46,14 @@ export default function WithdrawalListScreen() {
           data={items}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.content}
-          refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor='#2463EB' />}
+          refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor='#15803D' />}
           ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
           renderItem={({ item }) => (
             <Row item={item} onPress={() => router.push({ pathname: '/(app)/withdrawal/[id]', params: { id: item.id } })} />
           )}
           ListEmptyComponent={
             isLoading ? (
-              <ActivityIndicator color='#2463EB' style={{ marginTop: 40 }} />
+              <ActivityIndicator color='#15803D' style={{ marginTop: 40 }} />
             ) : (
               <EmptyState message='Chưa có yêu cầu rút tiền nào.' />
             )
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
 
   fab: {
     position: 'absolute', bottom: 20, right: 20,
-    width: 56, height: 56, borderRadius: 28, backgroundColor: '#2463EB',
+    width: 56, height: 56, borderRadius: 28, backgroundColor: '#15803D',
     justifyContent: 'center', alignItems: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
   },

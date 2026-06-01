@@ -291,7 +291,7 @@ export default function IncidentsScreen() {
               style={styles.createBtn}
               onPress={() => router.push('/(app)/incident/create')}
             >
-              <MaterialIcons name='add' size={18} color='#2463EB' />
+              <MaterialIcons name='add' size={18} color='#15803D' />
               <Text style={styles.createBtnText}>Tạo mới</Text>
             </Pressable>
           )}
@@ -356,7 +356,7 @@ export default function IncidentsScreen() {
 
       <View style={styles.body}>
         {showLoading ? (
-          <ActivityIndicator style={{ marginTop: 40 }} color='#2463EB' />
+          <ActivityIndicator style={{ marginTop: 40 }} color='#15803D' />
         ) : showError ? (
           <EmptyState
             message='Không thể tải dữ liệu.'
@@ -445,12 +445,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#DCFCE7',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
   },
-  createBtnText: { fontSize: 14, fontFamily: 'Inter_500Medium', color: '#2463EB' },
+  createBtnText: { fontSize: 14, fontFamily: 'Inter_500Medium', color: '#15803D' },
   doctorTabs: { marginBottom: 10 },
 
   searchBar: {
@@ -524,5 +524,5 @@ const styles = StyleSheet.create({
   },
   rejectText: { fontSize: 14, color: '#6B7280', fontFamily: 'Inter_500Medium' },
   acceptBtn: { flex: 2, paddingVertical: 12, alignItems: 'center' },
-  acceptText: { fontSize: 14, color: '#2463EB', fontFamily: 'Inter_600SemiBold' },
+  acceptText: { fontSize: 14, color: '#15803D', fontFamily: 'Inter_600SemiBold' },
 })

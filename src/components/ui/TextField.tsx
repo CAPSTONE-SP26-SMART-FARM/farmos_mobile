@@ -21,7 +21,7 @@ import Animated, {
 import Ionicons from '@expo/vector-icons/Ionicons'
 
 const COLORS = {
-  primary: '#2463EB',
+  primary: '#15803D',
   error: '#DC2828',
   text: '#111827',
   textDisabled: '#9CA3B0',
@@ -30,7 +30,7 @@ const COLORS = {
   textLabelResting: '#9CA3AF',
   textLabelFloating: '#4B5563',
   borderDefault: '#E5E7EB',
-  borderFocused: '#2463EB',
+  borderFocused: '#15803D',
   borderError: '#DC2828',
   bgDefault: '#FFFFFF',
   bgDisabled: '#F0F2F5',

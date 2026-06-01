@@ -36,7 +36,7 @@ export function QuickActionsCard({ items, delay = 200 }: Props) {
               <item.Icon
                 width={item.selfContained ? 44 : 24}
                 height={item.selfContained ? 44 : 24}
-                color='#2463EB'
+                color='#15803D'
               />
             </View>
             <Text style={styles.gridLabel}>{item.label}</Text>
@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 10,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#DCFCE7',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',

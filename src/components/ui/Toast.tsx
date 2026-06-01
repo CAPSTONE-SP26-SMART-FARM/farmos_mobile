@@ -45,7 +45,7 @@ const TOKENS: Record<ToastType, any> = {
   info: {
     bg: '#0F172A',
     icon: 'information-circle-outline',
-    accent: '#3B82F6',
+    accent: '#22C55E',
     vessel: 'rgba(59, 130, 246, 0.15)',
     message: 'Thông tin bổ sung cho bạn'
   },

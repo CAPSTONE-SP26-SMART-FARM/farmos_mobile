@@ -57,5 +57,5 @@ const styles = StyleSheet.create({
   title: { fontSize: 17, lineHeight: 24, fontFamily: 'Inter_600SemiBold', color: '#111827' },
   cancel: { fontSize: 15, lineHeight: 22, color: '#111827', fontFamily: 'Inter_600SemiBold' },
   done: { fontSize: 15, lineHeight: 22, fontFamily: 'Inter_600SemiBold', color: '#9CA3AF' },
-  doneActive: { color: '#2463EB' },
+  doneActive: { color: '#15803D' },
 })

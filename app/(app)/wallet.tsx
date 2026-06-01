@@ -111,7 +111,7 @@ export default function WalletScreen() {
         style={styles.body}
         data={groups}
         keyExtractor={(g) => g.date}
-        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={handleRefresh} tintColor='#2463EB' />}
+        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={handleRefresh} tintColor='#15803D' />}
         contentContainerStyle={styles.content}
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         renderItem={({ item }) => <WalletTxnGroup date={item.date} items={item.items} />}
@@ -154,7 +154,7 @@ export default function WalletScreen() {
         }
         ListEmptyComponent={
           txLoading ? (
-            <ActivityIndicator color='#2463EB' style={{ marginTop: 24 }} />
+            <ActivityIndicator color='#15803D' style={{ marginTop: 24 }} />
           ) : (
             <EmptyState message='Chưa có giao dịch nào.' />
           )
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
     marginTop: 20, marginBottom: 10,
   },
   sectionActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  actionLink: { fontSize: 13, color: '#2463EB', fontFamily: 'Inter_500Medium' },
+  actionLink: { fontSize: 13, color: '#15803D', fontFamily: 'Inter_500Medium' },
   dot: { fontSize: 13, color: '#D1D5DB', fontFamily: 'Inter_400Regular' },
 
   sectionTitle: {

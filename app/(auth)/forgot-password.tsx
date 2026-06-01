@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 36 },
   header: { alignItems: 'center', marginBottom: 24, gap: 8 },
   backBtn: { alignSelf: 'flex-start', marginBottom: 4 },
-  brand: { fontSize: 32, lineHeight: 40, fontFamily: 'Inter_700Bold', color: '#2463EB', textAlign: 'center' },
+  brand: { fontSize: 32, lineHeight: 40, fontFamily: 'Inter_700Bold', color: '#15803D', textAlign: 'center' },
   title: { fontSize: 24, lineHeight: 32, fontFamily: 'Inter_700Bold', color: '#111827', textAlign: 'center' },
   subtitle: { fontSize: 15, lineHeight: 22, color: '#6B7280', textAlign: 'center' },
   form: { gap: 16 },

@@ -64,10 +64,10 @@ const styles = StyleSheet.create({
   profileSection: { alignItems: 'center', paddingVertical: 32 },
   avatar: {
     width: 100, height: 100, borderRadius: 50,
-    backgroundColor: '#2463EB',
+    backgroundColor: '#15803D',
     justifyContent: 'center', alignItems: 'center',
     marginBottom: 16,
-    shadowColor: '#2463EB',
+    shadowColor: '#15803D',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
   },

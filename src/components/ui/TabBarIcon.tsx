@@ -12,7 +12,7 @@ interface TabBarIconProps {
 export const TabBarIcon = ({
   focused,
   Icon,
-  activeColor = '#2463EB',
+  activeColor = '#15803D',
   inactiveColor = '#6B7280',
   size = 24,
 }: TabBarIconProps) => {

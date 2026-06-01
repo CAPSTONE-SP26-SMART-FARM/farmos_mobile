@@ -55,7 +55,7 @@ export default function PrescriptionScreen() {
       <SheetHeader title={`Đơn thuốc${items.length > 0 ? ` (${items.length})` : ''}`} onCancel={() => router.back()} />
 
       {isLoading ? (
-        <ActivityIndicator color='#2463EB' style={{ marginTop: 40 }} />
+        <ActivityIndicator color='#15803D' style={{ marginTop: 40 }} />
       ) : items.length === 0 ? (
         <EmptyState message='Chưa có đơn thuốc' Icon={icons.emptyCartSvg} />
       ) : (

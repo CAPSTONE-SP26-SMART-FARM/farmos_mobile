@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAFAFA',
   },
   submit: {
-    backgroundColor: '#2463EB',
+    backgroundColor: '#15803D',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',

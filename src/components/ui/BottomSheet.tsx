@@ -240,7 +240,7 @@ BottomSheet.SelectItem = ({
       {renderLabel ? renderLabel() : <Text style={[styles.optionLabel, disabled && styles.optionLabelDisabled]}>{label}</Text>}
       {subtitle && !renderLabel && <Text style={styles.optionSubtitle}>{subtitle}</Text>}
     </View>
-    {isSelected && <Ionicons name='checkmark' size={20} color='#2463EB' />}
+    {isSelected && <Ionicons name='checkmark' size={20} color='#15803D' />}
   </TouchableOpacity>
 )
 
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center'
   },
-  radioOuterSelected: { borderColor: '#2463EB' },
-  radioInner: { width: 12, height: 12, borderRadius: 6, backgroundColor: '#2463EB' },
+  radioOuterSelected: { borderColor: '#15803D' },
+  radioInner: { width: 12, height: 12, borderRadius: 6, backgroundColor: '#15803D' },
   radioOptionText: { fontSize: 16, color: '#111827', flex: 1 }
 })

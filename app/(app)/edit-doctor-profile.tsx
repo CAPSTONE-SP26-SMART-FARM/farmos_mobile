@@ -118,7 +118,7 @@ export default function EditDoctorProfileScreen() {
           keyboardShouldPersistTaps='handled'
         >
           {profileLoading ? (
-            <ActivityIndicator color='#2463EB' style={{ marginTop: 40 }} />
+            <ActivityIndicator color='#15803D' style={{ marginTop: 40 }} />
           ) : (
             <>
               <View style={styles.section}>

@@ -30,7 +30,7 @@ const styles = StyleSheet.create({
   right: { alignSelf: 'flex-end' },
   sender: { fontSize: 11, color: '#9CA3AF', fontFamily: 'Inter_500Medium', marginBottom: 2, marginLeft: 4 },
   bubble: { borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8 },
-  mine: { backgroundColor: '#2463EB', borderBottomRightRadius: 4 },
+  mine: { backgroundColor: '#15803D', borderBottomRightRadius: 4 },
   theirs: { backgroundColor: '#F3F4F6', borderBottomLeftRadius: 4 },
   text: { fontSize: 14, color: '#111827', fontFamily: 'Inter_400Regular' },
   textMine: { color: '#fff' },

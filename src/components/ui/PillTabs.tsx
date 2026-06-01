@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: '#F3F4F6',
   },
-  tabActive: { backgroundColor: '#2463EB' },
+  tabActive: { backgroundColor: '#15803D' },
   label: { fontSize: 13, color: '#6B7280', fontFamily: 'Inter_500Medium' },
   labelActive: { color: '#fff' },
 })

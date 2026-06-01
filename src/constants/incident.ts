@@ -17,8 +17,8 @@ export const STATUS_META: Record<
 > = {
   open: {
     label: 'Chờ tiếp nhận',
-    color: '#2563EB',
-    bg: '#EFF6FF',
+    color: '#15803D',
+    bg: '#DCFCE7',
     desc: 'Sự cố vừa tạo, chưa có bác sĩ tiếp nhận',
   },
   assigned: {

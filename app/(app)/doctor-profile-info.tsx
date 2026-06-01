@@ -65,7 +65,7 @@ export default function DoctorProfileInfoScreen() {
       <View style={s.section}>
         <Text style={s.sectionTitle}>Thông tin chuyên môn</Text>
         {profileLoading ? (
-          <ActivityIndicator color='#2463EB' style={{ marginVertical: 12 }} />
+          <ActivityIndicator color='#15803D' style={{ marginVertical: 12 }} />
         ) : hasProfile ? (
           <>
             <View style={s.infoRow}>
