@@ -1,13 +1,17 @@
 import { useRef, useState } from 'react'
 import {
-  View, ScrollView, StyleSheet,
+  View, ScrollView, StyleSheet, TouchableOpacity,
   KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
 import { Text, TextField, ImagePickerGrid } from '@/components/ui'
 import { SheetHeader } from '@/components/features/incident/SheetHeader'
 import { useSubmitDailyLog } from '@/hooks/useDailyLog'
+import { useUpdateTaskProgress } from '@/hooks/useEmployeeTask'
+import { ProgressUpdateSheet } from '@/components/features/dailyLog/ProgressUpdateSheet'
+import { getErrorMessage } from '@/utils/error'
 import { useToast } from '@/hooks/useToast'
 import { usePreventUnsavedChanges } from '@/hooks/usePreventUnsavedChanges'
 import { useImagePicker } from '@/hooks/useImagePicker'
@@ -38,11 +42,29 @@ export default function DailyLogSubmitScreen() {
     priority: string
     progress?: string
   }>()
-  const progressValue = Math.max(0, Math.min(100, Math.round(Number(progress ?? 0))))
+  const initialProgress = Math.max(0, Math.min(100, Math.round(Number(progress ?? 0))))
+  const [progressValue, setProgressValue] = useState(initialProgress)
   const progressColor = progressValue >= 100 ? '#16A34A' : '#2463EB'
   const { showToast } = useToast()
   const { mutate, isPending } = useSubmitDailyLog()
+  const { mutateAsync: updateProgress, isPending: isUpdatingProgress } = useUpdateTaskProgress()
   const justSavedRef = useRef(false)
+
+  const [isProgressSheetOpen, setProgressSheetOpen] = useState(false)
+  const handleConfirmProgress = async (next: number) => {
+    if (next === progressValue) {
+      setProgressSheetOpen(false)
+      return
+    }
+    try {
+      await updateProgress({ id: taskId, body: { progress: next } })
+      setProgressValue(next)
+      setProgressSheetOpen(false)
+      showToast.success({ message: `Đã cập nhật tiến độ: ${next}%` })
+    } catch (err) {
+      showToast.error({ message: getErrorMessage(err, 'Không thể cập nhật tiến độ') })
+    }
+  }
 
   const [activities, setActivities] = useState('')
   const [notes, setNotes] = useState('')
@@ -129,7 +151,11 @@ export default function DailyLogSubmitScreen() {
                   <Text style={[styles.taskPriority, { color: PRIORITY_COLOR[priority] ?? '#2463EB' }]}>
                     {PRIORITY_LABEL[priority] ?? priority}
                   </Text>
-                  <View style={styles.progressRow}>
+                  <TouchableOpacity
+                    style={styles.progressRow}
+                    activeOpacity={0.7}
+                    onPress={() => setProgressSheetOpen(true)}
+                  >
                     <View style={styles.progressTrack}>
                       <View
                         style={[
@@ -141,16 +167,32 @@ export default function DailyLogSubmitScreen() {
                     <Text style={[styles.progressText, { color: progressColor }]}>
                       {progressValue}%
                     </Text>
-                  </View>
+                    <Ionicons name='create-outline' size={14} color='#6B7280' />
+                  </TouchableOpacity>
                 </View>
               </View>
 
-              <View style={styles.dateChip}>
-                <Text style={styles.dateChipText}>
-                  {new Date().toLocaleDateString('vi-VN', {
-                    weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric',
-                  })}
-                </Text>
+              <View style={styles.dateRow}>
+                <View style={styles.dateChip}>
+                  <Text style={styles.dateChipText}>
+                    {new Date().toLocaleDateString('vi-VN', {
+                      weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric',
+                    })}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.historyBtn}
+                  activeOpacity={0.7}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/(app)/daily-log/history/[taskId]',
+                      params: { taskId, title: title ?? '' },
+                    })
+                  }
+                >
+                  <Ionicons name='time-outline' size={14} color='#4B5563' />
+                  <Text style={styles.historyBtnText}>Xem lịch sử</Text>
+                </TouchableOpacity>
               </View>
 
               <View style={styles.card}>
@@ -190,6 +232,14 @@ export default function DailyLogSubmitScreen() {
           </TouchableWithoutFeedback>
         </KeyboardAvoidingView>
       </SafeAreaView>
+
+      <ProgressUpdateSheet
+        visible={isProgressSheetOpen}
+        initialValue={progressValue}
+        isSubmitting={isUpdatingProgress}
+        onClose={() => setProgressSheetOpen(false)}
+        onConfirm={handleConfirmProgress}
+      />
     </View>
   )
 }
@@ -242,6 +292,12 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
 
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
   dateChip: {
     alignSelf: 'flex-start',
     backgroundColor: '#EFF6FF',
@@ -250,6 +306,22 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   dateChipText: { fontSize: 13, color: '#2463EB', fontFamily: 'Inter_500Medium' },
+  historyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  historyBtnText: {
+    fontSize: 12,
+    color: '#4B5563',
+    fontFamily: 'Inter_500Medium',
+  },
 
   card: {
     backgroundColor: '#FFFFFF',

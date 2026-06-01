@@ -17,6 +17,7 @@ export default function AppLayout() {
       <Stack.Screen name='(tabs)' />
       <Stack.Screen name='farm/milestone/[milestoneId]' />
       <Stack.Screen name='daily-log/[taskId]' options={formSheetOptions} />
+      <Stack.Screen name='daily-log/history/[taskId]' />
       <Stack.Screen name='incident/create' options={formSheetOptions} />
       <Stack.Screen name='incident/[id]/index' />
       <Stack.Screen name='incident/[id]/chat' />

@@ -11,6 +11,12 @@ export type TaskForDailyLog = {
   status: TaskStatus
   progress: number
   assignedDate: string | null
+  hasLoggedToday?: boolean
+}
+
+export type TodayTasksFilter = {
+  milestoneId?: string
+  hasLoggedToday?: boolean
 }
 
 export type AttachmentItem = {
@@ -70,4 +76,14 @@ export type DailyLog = {
   farmer: DailyLogFarmer
   attachments: AttachmentRes[]
   createdAt: string
+}
+
+export type MyDailyLogsFilter = {
+  employeeTaskId?: string
+  search?: string
+}
+
+export type MyDailyLogsRes = {
+  data: DailyLog[]
+  meta: { page: number; limit: number; totalItems: number; totalPages: number }
 }

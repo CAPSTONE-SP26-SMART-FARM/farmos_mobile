@@ -69,7 +69,20 @@ export const queryKeys = {
     catalog: (q: string) => ['medicine', 'catalog', q] as const,
   },
   dailyLog: {
-    tasksForToday: (page?: number) => ['daily-log', 'tasks-for-today', page ?? 1] as const,
+    todayTasks: (
+      page?: number,
+      milestoneId?: string,
+      hasLoggedToday?: boolean,
+    ) =>
+      [
+        'daily-log',
+        'today-tasks',
+        page ?? 1,
+        milestoneId ?? null,
+        hasLoggedToday ?? null,
+      ] as const,
+    myLogs: (taskId?: string, search?: string) =>
+      ['daily-log', 'my-logs', taskId ?? null, search ?? ''] as const,
   },
   doctorWallet: {
     summary: ['doctor-wallet', 'summary'] as const,
