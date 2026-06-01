@@ -1,10 +1,11 @@
-import { View, ScrollView, StyleSheet, TouchableOpacity } from 'react-native'
+import { View, Image, ScrollView, StyleSheet, TouchableOpacity } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
 import { Text } from '@/components/ui'
 import { useAuth } from '@/hooks/useAuth'
 import { icons } from '@/constants/icon'
+import { getDefaultAvatar } from '@/constants/user'
 import { CONFIG } from '@/constants/config'
 import { useDoctorIncidentList } from '@/hooks/useDoctor'
 import { useIncidentList } from '@/hooks/useIncident'
@@ -122,10 +123,20 @@ export default function HomeScreen() {
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
       <View style={styles.header}>
-        <View style={styles.greeting}>
-          <Text style={styles.greetSub}>Chào mừng trở lại,</Text>
-          <Text style={styles.greetName}>{userName}</Text>
-        </View>
+        <TouchableOpacity
+          style={styles.greeting}
+          activeOpacity={0.7}
+          onPress={() => router.push('/(app)/(tabs)/profile')}
+        >
+          <Image
+            source={user?.avatarUrl ? { uri: user.avatarUrl } : getDefaultAvatar(user?.role)}
+            style={styles.headerAvatar}
+          />
+          <View style={styles.greetingText}>
+            <Text style={styles.greetSub}>Chào mừng trở lại,</Text>
+            <Text style={styles.greetName} numberOfLines={1}>{userName}</Text>
+          </View>
+        </TouchableOpacity>
         <TouchableOpacity
           style={styles.notiBtnWrap}
           onPress={() => router.push('/(app)/(tabs)/notifications')}
@@ -153,7 +164,9 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 8,
   },
-  greeting: { gap: 2 },
+  greeting: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  headerAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#DCFCE7' },
+  greetingText: { flex: 1, gap: 2 },
   greetSub: { fontSize: 13, color: '#6B7280', fontFamily: 'Inter_400Regular' },
   greetName: { fontSize: 22, color: '#111827', fontFamily: 'Inter_600SemiBold' },
   notiBtnWrap: {
