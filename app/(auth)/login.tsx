@@ -39,7 +39,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <LinearGradient colors={['#E0F2FF', '#FFFFFF']} style={styles.flex}>
+    <LinearGradient colors={['#DCFCE7', '#FFFFFF']} style={styles.flex}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps='handled' showsVerticalScrollIndicator={false}>
           <View style={styles.header}>

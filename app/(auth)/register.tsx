@@ -6,11 +6,12 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { LinearGradient } from 'expo-linear-gradient'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAuthStore } from '@/stores/authStore'
 import { authApi } from '@/services/api/auth'
 import { useToast } from '@/hooks/useToast'
 import { FormTextField } from '@/components/react-hook-form/FormTextField'
-import { PrimaryButton, SecondaryButton, Text } from '@/components/ui'
+import { PrimaryButton, SecondaryButton, Text, InlineFieldRow } from '@/components/ui'
 import { getErrorMessage } from '@/utils/error'
 
 // ── Schemas ──
@@ -35,7 +36,7 @@ type AccountForm = z.infer<typeof accountSchema>
 type Step = 1 | 2 | 3
 
 // ── Header ──
-function StepHeader({ step, email, onBack }: { step: Step; email: string; onBack: () => void }) {
+function StepHeader({ step, email }: { step: Step; email: string }) {
   const subtitles: Record<Step, string> = {
     1: 'Nhập email để nhận mã xác thực',
     2: `Nhập mã OTP đã gửi đến ${email}`,
@@ -43,15 +44,6 @@ function StepHeader({ step, email, onBack }: { step: Step; email: string; onBack
   }
   return (
     <View style={styles.header}>
-      {step > 1 && (
-        <TouchableOpacity
-          onPress={onBack}
-          style={styles.backBtn}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <Ionicons name='arrow-back' size={22} color='#111827' />
-        </TouchableOpacity>
-      )}
       <Text style={styles.brand}>FarmOS</Text>
       <Text style={styles.title}>Đăng ký</Text>
       <Text style={styles.subtitle}>{subtitles[step]}</Text>
@@ -68,6 +60,7 @@ function StepHeader({ step, email, onBack }: { step: Step; email: string; onBack
 export default function RegisterScreen() {
   const { register: registerUser, isLoading } = useAuthStore()
   const { showToast } = useToast()
+  const insets = useSafeAreaInsets()
   const [step, setStep] = useState<Step>(1)
   const [email, setEmail] = useState('')
   const [otpCode, setOtpCode] = useState('')
@@ -133,53 +126,71 @@ export default function RegisterScreen() {
   }
 
   return (
-    <LinearGradient colors={['#E0F2FF', '#FFFFFF']} style={styles.flex}>
+    <LinearGradient colors={['#DCFCE7', '#FFFFFF']} style={styles.flex}>
+      <TouchableOpacity
+        onPress={() => (step > 1 ? setStep((step - 1) as Step) : router.back())}
+        style={[styles.backBtn, { top: insets.top + 8 }]}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+      >
+        <Ionicons name='arrow-back' size={24} color='#111827' />
+      </TouchableOpacity>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps='handled'
           showsVerticalScrollIndicator={false}
         >
-        <StepHeader step={step} email={email} onBack={() => setStep((step - 1) as Step)} />
+        <StepHeader step={step} email={email} />
 
         {step === 1 && (
-          <View style={styles.form}>
-            <FormTextField
-              control={emailForm.control}
-              name='email'
-              label='Email'
-              keyboardType='email-address'
-              autoCapitalize='none'
-              autoComplete='email'
-            />
-            <PrimaryButton
-              title='Gửi mã OTP'
-              loading={isSendingOtp}
-              onPress={emailForm.handleSubmit(handleSendOtp)}
-            />
-          </View>
+          <InlineFieldRow
+            field={
+              <FormTextField
+                control={emailForm.control}
+                name='email'
+                label='Email'
+                keyboardType='email-address'
+                autoCapitalize='none'
+                autoComplete='email'
+              />
+            }
+            action={
+              <PrimaryButton
+                title='Gửi mã'
+                loading={isSendingOtp}
+                onPress={emailForm.handleSubmit(handleSendOtp)}
+                style={styles.inlineButton}
+              />
+            }
+          />
         )}
 
         {step === 2 && (
           <View style={styles.form}>
-            <FormTextField
-              control={otpForm.control}
-              name='code'
-              label='Mã OTP (6 chữ số)'
-              keyboardType='number-pad'
-              maxLength={6}
-              autoFocus
+            <InlineFieldRow
+              field={
+                <FormTextField
+                  control={otpForm.control}
+                  name='code'
+                  label='Mã OTP (6 chữ số)'
+                  keyboardType='number-pad'
+                  maxLength={6}
+                  autoFocus
+                />
+              }
+              action={
+                <SecondaryButton
+                  title='Gửi lại'
+                  loading={isSendingOtp}
+                  onPress={emailForm.handleSubmit(handleSendOtp)}
+                  style={styles.inlineButton}
+                />
+              }
             />
             <PrimaryButton
               title='Xác nhận OTP'
               loading={isVerifyingOtp}
               onPress={otpForm.handleSubmit(handleVerifyOtp)}
-            />
-            <SecondaryButton
-              title='Gửi lại OTP'
-              loading={isSendingOtp}
-              onPress={emailForm.handleSubmit(handleSendOtp)}
-              size='small'
             />
           </View>
         )}
@@ -214,7 +225,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 36 },
   header: { alignItems: 'center', marginBottom: 24, gap: 8 },
-  backBtn: { alignSelf: 'flex-start', marginBottom: 4 },
+  backBtn: { position: 'absolute', left: 20, zIndex: 10 },
   brand: { fontSize: 32, lineHeight: 40, fontFamily: 'Inter_700Bold', color: '#15803D', textAlign: 'center' },
   title: { fontSize: 24, lineHeight: 32, fontFamily: 'Inter_700Bold', color: '#111827', textAlign: 'center' },
   subtitle: { fontSize: 15, lineHeight: 22, color: '#6B7280', textAlign: 'center' },
@@ -222,6 +233,7 @@ const styles = StyleSheet.create({
   stepDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#E5E7EB' },
   stepDotActive: { backgroundColor: '#15803D' },
   form: { gap: 16 },
+  inlineButton: { height: 56, minHeight: 56, paddingVertical: 0, paddingHorizontal: 20 },
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 28, flexWrap: 'wrap' },
   footerText: { fontSize: 14, color: '#6B7280' },
   footerLink: { fontSize: 14, color: '#15803D', fontFamily: 'Inter_600SemiBold' },
