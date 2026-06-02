@@ -24,7 +24,7 @@ export function ProfileInfoLayout({ editPath, children }: Props) {
             onPress={() => router.push(editPath)}
             hitSlop={10}
           >
-            <EditIcon width={22} height={22} />
+            <EditIcon width={16} height={16} />
           </Pressable>
         }
       />

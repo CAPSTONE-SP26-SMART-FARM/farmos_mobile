@@ -10,12 +10,14 @@ export interface UpdateProfileRequest {
 export const profileApi = {
   // POST /profile/update
   // BE yêu cầu avatarUrl phải là string | null, không được undefined
-  update: (body: UpdateProfileRequest) =>
-    apiClient
-      .post<{ data: User }>('/profile/update', {
-        fullName: body.fullName,
-        phone: body.phone ?? null,
-        avatarUrl: body.avatarUrl ?? null, // luôn gửi null thay vì undefined
-      })
-      .then((r) => r.data.data),
+  update: (body: UpdateProfileRequest) => {
+    const payload = {
+      fullName: body.fullName,
+      phone: body.phone ?? null,
+      avatarUrl: body.avatarUrl ?? null, // luôn gửi null thay vì undefined
+    }
+    return apiClient.post<{ data: User }>('/profile/update', payload).then(r => {
+      return r.data.data
+    })
+  },
 }

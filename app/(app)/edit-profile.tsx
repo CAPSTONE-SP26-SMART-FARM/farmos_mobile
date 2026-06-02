@@ -7,7 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
 import { FormTextField } from '@/components/react-hook-form/FormTextField'
-import { PrimaryButton, Text, TextField, TopBar } from '@/components/ui'
+import { PrimaryButton, Text, TextField, TopBar, AvatarPicker } from '@/components/ui'
+import { getDefaultAvatar } from '@/constants/user'
 
 const schema = z.object({
   fullName: z.string().min(2, 'Họ tên ít nhất 2 ký tự').max(255),
@@ -37,6 +38,15 @@ export default function EditProfileScreen() {
     }
   }
 
+  const handleAvatarChange = async (avatarUrl: string | null) => {
+    await updateProfile({
+      fullName: user?.fullName ?? '',
+      phone: user?.phone ?? null,
+      avatarUrl,
+    })
+    showToast.success({ message: avatarUrl ? 'Cập nhật ảnh đại diện thành công!' : 'Đã xoá ảnh đại diện' })
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <TopBar title='Chỉnh sửa hồ sơ' />
@@ -47,6 +57,16 @@ export default function EditProfileScreen() {
           keyboardShouldPersistTaps='handled'
           showsVerticalScrollIndicator={false}
         >
+          <View style={styles.avatarSection}>
+            <AvatarPicker
+              uri={user?.avatarUrl ?? null}
+              name={user?.fullName}
+              fallbackSource={getDefaultAvatar(user?.role)}
+              onUploaded={(url) => handleAvatarChange(url)}
+              onRemoved={() => handleAvatarChange(null)}
+            />
+          </View>
+
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Thông tin cá nhân</Text>
             <TextField label='Email' value={user?.email ?? ''} readOnly showError={false} />
@@ -85,6 +105,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: '#F3F4F6' },
   scrollContent: { padding: 16, gap: 16 },
   footer: { padding: 20, backgroundColor: '#FFFFFF' },
+  avatarSection: { alignItems: 'center', paddingVertical: 8 },
   section: {
     backgroundColor: '#FFFFFF', borderRadius: 16,
     padding: 16, gap: 16,
