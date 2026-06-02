@@ -74,7 +74,6 @@ export default function DoctorDqsScreen() {
   const { data: dqs } = useDoctorDqs()
   const latest = dqs?.latest
   const [tip, setTip] = useState<Tip | null>(null)
-  const insetsTop = useRef(0)
 
   const handleShow = (info: string, iconX: number, iconY: number, iconW: number, iconH: number) => {
     const screenW = Dimensions.get('window').width
@@ -190,9 +189,9 @@ export default function DoctorDqsScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FFFFFF' },
-  scroll: { flex: 1, backgroundColor: '#F3F4F6' },
-  scrollContent: { padding: 16, paddingBottom: 32, gap: 12 },
+  safe: { backgroundColor: '#FFFFFF' },
+  scroll: { backgroundColor: '#F3F4F6' },
+  scrollContent: { padding: 16, paddingBottom: 24, gap: 12 },
   titleRow: {
     flexDirection: 'row', alignItems: 'center', marginBottom: 10,
   },

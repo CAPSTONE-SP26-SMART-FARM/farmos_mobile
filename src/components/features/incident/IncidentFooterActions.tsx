@@ -55,15 +55,15 @@ export function IncidentFooterActions({
 
   if (canResolve) {
     return (
-      <View style={[styles.wrap, styles.wrapStack]}>
-        <TouchableOpacity style={[styles.btn, { backgroundColor: '#7C3AED' }]} onPress={onResolve}>
-          <Text style={styles.btnText}>Giải quyết & Kê đơn thuốc</Text>
-        </TouchableOpacity>
+      <View style={[styles.wrap, styles.wrapRow]}>
         {canChat && (
-          <TouchableOpacity style={[styles.btn, styles.btnSecondary]} onPress={onOpenChat}>
-            <Text style={[styles.btnText, { color: '#15803D' }]}>Chat với Farmer</Text>
+          <TouchableOpacity style={[styles.btn, styles.btnOutline, styles.btnChat]} onPress={onOpenChat}>
+            <Text style={[styles.btnText, { color: '#15803D' }]}>Chat</Text>
           </TouchableOpacity>
         )}
+        <TouchableOpacity style={[styles.btn, styles.btnResolve]} onPress={onResolve}>
+          <Text style={styles.btnText}>Giải quyết & Kê đơn</Text>
+        </TouchableOpacity>
       </View>
     )
   }
@@ -129,7 +129,13 @@ const styles = StyleSheet.create({
   },
   btnDisabled: { backgroundColor: '#E5E7EB' },
   btnCancel: { backgroundColor: '#FEF2F2' },
-  btnSecondary: { backgroundColor: '#DCFCE7' },
   btnText: { color: '#fff', fontSize: 15, fontFamily: 'Inter_600SemiBold' },
-  wrapStack: { gap: 8 },
+  wrapRow: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  btnResolve: { flex: 1, backgroundColor: '#15803D' },
+  btnOutline: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#15803D',
+  },
+  btnChat: { paddingHorizontal: 24 },
 })
