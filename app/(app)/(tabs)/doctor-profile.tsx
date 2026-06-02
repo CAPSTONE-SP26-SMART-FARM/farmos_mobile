@@ -1,51 +1,16 @@
-import { View, ScrollView, StyleSheet, TouchableOpacity, Switch, Alert } from 'react-native'
+import { View, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { MaterialIcons } from '@expo/vector-icons'
 import { Text, AvatarPicker } from '@/components/ui'
 import { useAuth } from '@/hooks/useAuth'
-import { useToast } from '@/hooks/useToast'
-import { useDoctorProfile, useDoctorRequestsList, useUpdateDoctorOnlineStatus } from '@/hooks/useDoctor'
+import { useUpdateAvatar } from '@/hooks/useUpdateAvatar'
 import { getDefaultAvatar } from '@/constants/user'
 
-
 export default function DoctorProfileScreen() {
-  const { user, logout, updateProfile } = useAuth()
-  const { showToast } = useToast()
+  const { user, logout } = useAuth()
   const router = useRouter()
-
-  const { data: profile } = useDoctorProfile()
-  const { data: requestsData } = useDoctorRequestsList()
-  const { mutate: updateOnlineStatus, isPending: isTogglingOnline } = useUpdateDoctorOnlineStatus()
-
-  const registrationStatus = requestsData?.data?.[0]?.registrationStatus
-  const isApproved = registrationStatus === 'approved'
-  const isOnline = profile?.isOnline ?? user?.isOnline ?? false
-
-  const handleToggleOnline = () => {
-    if (!isApproved) {
-      showToast.error({ message: 'Cần được phê duyệt trước khi bật online' })
-      return
-    }
-    updateOnlineStatus(
-      { isOnline: !isOnline },
-      {
-        onSuccess: () =>
-          showToast.success({ message: `Đã chuyển sang ${!isOnline ? 'Online' : 'Offline'}` }),
-        onError: (err: any) =>
-          showToast.error({ message: err?.response?.data?.message ?? 'Cập nhật thất bại' }),
-      },
-    )
-  }
-
-  const handleAvatarChange = async (avatarUrl: string | null) => {
-    await updateProfile({
-      fullName: user?.fullName ?? '',
-      phone: user?.phone ?? null,
-      avatarUrl,
-    })
-    showToast.success({ message: avatarUrl ? 'Cập nhật ảnh đại diện thành công!' : 'Đã xoá ảnh đại diện' })
-  }
+  const handleAvatarChange = useUpdateAvatar()
 
   const handleLogout = () => {
     Alert.alert('Đăng xuất', 'Bạn có chắc muốn đăng xuất không?', [
@@ -74,28 +39,7 @@ export default function DoctorProfileScreen() {
           <Text style={styles.sub}>{user?.email ?? ''}</Text>
         </View>
 
-<View style={styles.menuContainer}>
-          <View style={styles.menuCard}>
-            <View style={styles.menuLeft}>
-              <MaterialIcons
-                name={isOnline ? 'wifi' : 'wifi-off'}
-                size={24}
-                color={isOnline ? '#059669' : '#4B5563'}
-              />
-              <View>
-                <Text style={styles.menuLabel}>Nhận sự cố</Text>
-                <Text style={styles.menuSub}>{isApproved ? (isOnline ? 'Đang bật' : 'Đang tắt') : 'Cần phê duyệt'}</Text>
-              </View>
-            </View>
-            <Switch
-              value={isOnline}
-              onValueChange={handleToggleOnline}
-              disabled={!isApproved || isTogglingOnline}
-              trackColor={{ false: '#E5E7EB', true: '#BBF7D0' }}
-              thumbColor={isOnline ? '#059669' : '#9CA3AF'}
-            />
-          </View>
-
+        <View style={styles.menuContainer}>
           <TouchableOpacity
             style={styles.menuCard}
             activeOpacity={0.7}
@@ -146,7 +90,6 @@ const styles = StyleSheet.create({
   },
   menuLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   menuLabel: { fontSize: 15, color: '#111827', fontFamily: 'Inter_500Medium' },
-  menuSub: { fontSize: 12, color: '#6B7280', fontFamily: 'Inter_400Regular', marginTop: 1 },
   menuLabelDanger: { fontSize: 15, color: '#EF4444', fontFamily: 'Inter_500Medium' },
 
 })

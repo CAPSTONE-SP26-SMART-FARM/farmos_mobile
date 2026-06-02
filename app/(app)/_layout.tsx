@@ -10,6 +10,15 @@ const formSheetOptions = {
   contentStyle: { backgroundColor: '#F3F4F6' },
 }
 
+// Sheet co vừa nội dung — dùng cho màn nội dung ngắn, không full màn (vd doctor-dqs).
+const fitContentSheetOptions = {
+  presentation: 'formSheet' as const,
+  headerShown: false,
+  sheetGrabberVisible: true,
+  sheetAllowedDetents: 'fitToContents' as const,
+  contentStyle: { backgroundColor: '#F3F4F6' },
+}
+
 export default function AppLayout() {
   useNetworkStatus()
   return (
@@ -32,7 +41,7 @@ export default function AppLayout() {
       <Stack.Screen name='edit-doctor-profile' />
       <Stack.Screen name='farmer-profile-info' />
       <Stack.Screen name='doctor-profile-info' />
-      <Stack.Screen name='doctor-dqs' options={formSheetOptions} />
+      <Stack.Screen name='doctor-dqs' options={fitContentSheetOptions} />
     </Stack>
   )
 }
