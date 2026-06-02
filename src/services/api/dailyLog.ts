@@ -6,6 +6,7 @@ import type {
   SubmitDailyLogBody,
   TasksForDailyLogRes,
   TodayTasksFilter,
+  UpdateDailyLogBody,
 } from '@/types/dailyLog'
 
 export const dailyLogApi = {
@@ -24,6 +25,16 @@ export const dailyLogApi = {
     apiClient
       .post<{ data: DailyLog }>('/daily-log/farmer/submit', body)
       .then((r) => r.data.data),
+
+  update: (dailyLogId: string, body: UpdateDailyLogBody) =>
+    apiClient
+      .patch<{ data: DailyLog }>(`/daily-log/farmer/${dailyLogId}`, body)
+      .then((r) => r.data.data),
+
+  delete: (dailyLogId: string) =>
+    apiClient
+      .delete<{ statusCode: number; message?: string }>(`/daily-log/farmer/${dailyLogId}`)
+      .then((r) => r.data),
 
   myLogs: (page = 1, limit = 20, filter: MyDailyLogsFilter = {}) => {
     const q = new URLSearchParams({ page: String(page), limit: String(limit) })

@@ -6,7 +6,11 @@ import {
 } from '@tanstack/react-query'
 import { queryKeys } from '@/constants/queryKeys'
 import { dailyLogApi } from '@/services/api/dailyLog'
-import type { SubmitDailyLogBody, TodayTasksFilter } from '@/types/dailyLog'
+import type {
+  SubmitDailyLogBody,
+  TodayTasksFilter,
+  UpdateDailyLogBody,
+} from '@/types/dailyLog'
 
 const MY_LOGS_PAGE_SIZE = 10
 
@@ -26,6 +30,27 @@ export function useSubmitDailyLog() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (body: SubmitDailyLogBody) => dailyLogApi.submit(body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['daily-log'] })
+    },
+  })
+}
+
+export function useUpdateDailyLog() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: UpdateDailyLogBody }) =>
+      dailyLogApi.update(id, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['daily-log'] })
+    },
+  })
+}
+
+export function useDeleteDailyLog() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => dailyLogApi.delete(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['daily-log'] })
     },

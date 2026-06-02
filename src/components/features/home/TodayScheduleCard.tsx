@@ -1,32 +1,43 @@
-import { View, StyleSheet, TouchableOpacity } from 'react-native'
-import { router } from 'expo-router'
 import { Text } from '@/components/ui'
 import { icons } from '@/constants/icon'
-import { isToday } from '@/utils/date'
-import Animated, { FadeInDown } from 'react-native-reanimated'
 import type { IncidentTicket } from '@/types/incident'
+import { isToday } from '@/utils/date'
+import { router } from 'expo-router'
+import { StyleSheet, TouchableOpacity, View } from 'react-native'
+import Animated, { FadeInDown } from 'react-native-reanimated'
 
 const CalendarIcon = icons.calendarBgSvg
-const ClockIcon = icons.clockSvg
 
 const DONE_STATUSES = ['resolved', 'closed']
 
 function formatToday() {
-  return new Date().toLocaleDateString('vi-VN', {
+  // "Thứ Ba, 02/06/2026"
+  const s = new Date().toLocaleDateString('vi-VN', {
     weekday: 'long',
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
   })
+  // Capitalize first letter ("thứ ba" → "Thứ ba")
+  return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
 interface Props {
   tickets: IncidentTicket[]
   tasksCount?: number
+  /** Khi user bấm vào card task, jump thẳng vào milestone "trọng tâm" (nếu có). */
+  targetMilestoneId?: string
+  targetMilestoneStageName?: string
   delay?: number
 }
 
-export function TodayScheduleCard({ tickets, tasksCount, delay = 150 }: Props) {
+export function TodayScheduleCard({
+  tickets,
+  tasksCount,
+  targetMilestoneId,
+  targetMilestoneStageName,
+  delay = 150,
+}: Props) {
   const isTaskMode = tasksCount !== undefined
 
   const todayTickets = tickets.filter((t) => isToday(t.createdAt))
@@ -34,26 +45,10 @@ export function TodayScheduleCard({ tickets, tasksCount, delay = 150 }: Props) {
   const totalToday = isTaskMode ? (tasksCount ?? 0) : todayTickets.length
 
   const allDone = isTaskMode ? totalToday === 0 : (totalToday === 0 || resolvedCount === totalToday)
-  const remaining = isTaskMode ? totalToday : totalToday - resolvedCount
 
-  const progressLabel = isTaskMode
-    ? totalToday === 0
-      ? 'Không có công việc hôm nay'
-      : `${totalToday} công việc cần làm hôm nay`
-    : totalToday === 0
-      ? 'Không có sự cố hôm nay'
-      : `${resolvedCount}/${totalToday} đã giải quyết`
-
-  const statusColor = remaining > 0 ? '#DB7706' : '#15803D'
-  const statusLabel = allDone
-    ? null
-    : isTaskMode
-    ? remaining > 2
-      ? 'Còn nhiều việc'
-      : `Còn ${remaining} công việc`
-    : remaining > 2
-    ? 'Còn nhiều việc'
-    : `Còn ${remaining} chưa xử lý`
+  // Khi all done: hiển thị 1 dòng tổng kết.
+  // Ngược lại: dòng 1 = ngày (caption), dòng 2 = số nổi bật + label.
+  const remainingCount = isTaskMode ? totalToday : totalToday - resolvedCount
 
   return (
     <Animated.View
@@ -66,15 +61,31 @@ export function TodayScheduleCard({ tickets, tasksCount, delay = 150 }: Props) {
         style={styles.itemRow}
         activeOpacity={isTaskMode ? 0.7 : 1}
         disabled={!isTaskMode}
-        onPress={() =>
+        onPress={() => {
+          // Có milestone trọng tâm → mở thẳng vào tab Công việc của milestone đó.
+          if (targetMilestoneId) {
+            router.push({
+              pathname: '/(app)/farm/milestone/[milestoneId]',
+              params: {
+                milestoneId: targetMilestoneId,
+                stageName: targetMilestoneStageName ?? 'Giai đoạn',
+                tab: 'tasks',
+                milestoneStatus: 'in_progress',
+              },
+            })
+            return
+          }
+          // Fallback: về danh sách trang trại.
           router.push({ pathname: '/(app)/(tabs)/farm', params: { tab: 'tasks' } })
-        }
+        }}
       >
         <View style={styles.iconWrapper}>
           <CalendarIcon width={48} height={48} color='#15803D' />
         </View>
+
         {allDone ? (
           <View style={styles.content}>
+            <Text style={styles.dateCaption}>{formatToday()}</Text>
             <Text style={styles.doneTitle}>
               {isTaskMode
                 ? 'Không có công việc nào hôm nay'
@@ -82,24 +93,19 @@ export function TodayScheduleCard({ tickets, tasksCount, delay = 150 }: Props) {
                   ? 'Ngày sạch — không có sự cố nào'
                   : `Hoàn tất ${resolvedCount} sự cố hôm nay`}
             </Text>
-            <Text style={styles.doneSubtitle}>{formatToday()}</Text>
           </View>
         ) : (
           <View style={styles.content}>
-            <Text style={styles.period}>{progressLabel}</Text>
-            <View style={styles.deadlineRow}>
-              <Text style={styles.deadline}>{formatToday()}</Text>
-              {statusLabel && (
-                <>
-                  <ClockIcon width={14} height={14} color={statusColor} />
-                  <Text style={[styles.statusText, { color: statusColor }]}>
-                    {statusLabel}
-                  </Text>
-                </>
-              )}
+            <Text style={styles.dateCaption}>{formatToday()}</Text>
+            <View style={styles.countRow}>
+              <Text style={styles.countNumber}>{remainingCount}</Text>
+              <Text style={styles.countLabel}>
+                {isTaskMode ? 'công việc cần làm' : 'sự cố chưa xử lý'}
+              </Text>
             </View>
           </View>
         )}
+
         {isTaskMode && <Text style={styles.chevron}>›</Text>}
       </TouchableOpacity>
     </Animated.View>
@@ -145,38 +151,35 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  period: {
-    fontSize: 13,
-    fontFamily: 'Inter_400Regular',
+  dateCaption: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: 'Inter_500Medium',
     color: '#6B7280',
-    marginBottom: 2,
+    marginBottom: 4,
   },
-  deadlineRow: {
+  countRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+    alignItems: 'baseline',
+    gap: 6,
   },
-  deadline: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontFamily: 'Inter_400Regular',
-    color: '#4B5563',
+  countNumber: {
+    fontSize: 22,
+    lineHeight: 26,
+    fontFamily: 'Inter_700Bold',
+    color: '#15803D',
   },
-  statusText: {
-    fontSize: 12,
-    lineHeight: 16,
+  countLabel: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: 'Inter_600SemiBold',
+    color: '#111827',
   },
   doneTitle: {
     fontSize: 14,
     lineHeight: 20,
-    fontFamily: 'Inter_500Medium',
-    color: '#111827',
-  },
-  doneSubtitle: {
-    fontSize: 13,
-    lineHeight: 20,
-    fontFamily: 'Inter_400Regular',
-    color: '#4B5563',
+    fontFamily: 'Inter_600SemiBold',
+    color: '#15803D',
   },
   chevron: {
     fontSize: 22,

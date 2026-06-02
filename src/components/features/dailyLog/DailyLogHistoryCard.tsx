@@ -1,4 +1,4 @@
-import { View, Image, StyleSheet, TouchableOpacity } from 'react-native'
+import { View, Image, StyleSheet, TouchableOpacity, Pressable } from 'react-native'
 import { MaterialIcons } from '@expo/vector-icons'
 import dayjs from 'dayjs'
 import { Text } from '@/components/ui'
@@ -7,14 +7,25 @@ import type { DailyLog } from '@/types/dailyLog'
 interface Props {
   log: DailyLog
   onPress?: () => void
+  onEdit?: (log: DailyLog) => void
+  onDelete?: (log: DailyLog) => void
 }
 
-export function DailyLogHistoryCard({ log, onPress }: Props) {
+function isToday(logDate: string): boolean {
+  // logDate là "YYYY-MM-DD" theo UTC từ BE. dayjs() lấy local — vẫn so theo YYYY-MM-DD local.
+  // Khớp với UX "log của hôm nay" theo cách user cảm nhận.
+  return dayjs(logDate).format('YYYY-MM-DD') === dayjs().format('YYYY-MM-DD')
+}
+
+export function DailyLogHistoryCard({ log, onPress, onEdit, onDelete }: Props) {
   const date = dayjs(log.logDate || log.createdAt)
   const dayLabel = date.format('DD/MM/YYYY')
   const timeLabel = dayjs(log.createdAt).format('HH:mm')
   const previews = log.attachments?.slice(0, 4) ?? []
   const extra = (log.attachments?.length ?? 0) - previews.length
+
+  const today = isToday(log.logDate)
+  const showActions = today && (onEdit || onDelete)
 
   const Wrapper: any = onPress ? TouchableOpacity : View
   return (
@@ -23,9 +34,16 @@ export function DailyLogHistoryCard({ log, onPress }: Props) {
       {...(onPress ? { activeOpacity: 0.85, onPress } : {})}
     >
       <View style={styles.headerRow}>
-        <View style={styles.dateChip}>
-          <MaterialIcons name='event' size={14} color='#2463EB' />
-          <Text style={styles.dateChipText}>{dayLabel}</Text>
+        <View style={styles.headerLeft}>
+          <View style={styles.dateChip}>
+            <MaterialIcons name='event' size={14} color='#2463EB' />
+            <Text style={styles.dateChipText}>{dayLabel}</Text>
+          </View>
+          {today ? (
+            <View style={styles.todayChip}>
+              <Text style={styles.todayChipText}>Hôm nay</Text>
+            </View>
+          ) : null}
         </View>
         <Text style={styles.time}>{timeLabel}</Text>
       </View>
@@ -61,6 +79,31 @@ export function DailyLogHistoryCard({ log, onPress }: Props) {
           ))}
         </View>
       ) : null}
+
+      {showActions ? (
+        <View style={styles.actionsRow}>
+          {onEdit ? (
+            <Pressable
+              onPress={() => onEdit(log)}
+              style={({ pressed }) => [styles.actionBtn, pressed && styles.actionPressed]}
+              hitSlop={6}
+            >
+              <MaterialIcons name='edit' size={14} color='#2463EB' />
+              <Text style={styles.actionTextEdit}>Sửa</Text>
+            </Pressable>
+          ) : null}
+          {onDelete ? (
+            <Pressable
+              onPress={() => onDelete(log)}
+              style={({ pressed }) => [styles.actionBtn, pressed && styles.actionPressed]}
+              hitSlop={6}
+            >
+              <MaterialIcons name='delete-outline' size={14} color='#DC2626' />
+              <Text style={styles.actionTextDelete}>Xóa</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
     </Wrapper>
   )
 }
@@ -82,6 +125,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   dateChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -94,6 +138,17 @@ const styles = StyleSheet.create({
   dateChipText: {
     fontSize: 12,
     color: '#2463EB',
+    fontFamily: 'Inter_600SemiBold',
+  },
+  todayChip: {
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 100,
+  },
+  todayChipText: {
+    fontSize: 11,
+    color: '#15803D',
     fontFamily: 'Inter_600SemiBold',
   },
   time: {
@@ -149,4 +204,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Inter_600SemiBold',
   },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 6,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  actionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    backgroundColor: '#F9FAFB',
+  },
+  actionPressed: { opacity: 0.6 },
+  actionTextEdit: { fontSize: 12.5, color: '#2463EB', fontFamily: 'Inter_600SemiBold' },
+  actionTextDelete: { fontSize: 12.5, color: '#DC2626', fontFamily: 'Inter_600SemiBold' },
 })

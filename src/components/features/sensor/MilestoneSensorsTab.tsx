@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import {
   View,
   ScrollView,
@@ -6,23 +6,53 @@ import {
   ActivityIndicator,
   StyleSheet,
   RefreshControl,
-  Pressable,
 } from 'react-native'
 import { useRouter } from 'expo-router'
-import { MaterialIcons } from '@expo/vector-icons'
-import { Text, EmptyState, TextField } from '@/components/ui'
+import { Text, EmptyState } from '@/components/ui'
+import type { PillTabItem } from '@/components/ui'
+import { MilestoneTabToolbar } from '@/components/features/farm/MilestoneTabToolbar'
+import { DeviceStatusBadge } from './DeviceStatusBadge'
 import { useFarmerMilestoneAssignments } from '@/hooks/useFarmerMilestones'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { icons } from '@/constants/icon'
+import type { DeviceStatus, FarmerMilestoneStatus } from '@/types/farmerIot'
 
-export function MilestoneSensorsTab({ milestoneId }: { milestoneId: string }) {
+type SensorFilter = 'all' | 'active' | 'error'
+
+const FILTER_TABS: readonly PillTabItem<SensorFilter>[] = [
+  { key: 'all', label: 'Tất cả' },
+  { key: 'active', label: 'Hoạt động' },
+  { key: 'error', label: 'Lỗi' },
+]
+
+function filterToStatus(f: SensorFilter): DeviceStatus | undefined {
+  if (f === 'active') return 'active'
+  if (f === 'error') return 'error'
+  return undefined
+}
+
+interface MilestoneSensorsTabProps {
+  milestoneId: string
+  /**
+   * Trạng thái milestone — pass để badge áp đúng quy tắc override
+   * (xem [[DeviceStatusBadge]]). Không có thì badge hiển thị nhãn board đơn.
+   */
+  milestoneStatus?: FarmerMilestoneStatus
+}
+
+export function MilestoneSensorsTab({ milestoneId, milestoneStatus }: MilestoneSensorsTabProps) {
   const router = useRouter()
-  const [q, setQ] = useState('')
-  const [searchVisible, setSearchVisible] = useState(false)
+  const [searchText, setSearchText] = useState('')
+  const debouncedSearch = useDebouncedValue(searchText.trim(), 400)
+  const isDebouncing = searchText.trim() !== debouncedSearch
+
+  const [filter, setFilter] = useState<SensorFilter>('all')
 
   const { data, isLoading, refetch } = useFarmerMilestoneAssignments(milestoneId, {
     page: 1,
     limit: 50,
-    q: q.trim() || undefined,
+    q: debouncedSearch || undefined,
+    status: filterToStatus(filter),
   })
   const assignments = data?.data ?? []
 
@@ -36,43 +66,25 @@ export function MilestoneSensorsTab({ milestoneId }: { milestoneId: string }) {
     }
   }, [refetch])
 
-  const toggleSearch = () => {
-    setSearchVisible((v) => {
-      if (v) setQ('')
-      return !v
-    })
-  }
+  const emptyMessage = debouncedSearch
+    ? `Không tìm thấy thiết bị khớp với "${debouncedSearch}".`
+    : filter === 'active'
+      ? 'Không có thiết bị nào đang hoạt động.'
+      : filter === 'error'
+        ? 'Không có thiết bị nào bị lỗi.'
+        : 'Giai đoạn này chưa gắn thiết bị.'
 
   return (
     <View style={styles.container}>
-      <View style={styles.toolbar}>
-        <Pressable
-          onPress={toggleSearch}
-          hitSlop={10}
-          style={({ pressed }) => [styles.searchBtn, pressed && styles.searchBtnActive]}
-        >
-          <MaterialIcons
-            name={searchVisible ? 'close' : 'search'}
-            size={18}
-            color='#4B5563'
-          />
-          <Text style={styles.searchBtnText}>
-            {searchVisible ? 'Đóng' : 'Tìm theo mã kit'}
-          </Text>
-        </Pressable>
-      </View>
-
-      {searchVisible && (
-        <View style={styles.searchBar}>
-          <TextField
-            label='Tìm theo mã kit (K001, W002...)'
-            value={q}
-            onChangeText={setQ}
-            showError={false}
-            autoFocus
-          />
-        </View>
-      )}
+      <MilestoneTabToolbar
+        searchValue={searchText}
+        onSearchChange={setSearchText}
+        searchPlaceholder='Tìm mã kit, tên thiết bị...'
+        isSearching={isDebouncing}
+        filterItems={FILTER_TABS}
+        filterValue={filter}
+        onFilterChange={setFilter}
+      />
 
       <ScrollView
         style={styles.body}
@@ -85,7 +97,7 @@ export function MilestoneSensorsTab({ milestoneId }: { milestoneId: string }) {
         {isLoading ? (
           <ActivityIndicator style={{ marginTop: 24 }} color='#2463EB' />
         ) : assignments.length === 0 ? (
-          <EmptyState message='Giai đoạn này chưa gắn thiết bị.' Icon={icons.emptyCartSvg} />
+          <EmptyState message={emptyMessage} Icon={icons.emptyCartSvg} />
         ) : (
           <View style={styles.list}>
             {assignments.map((a) => (
@@ -109,7 +121,13 @@ export function MilestoneSensorsTab({ milestoneId }: { milestoneId: string }) {
                       {a.device.deviceName}
                     </Text>
                   </View>
-                  <Text style={styles.cardSubtitle}>{a.sensors.length} cảm biến</Text>
+                  <View style={styles.metaRow}>
+                    <DeviceStatusBadge
+                      status={a.device.status}
+                      milestoneStatus={milestoneStatus}
+                    />
+                    <Text style={styles.cardSubtitle}>{a.sensors.length} cảm biến</Text>
+                  </View>
                 </View>
                 <Text style={styles.chevron}>›</Text>
               </TouchableOpacity>
@@ -123,33 +141,6 @@ export function MilestoneSensorsTab({ milestoneId }: { milestoneId: string }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  toolbar: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingHorizontal: 16,
-    paddingTop: 4,
-    paddingBottom: 8,
-    backgroundColor: '#FFFFFF',
-  },
-  searchBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 18,
-    backgroundColor: '#F3F4F6',
-  },
-  searchBtnActive: { backgroundColor: '#E5E7EB' },
-  searchBtnText: { fontSize: 12, color: '#4B5563', fontFamily: 'Inter_500Medium' },
-  searchBar: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingTop: 4,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
   body: { flex: 1, backgroundColor: '#F3F4F6' },
   content: { padding: 16, paddingBottom: 24, gap: 12 },
   list: { gap: 12 },
@@ -166,19 +157,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  cardContent: { flex: 1 },
+  cardContent: { flex: 1, gap: 6 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   kitLabel: {
     fontSize: 13,
-    color: '#2463EB',
+    color: '#15803D',
     fontFamily: 'Inter_700Bold',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#DCFCE7',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
     overflow: 'hidden',
   },
   cardTitle: { flex: 1, fontSize: 14, color: '#111827', fontFamily: 'Inter_600SemiBold', lineHeight: 20 },
-  cardSubtitle: { fontSize: 12, color: '#9CA3AF', fontFamily: 'Inter_400Regular', marginTop: 4 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  cardSubtitle: { fontSize: 12, color: '#6B7280', fontFamily: 'Inter_400Regular' },
   chevron: { fontSize: 22, color: '#9CA3AF' },
 })

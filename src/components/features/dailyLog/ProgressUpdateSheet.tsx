@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { View, StyleSheet, type LayoutChangeEvent } from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { BottomSheet, Text, PrimaryButton } from '@/components/ui'
+import { WindowBanner } from './WindowBanner'
+import { isWithinDailyLogWindow } from '@/utils/dailyLogWindow'
+import { getProgressColor } from '@/utils/progressColor'
 
 interface Props {
   visible: boolean
@@ -23,14 +26,20 @@ export function ProgressUpdateSheet({
 }: Props) {
   const [value, setValue] = useState(clamp(initialValue))
   const [trackWidth, setTrackWidth] = useState(0)
+  const [inWindow, setInWindow] = useState(isWithinDailyLogWindow())
   const trackWidthRef = useRef(0)
 
   useEffect(() => {
-    if (visible) setValue(clamp(initialValue))
+    if (visible) {
+      setValue(clamp(initialValue))
+      setInWindow(isWithinDailyLogWindow())
+      const id = setInterval(() => setInWindow(isWithinDailyLogWindow()), 60_000)
+      return () => clearInterval(id)
+    }
   }, [visible, initialValue])
 
   const dirty = value !== clamp(initialValue)
-  const color = value >= 100 ? '#16A34A' : '#2463EB'
+  const color = getProgressColor(value)
 
   const onTrackLayout = (e: LayoutChangeEvent) => {
     const w = e.nativeEvent.layout.width
@@ -58,6 +67,8 @@ export function ProgressUpdateSheet({
       <BottomSheet.Header title='Cập nhật tiến độ' onClose={onClose} />
 
       <View style={styles.body}>
+        <WindowBanner compact />
+
         <View style={styles.valueWrap}>
           <Text style={[styles.value, { color }]}>{value}%</Text>
           <Text style={styles.hint}>Kéo thanh để chỉnh tiến độ</Text>
@@ -93,9 +104,9 @@ export function ProgressUpdateSheet({
         </View>
 
         <PrimaryButton
-          title='Lưu tiến độ'
+          title={inWindow ? 'Lưu tiến độ' : 'Ngoài giờ làm việc'}
           onPress={() => onConfirm(value)}
-          disabled={!dirty || isSubmitting}
+          disabled={!dirty || isSubmitting || !inWindow}
           loading={isSubmitting}
           style={styles.cta}
         />

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import {
   View,
   ScrollView,
@@ -9,11 +9,14 @@ import {
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { MaterialIcons } from '@expo/vector-icons'
-import { Text, EmptyState, PillTabs } from '@/components/ui'
+import { Text, EmptyState } from '@/components/ui'
 import type { PillTabItem } from '@/components/ui'
+import { MilestoneTabToolbar } from '@/components/features/farm/MilestoneTabToolbar'
 import { useTodayTasks } from '@/hooks/useDailyLog'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { icons } from '@/constants/icon'
 import type { TaskForDailyLog } from '@/types/dailyLog'
+import { getProgressColor } from '@/utils/progressColor'
 
 type TaskFilter = 'all' | 'pending' | 'logged'
 
@@ -44,7 +47,7 @@ function filterToHasLogged(f: TaskFilter): boolean | undefined {
 
 function TaskCard({ task, onPress }: { task: TaskForDailyLog; onPress: () => void }) {
   const progress = Math.max(0, Math.min(100, Math.round(task.progress ?? 0)))
-  const progressColor = progress >= 100 ? '#16A34A' : '#2463EB'
+  const progressColor = getProgressColor(progress)
   const logged = task.hasLoggedToday === true
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
@@ -96,12 +99,26 @@ function TaskCard({ task, onPress }: { task: TaskForDailyLog; onPress: () => voi
 export function MilestoneTasksTab({ milestoneId }: { milestoneId: string }) {
   const router = useRouter()
   const [filter, setFilter] = useState<TaskFilter>('all')
+  const [searchText, setSearchText] = useState('')
+  const debouncedSearch = useDebouncedValue(searchText.trim(), 400)
+  const isDebouncing = searchText.trim() !== debouncedSearch
 
   const { data, isLoading, refetch } = useTodayTasks({
     milestoneId,
     hasLoggedToday: filterToHasLogged(filter),
   })
-  const tasks = data?.data ?? []
+  const allTasks = data?.data ?? []
+
+  // BE chưa expose ?search cho /daily-log/farmer/today — filter client-side theo title/description.
+  const tasks = useMemo(() => {
+    if (!debouncedSearch) return allTasks
+    const needle = debouncedSearch.toLowerCase()
+    return allTasks.filter(
+      (t) =>
+        t.title.toLowerCase().includes(needle) ||
+        (t.description ?? '').toLowerCase().includes(needle),
+    )
+  }, [allTasks, debouncedSearch])
 
   const [isRefreshing, setIsRefreshing] = useState(false)
   const handleRefresh = useCallback(async () => {
@@ -113,8 +130,9 @@ export function MilestoneTasksTab({ milestoneId }: { milestoneId: string }) {
     }
   }, [refetch])
 
-  const emptyMessage =
-    filter === 'logged'
+  const emptyMessage = debouncedSearch
+    ? `Không tìm thấy công việc khớp với "${debouncedSearch}".`
+    : filter === 'logged'
       ? 'Chưa có công việc nào được ghi nhật ký hôm nay.'
       : filter === 'pending'
         ? 'Tất cả công việc của giai đoạn này đã được ghi hôm nay.'
@@ -122,9 +140,15 @@ export function MilestoneTasksTab({ milestoneId }: { milestoneId: string }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.filterWrap}>
-        <PillTabs items={FILTER_TABS} value={filter} onChange={setFilter} />
-      </View>
+      <MilestoneTabToolbar
+        searchValue={searchText}
+        onSearchChange={setSearchText}
+        searchPlaceholder='Tìm theo tên công việc...'
+        isSearching={isDebouncing}
+        filterItems={FILTER_TABS}
+        filterValue={filter}
+        onFilterChange={setFilter}
+      />
 
       <ScrollView
         style={styles.body}
@@ -137,7 +161,10 @@ export function MilestoneTasksTab({ milestoneId }: { milestoneId: string }) {
         {isLoading ? (
           <ActivityIndicator style={{ marginTop: 24 }} color='#2463EB' />
         ) : tasks.length === 0 ? (
-          <EmptyState message={emptyMessage} Icon={icons.emptyCartSvg} />
+          <EmptyState
+            message={emptyMessage}
+            Icon={debouncedSearch ? icons.emptySearchSvg : icons.emptyCartSvg}
+          />
         ) : (
           <View style={styles.list}>
             {tasks.map((task) => (
@@ -146,12 +173,13 @@ export function MilestoneTasksTab({ milestoneId }: { milestoneId: string }) {
                 task={task}
                 onPress={() =>
                   router.push({
-                    pathname: '/(app)/daily-log/[taskId]',
+                    pathname: '/(app)/employee-task/[taskId]',
                     params: {
                       taskId: task.id,
                       title: task.title,
                       priority: task.priority,
                       progress: String(task.progress ?? 0),
+                      description: task.description ?? '',
                     },
                   })
                 }
@@ -166,12 +194,6 @@ export function MilestoneTasksTab({ milestoneId }: { milestoneId: string }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  filterWrap: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 12,
-  },
   body: { flex: 1, backgroundColor: '#F3F4F6' },
   content: { padding: 16, paddingBottom: 32 },
   list: { gap: 12 },

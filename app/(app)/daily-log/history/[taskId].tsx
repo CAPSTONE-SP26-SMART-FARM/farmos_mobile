@@ -1,5 +1,6 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
+  Alert,
   View,
   TextInput,
   StyleSheet,
@@ -9,17 +10,29 @@ import {
   FlatList,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useLocalSearchParams } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { Text, TopBar, EmptyState } from '@/components/ui'
 import { DailyLogHistoryCard } from '@/components/features/dailyLog/DailyLogHistoryCard'
-import { useMyDailyLogsByTask } from '@/hooks/useDailyLog'
+import { WindowBanner } from '@/components/features/dailyLog/WindowBanner'
+import { useDeleteDailyLog, useMyDailyLogsByTask } from '@/hooks/useDailyLog'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
+import { useToast } from '@/hooks/useToast'
 import { icons } from '@/constants/icon'
 import type { DailyLog } from '@/types/dailyLog'
+import { isWithinDailyLogWindow } from '@/utils/dailyLogWindow'
+import { getDailyLogErrorMessage, getErrorMessage } from '@/utils/error'
 
 export default function DailyLogHistoryScreen() {
+  const router = useRouter()
+  const { showToast } = useToast()
   const { taskId, title } = useLocalSearchParams<{ taskId: string; title?: string }>()
+
+  const [inWindow, setInWindow] = useState(isWithinDailyLogWindow())
+  useEffect(() => {
+    const id = setInterval(() => setInWindow(isWithinDailyLogWindow()), 60_000)
+    return () => clearInterval(id)
+  }, [])
 
   const [searchText, setSearchText] = useState('')
   const debouncedSearch = useDebouncedValue(searchText.trim(), 400)
@@ -57,9 +70,59 @@ export default function DailyLogHistoryScreen() {
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
+  const { mutateAsync: deleteLog } = useDeleteDailyLog()
+  const handleEdit = useCallback(
+    (log: DailyLog) => {
+      router.push({
+        pathname: '/(app)/daily-log/edit/[logId]',
+        params: { logId: log.id, taskId, title: title ?? '' },
+      })
+    },
+    [router, taskId, title],
+  )
+  const handleDelete = useCallback(
+    (log: DailyLog) => {
+      if (!isWithinDailyLogWindow()) {
+        showToast.error({
+          message: 'Ngoài khung giờ làm việc. Chỉ xóa nhật ký trong 07:00–17:00.',
+        })
+        return
+      }
+      Alert.alert(
+        'Xóa nhật ký?',
+        'Bạn có chắc muốn xóa nhật ký này? Hành động này không thể hoàn tác.',
+        [
+          { text: 'Hủy', style: 'cancel' },
+          {
+            text: 'Xóa',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await deleteLog(log.id)
+                showToast.success({ message: 'Đã xóa nhật ký' })
+              } catch (err) {
+                const msg =
+                  getDailyLogErrorMessage(err) ??
+                  getErrorMessage(err, 'Không thể xóa nhật ký')
+                showToast.error({ message: msg })
+              }
+            },
+          },
+        ],
+      )
+    },
+    [deleteLog, showToast],
+  )
+
   const renderItem = useCallback(
-    ({ item }: { item: DailyLog }) => <DailyLogHistoryCard log={item} />,
-    [],
+    ({ item }: { item: DailyLog }) => (
+      <DailyLogHistoryCard
+        log={item}
+        onEdit={inWindow ? handleEdit : undefined}
+        onDelete={inWindow ? handleDelete : undefined}
+      />
+    ),
+    [inWindow, handleEdit, handleDelete],
   )
 
   const renderFooter = () => {
@@ -80,6 +143,9 @@ export default function DailyLogHistoryScreen() {
       />
 
       <View style={styles.searchWrap}>
+        <View style={styles.bannerWrap}>
+          <WindowBanner compact />
+        </View>
         <View style={styles.searchBar}>
           <Ionicons name='search-outline' size={18} color='#9CA3AF' />
           <TextInput
@@ -149,7 +215,8 @@ export default function DailyLogHistoryScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F3F4F6' },
-  searchWrap: { paddingHorizontal: 16, paddingTop: 10, backgroundColor: '#FFFFFF', paddingBottom: 10 },
+  searchWrap: { paddingHorizontal: 16, paddingTop: 10, backgroundColor: '#FFFFFF', paddingBottom: 10, gap: 10 },
+  bannerWrap: {},
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
