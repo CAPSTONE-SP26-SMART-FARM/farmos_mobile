@@ -1,4 +1,5 @@
 import { Tabs } from 'expo-router'
+import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { HapticTab } from '@/components/HapticTab'
 import { TabBarIcon } from '@/components/ui/TabBarIcon'
 import { icons } from '@/constants/icon'
@@ -52,7 +53,11 @@ export default function TabsLayout() {
           href: isDoctor ? null : undefined,
           title: 'Trang trại',
           tabBarIcon: ({ focused }) => (
-            <TabBarIcon focused={focused} Icon={icons.motionSensorSvg} />
+            <MaterialCommunityIcons
+              name='barn'
+              size={24}
+              color={focused ? '#15803D' : '#6B7280'}
+            />
           ),
         }}
       />

@@ -1,4 +1,5 @@
-import { View, Image, ScrollView, StyleSheet, TouchableOpacity } from 'react-native'
+import { useMemo } from 'react'
+import { View, ScrollView, StyleSheet, TouchableOpacity, Image } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
@@ -89,12 +90,56 @@ function FarmerHome() {
   const { data } = useIncidentList()
   const tickets = data?.data ?? []
   const { data: tasksData } = useTasksForDailyLog()
-  const tasksCount = tasksData?.data?.length ?? 0
+
+  // Hook đã filter hasLoggedToday=false. Loại thêm task đã hoàn thành (progress=100).
+  const pendingTasks = useMemo(
+    () => (tasksData?.data ?? []).filter((t) => (t.progress ?? 0) < 100),
+    [tasksData?.data],
+  )
+  const tasksCount = pendingTasks.length
+
+  // Milestone "trọng tâm": gom các task pending theo milestoneId, chọn milestone
+  // có tổng priority weight cao nhất (urgent=4, high=3, normal=2, low=1).
+  // Tiebreak: nhiều task hơn → tên (id) ổn định.
+  const focusMilestoneId = useMemo<string | undefined>(() => {
+    if (pendingTasks.length === 0) return undefined
+    const w: Record<string, number> = { urgent: 4, high: 3, normal: 2, low: 1 }
+    const agg = new Map<string, { score: number; count: number }>()
+    for (const t of pendingTasks) {
+      if (!t.milestoneId) continue
+      const cur = agg.get(t.milestoneId) ?? { score: 0, count: 0 }
+      cur.score += w[t.priority] ?? 1
+      cur.count += 1
+      agg.set(t.milestoneId, cur)
+    }
+    let best: { id: string; score: number; count: number } | null = null
+    for (const [id, v] of agg) {
+      if (
+        !best ||
+        v.score > best.score ||
+        (v.score === best.score && v.count > best.count)
+      ) {
+        best = { id, ...v }
+      }
+    }
+    return best?.id
+  }, [pendingTasks])
+
+  const focusMilestoneStageName = useMemo(() => {
+    if (!focusMilestoneId) return undefined
+    return pendingTasks.find((t) => t.milestoneId === focusMilestoneId)?.milestoneName ?? undefined
+  }, [pendingTasks, focusMilestoneId])
 
   return (
     <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
       <IncidentSummaryCard tickets={tickets} />
-      <TodayScheduleCard tickets={tickets} tasksCount={tasksCount} delay={150} />
+      <TodayScheduleCard
+        tickets={tickets}
+        tasksCount={tasksCount}
+        targetMilestoneId={focusMilestoneId}
+        targetMilestoneStageName={focusMilestoneStageName}
+        delay={150}
+      />
       <FarmStatusCard />
       <QuickActionsCard items={FARMER_QUICK_ACTIONS} delay={200} />
       <TipsCard

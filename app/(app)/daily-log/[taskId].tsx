@@ -1,45 +1,28 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   View, ScrollView, StyleSheet,
   KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
+import { MaterialIcons } from '@expo/vector-icons'
 import { Text, TextField, ImagePickerGrid } from '@/components/ui'
 import { SheetHeader } from '@/components/features/incident/SheetHeader'
+import { WindowBanner } from '@/components/features/dailyLog/WindowBanner'
 import { useSubmitDailyLog } from '@/hooks/useDailyLog'
+import { extractApiError, getDailyLogErrorMessage } from '@/utils/error'
+import { isWithinDailyLogWindow } from '@/utils/dailyLogWindow'
 import { useToast } from '@/hooks/useToast'
 import { usePreventUnsavedChanges } from '@/hooks/usePreventUnsavedChanges'
 import { useImagePicker } from '@/hooks/useImagePicker'
 import { uploadImageToCloudinary } from '@/utils/cloudinary'
-import { icons } from '@/constants/icon'
 
-const DiaryIcon = icons.diarySvg
 const MAX_IMAGES = 5
-
-const PRIORITY_LABEL: Record<string, string> = {
-  low: 'Thấp',
-  normal: 'Bình thường',
-  high: 'Cao',
-  urgent: 'Khẩn cấp',
-}
-const PRIORITY_COLOR: Record<string, string> = {
-  low: '#6B7280',
-  normal: '#15803D',
-  high: '#D97706',
-  urgent: '#DC2626',
-}
 
 export default function DailyLogSubmitScreen() {
   const router = useRouter()
-  const { taskId, title, priority, progress } = useLocalSearchParams<{
-    taskId: string
-    title: string
-    priority: string
-    progress?: string
-  }>()
-  const progressValue = Math.max(0, Math.min(100, Math.round(Number(progress ?? 0))))
-  const progressColor = progressValue >= 100 ? '#16A34A' : '#15803D'
+  const { taskId } = useLocalSearchParams<{ taskId: string }>()
+
   const { showToast } = useToast()
   const { mutate, isPending } = useSubmitDailyLog()
   const justSavedRef = useRef(false)
@@ -47,18 +30,47 @@ export default function DailyLogSubmitScreen() {
   const [activities, setActivities] = useState('')
   const [notes, setNotes] = useState('')
   const [activitiesError, setActivitiesError] = useState('')
+  const [notesError, setNotesError] = useState('')
+  const [serverError, setServerError] = useState<string | null>(null)
+  const [successCount, setSuccessCount] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
-  const { imageUris, pick, remove, canAdd } = useImagePicker({ max: MAX_IMAGES })
+  const { imageUris, pick, remove, canAdd, reset: resetImages } = useImagePicker({ max: MAX_IMAGES })
 
-  const canSubmit = activities.trim().length > 0
+  const [inWindow, setInWindow] = useState(isWithinDailyLogWindow())
+  useEffect(() => {
+    const id = setInterval(() => setInWindow(isWithinDailyLogWindow()), 60_000)
+    return () => clearInterval(id)
+  }, [])
+
+  const canSubmit = activities.trim().length > 0 && inWindow
   const isLoading = isPending || isUploading
 
+  const clearForm = () => {
+    setActivities('')
+    setNotes('')
+    setActivitiesError('')
+    setNotesError('')
+    resetImages()
+  }
+
+  const resetErrors = () => {
+    setActivitiesError('')
+    setNotesError('')
+    setServerError(null)
+  }
+
   const handleSubmit = async () => {
-    if (!canSubmit) {
+    if (!inWindow) {
+      const msg = 'Ngoài khung giờ làm việc. Chỉ tạo nhật ký trong 07:00–17:00.'
+      setServerError(msg)
+      showToast.error({ message: msg })
+      return
+    }
+    if (!activities.trim()) {
       setActivitiesError('Vui lòng mô tả công việc đã làm hôm nay')
       return
     }
-    setActivitiesError('')
+    resetErrors()
 
     let attachments: { url: string }[] | undefined
     if (imageUris.length > 0) {
@@ -67,7 +79,8 @@ export default function DailyLogSubmitScreen() {
         const urls = await Promise.all(imageUris.map(uploadImageToCloudinary))
         attachments = urls.map((url) => ({ url }))
       } catch {
-        showToast.error({ message: 'Upload ảnh thất bại, vui lòng thử lại' })
+        setServerError('Upload ảnh thất bại. Vui lòng kiểm tra mạng và thử lại.')
+        showToast.error({ message: 'Upload ảnh thất bại' })
         setIsUploading(false)
         return
       } finally {
@@ -79,16 +92,41 @@ export default function DailyLogSubmitScreen() {
       { employeeTaskId: taskId, activities: activities.trim(), notes: notes.trim(), attachments },
       {
         onSuccess: () => {
-          showToast.success({ message: 'Đã ghi nhật ký thành công' })
           justSavedRef.current = true
-          router.back()
+          clearForm()
+          setSuccessCount((n) => n + 1)
+          showToast.success({ message: 'Đã ghi nhật ký thành công' })
+          // Reset flag sau khi state đã apply để usePreventUnsavedChanges thấy form sạch.
+          setTimeout(() => { justSavedRef.current = false }, 50)
         },
-        onError: (err: any) => {
-          if (err?.response?.status === 409) {
-            showToast.error({ message: 'Bạn đã ghi nhật ký cho công việc này hôm nay rồi' })
-          } else {
-            showToast.error({ message: err?.response?.data?.message ?? 'Ghi nhật ký thất bại' })
+        onError: (err) => {
+          const ex = extractApiError(err)
+
+          // Map field errors về đúng input
+          if (ex.fieldErrors.activities) {
+            setActivitiesError(ex.fieldErrors.activities)
           }
+          if (ex.fieldErrors.notes) {
+            setNotesError(ex.fieldErrors.notes)
+          }
+
+          // Top-level message — ưu tiên copy thân thiện cho các error code đã biết
+          const friendly = getDailyLogErrorMessage(err)
+          let banner: string
+          if (friendly) {
+            banner = friendly
+          } else if (ex.statusCode === 409) {
+            banner = 'Bạn đã ghi nhật ký cho công việc này hôm nay rồi.'
+          } else if (ex.isNetworkError) {
+            banner = 'Mất kết nối mạng. Vui lòng thử lại.'
+          } else {
+            banner =
+              ex.message ??
+              Object.values(ex.fieldErrors)[0] ??
+              'Ghi nhật ký thất bại. Vui lòng thử lại.'
+          }
+          setServerError(banner)
+          showToast.error({ message: banner })
         },
       },
     )
@@ -105,10 +143,18 @@ export default function DailyLogSubmitScreen() {
 
       <SafeAreaView edges={['bottom', 'left', 'right']} style={styles.flex}>
         <SheetHeader
-          title='Ghi nhật ký'
+          title='Tạo nhật ký'
           onCancel={() => router.back()}
           onDone={handleSubmit}
-          doneLabel={isUploading ? 'Đang tải ảnh…' : isPending ? 'Đang gửi…' : 'Hoàn thành'}
+          doneLabel={
+            isUploading
+              ? 'Đang tải ảnh…'
+              : isPending
+                ? 'Đang gửi…'
+                : !inWindow
+                  ? 'Ngoài giờ'
+                  : 'Tạo'
+          }
           canDone={canSubmit && !isLoading}
         />
 
@@ -120,38 +166,23 @@ export default function DailyLogSubmitScreen() {
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps='handled'
             >
-              <View style={styles.taskCard}>
-                <View style={styles.taskIconWrap}>
-                  <DiaryIcon width={24} height={24} color='#15803D' />
-                </View>
-                <View style={styles.taskInfo}>
-                  <Text style={styles.taskTitle} numberOfLines={2}>{title}</Text>
-                  <Text style={[styles.taskPriority, { color: PRIORITY_COLOR[priority] ?? '#15803D' }]}>
-                    {PRIORITY_LABEL[priority] ?? priority}
-                  </Text>
-                  <View style={styles.progressRow}>
-                    <View style={styles.progressTrack}>
-                      <View
-                        style={[
-                          styles.progressFill,
-                          { width: `${progressValue}%`, backgroundColor: progressColor },
-                        ]}
-                      />
-                    </View>
-                    <Text style={[styles.progressText, { color: progressColor }]}>
-                      {progressValue}%
-                    </Text>
-                  </View>
-                </View>
-              </View>
+              <WindowBanner />
 
-              <View style={styles.dateChip}>
-                <Text style={styles.dateChipText}>
-                  {new Date().toLocaleDateString('vi-VN', {
-                    weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric',
-                  })}
-                </Text>
-              </View>
+              {serverError ? (
+                <View style={styles.errorBanner}>
+                  <MaterialIcons name='error-outline' size={18} color='#B91C1C' />
+                  <Text style={styles.errorBannerText}>{serverError}</Text>
+                </View>
+              ) : null}
+
+              {successCount > 0 && !serverError ? (
+                <View style={styles.successBanner}>
+                  <MaterialIcons name='check-circle' size={18} color='#15803D' />
+                  <Text style={styles.successBannerText}>
+                    Đã tạo {successCount} nhật ký thành công. Bạn có thể tiếp tục hoặc đóng form.
+                  </Text>
+                </View>
+              ) : null}
 
               <View style={styles.card}>
                 <TextField
@@ -160,6 +191,7 @@ export default function DailyLogSubmitScreen() {
                   onChangeText={(v) => {
                     setActivities(v)
                     if (v.trim()) setActivitiesError('')
+                    if (serverError) setServerError(null)
                   }}
                   multiline
                   numberOfLines={5}
@@ -171,9 +203,13 @@ export default function DailyLogSubmitScreen() {
                 <TextField
                   label='Ghi chú thêm (tuỳ chọn)'
                   value={notes}
-                  onChangeText={setNotes}
+                  onChangeText={(v) => {
+                    setNotes(v)
+                    if (notesError) setNotesError('')
+                  }}
                   multiline
                   numberOfLines={3}
+                  error={notesError}
                   showClear={false}
                   containerStyle={styles.textareaContainer}
                 />
@@ -200,56 +236,43 @@ const styles = StyleSheet.create({
   scrollView: { flex: 1 },
   scrollContent: { padding: 16, gap: 12, paddingBottom: 40 },
 
-  taskCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
+  errorBanner: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 2,
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: '#FEE2E2',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
   },
-  taskIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    backgroundColor: '#DCFCE7',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  taskInfo: { flex: 1, gap: 4 },
-  taskTitle: { fontSize: 15, fontFamily: 'Inter_600SemiBold', color: '#111827', lineHeight: 22 },
-  taskPriority: { fontSize: 12, fontFamily: 'Inter_500Medium' },
-
-  progressRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
-  progressTrack: {
+  errorBannerText: {
     flex: 1,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#E5E7EB',
-    overflow: 'hidden',
-  },
-  progressFill: { height: '100%', borderRadius: 3 },
-  progressText: {
-    fontSize: 11,
-    lineHeight: 14,
-    fontFamily: 'Inter_600SemiBold',
-    minWidth: 34,
-    textAlign: 'right',
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#B91C1C',
+    fontFamily: 'Inter_500Medium',
   },
 
-  dateChip: {
-    alignSelf: 'flex-start',
+  successBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
     backgroundColor: '#DCFCE7',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#86EFAC',
   },
-  dateChipText: { fontSize: 13, color: '#15803D', fontFamily: 'Inter_500Medium' },
+  successBannerText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#15803D',
+    fontFamily: 'Inter_500Medium',
+  },
 
   card: {
     backgroundColor: '#FFFFFF',

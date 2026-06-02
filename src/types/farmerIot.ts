@@ -26,8 +26,15 @@ export type PagingMeta = {
 }
 
 // ── Assignment theo milestone (paginated) ────────────────────────────────
+/** Khớp 1-1 với Prisma enum DeviceStatus của farm_os_be. */
 export type DeviceStatus =
-  | 'available' | 'purchase' | 'install' | 'active' | 'error' | 'revoked'
+  | 'available'
+  | 'purchase'
+  | 'install'
+  | 'inactive'
+  | 'active'
+  | 'error'
+  | 'revoked'
 
 export type FarmerMilestoneAssignmentsQuery = {
   page?: number

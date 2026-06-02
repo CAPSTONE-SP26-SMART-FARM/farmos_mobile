@@ -1,16 +1,32 @@
 export type TaskPriority = 'low' | 'normal' | 'high' | 'urgent'
 export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'verified' | 'cancelled'
 
+export type TaskTodayLogBrief = {
+  id: string
+  activities: string
+  notes: string
+  createdAt: string
+}
+
 export type TaskForDailyLog = {
   id: string
   milestoneId: string
   zoneId: string
+  milestoneName?: string | null
   title: string
   description: string | null
   priority: TaskPriority
   status: TaskStatus
   progress: number
+  startDate?: string | null
   assignedDate: string | null
+  hasLoggedToday?: boolean
+  todayLog?: TaskTodayLogBrief | null
+}
+
+export type TodayTasksFilter = {
+  milestoneId?: string
+  hasLoggedToday?: boolean
 }
 
 export type AttachmentItem = {
@@ -36,6 +52,18 @@ export type TasksForDailyLogRes = {
 export type SubmitDailyLogBody = {
   employeeTaskId: string
   activities: string
+  notes?: string
+  attachments?: AttachmentItem[]
+}
+
+/**
+ * Update body. Semantics theo BE:
+ * - omit `attachments` => keep current
+ * - `attachments: []` => clear all
+ * - `attachments: [...]` => replace
+ */
+export type UpdateDailyLogBody = {
+  activities?: string
   notes?: string
   attachments?: AttachmentItem[]
 }
@@ -70,4 +98,14 @@ export type DailyLog = {
   farmer: DailyLogFarmer
   attachments: AttachmentRes[]
   createdAt: string
+}
+
+export type MyDailyLogsFilter = {
+  employeeTaskId?: string
+  search?: string
+}
+
+export type MyDailyLogsRes = {
+  data: DailyLog[]
+  meta: { page: number; limit: number; totalItems: number; totalPages: number }
 }

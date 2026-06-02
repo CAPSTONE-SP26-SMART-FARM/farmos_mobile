@@ -1,16 +1,13 @@
 import { View, StyleSheet, TouchableOpacity } from 'react-native'
 import { Text } from '@/components/ui'
-import { icons } from '@/constants/icon'
+import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { useFarmerCurrentUpcomingMilestones } from '@/hooks/useFarmerMilestones'
 import { router } from 'expo-router'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 
-const StorefrontIcon = icons.storefrontSvg
-
 export function FarmStatusCard() {
   const { data: milestones = [], isLoading } = useFarmerCurrentUpcomingMilestones()
   const inProgress = milestones.filter((m) => m.status === 'in_progress')
-  const upcoming = milestones.filter((m) => m.status === 'pending')
 
   return (
     <Animated.View
@@ -24,7 +21,7 @@ export function FarmStatusCard() {
         onPress={() => router.push('/(app)/(tabs)/farm')}
       >
         <View style={styles.iconWrapper}>
-          <StorefrontIcon width={22} height={22} color='#15803D' />
+          <MaterialCommunityIcons name='barn' size={24} color='#15803D' />
         </View>
         <View style={styles.content}>
           {isLoading ? (
@@ -39,10 +36,7 @@ export function FarmStatusCard() {
               <Text style={styles.statusText}>
                 {inProgress.length} giai đoạn đang diễn ra
               </Text>
-              <Text style={styles.subText}>
-                {upcoming.length > 0 ? `${upcoming.length} sắp tới · ` : ''}
-                Nhấn để xem chi tiết
-              </Text>
+              <Text style={styles.subText}>Nhấn để xem chi tiết</Text>
             </>
           )}
         </View>
