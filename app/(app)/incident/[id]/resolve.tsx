@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import {
-  View, ScrollView, StyleSheet, KeyboardAvoidingView, Platform,
-  Keyboard, TouchableWithoutFeedback, Pressable, TouchableOpacity,
-} from 'react-native'
+import { View, StyleSheet, Pressable, TouchableOpacity, useWindowDimensions } from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { MaterialIcons } from '@expo/vector-icons'
@@ -13,6 +11,7 @@ import { useToast } from '@/hooks/useToast'
 import { getErrorMessage } from '@/utils/error'
 import { useResolveStore } from '@/stores/resolveStore'
 import { usePreventUnsavedChanges } from '@/hooks/usePreventUnsavedChanges'
+import type { RxItem } from '@/stores/resolveStore'
 import type { PrescriptionItemInput } from '@/types/medicine'
 
 const FIELD_LABELS = [
@@ -22,9 +21,18 @@ const FIELD_LABELS = [
   { key: 'prevention' as const, label: 'Cách phòng tránh tái phát' },
 ]
 
+// Đơn thuốc đủ thông tin khi có liều lượng, tần suất và hướng dẫn sử dụng ≥ 30 ký tự.
+const isRxItemComplete = (item: RxItem) =>
+  !!item.dosage && !!item.frequency && item.usageInstructions.trim().length >= 30
+
+// Phần cố định phía trên vùng scroll (status bar + grabber + SheetHeader) mà formSheet không phủ.
+// Trừ khỏi screenHeight để ScrollView biết đúng vùng scrollable.
+const HEADER_HEIGHT = 160
+
 export default function ResolveScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
+  const { height: screenHeight } = useWindowDimensions()
   const { showToast } = useToast()
   const { mutate: resolve, isPending } = useResolveTicket(id)
 
@@ -51,6 +59,15 @@ export default function ResolveScreen() {
     onBeforeExit: () => { reset() },
   })
 
+  // Đủ điều kiện gửi: 4 field bắt buộc có nội dung + có đơn thuốc và mọi đơn đã đủ thông tin.
+  const allFieldsFilled =
+    rootCause.trim().length > 0 &&
+    rootCauseReason.trim().length > 0 &&
+    treatment.trim().length > 0 &&
+    prevention.trim().length > 0
+  const allItemsComplete = items.length > 0 && items.every(isRxItemComplete)
+  const canSubmit = allFieldsFilled && allItemsComplete
+
   type FieldKey = (typeof FIELD_LABELS)[number]['key']
   const [errors, setErrors] = useState<Partial<Record<FieldKey, string>>>({})
 
@@ -67,8 +84,8 @@ export default function ResolveScreen() {
       return false
     }
     for (const item of items) {
-      if (item.usageInstructions.trim().length < 30) {
-        showToast.error({ message: `Hướng dẫn sử dụng "${item._displayName}" cần ≥ 30 ký tự` })
+      if (!isRxItemComplete(item)) {
+        showToast.error({ message: `Vui lòng nhập đủ thông tin sử dụng cho "${item._displayName}"` })
         return false
       }
     }
@@ -111,17 +128,17 @@ export default function ResolveScreen() {
         onCancel={() => router.back()}
         onDone={handleSubmit}
         doneLabel={isPending ? 'Đang gửi…' : 'Xong'}
-        canDone={!isPending}
+        canDone={canSubmit && !isPending}
       />
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.content}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps='handled'
-          >
+      <KeyboardAwareScrollView
+        style={[styles.scrollView, { height: screenHeight - HEADER_HEIGHT }]}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps='handled'
+        enableOnAndroid
+        extraHeight={150}
+      >
             {/* Solution 4 fields */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Giải pháp</Text>
@@ -145,7 +162,7 @@ export default function ResolveScreen() {
               <Text style={styles.sectionTitle}>Đơn thuốc</Text>
 
               {items.map((item, idx) => {
-                const incomplete = !item.dosage || !item.frequency || item.usageInstructions.trim().length < 30
+                const incomplete = !isRxItemComplete(item)
                 return (
                   <Pressable
                     key={idx}
@@ -156,7 +173,7 @@ export default function ResolveScreen() {
                       <Text style={styles.itemName} numberOfLines={1}>{item._displayName}</Text>
                       <Text style={[styles.itemMeta, incomplete && styles.itemMetaWarn]} numberOfLines={1}>
                         {incomplete
-                          ? 'Chưa đủ thông tin — bấm để nhập'
+                          ? 'Nhập thông tin sử dụng'
                           : [item.dosage, item.frequency].filter(Boolean).join(' · ')}
                       </Text>
                     </View>
@@ -187,9 +204,7 @@ export default function ResolveScreen() {
                 <Text style={styles.actionText}>Thêm thuốc tự nhập</Text>
               </Pressable>
             </View>
-          </ScrollView>
-        </TouchableWithoutFeedback>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   )
 }
@@ -216,7 +231,7 @@ const styles = StyleSheet.create({
   itemDivider: { borderTopWidth: 1, borderTopColor: '#F3F4F6' },
   itemName: { fontSize: 14, lineHeight: 20, fontFamily: 'Inter_500Medium', color: '#111827' },
   itemMeta: { fontSize: 13, lineHeight: 18, color: '#6B7280', marginTop: 2 },
-  itemMetaWarn: { color: '#D97706' },
+  itemMetaWarn: { color: '#DC2626' },
 
   divider: { height: 1, backgroundColor: '#F3F4F6' },
 
