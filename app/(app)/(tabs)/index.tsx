@@ -8,11 +8,10 @@ import { useAuth } from '@/hooks/useAuth'
 import { icons } from '@/constants/icon'
 import { getDefaultAvatar } from '@/constants/user'
 import { CONFIG } from '@/constants/config'
-import { useDoctorIncidentList } from '@/hooks/useDoctor'
 import { useIncidentList } from '@/hooks/useIncident'
 import { useTasksForDailyLog } from '@/hooks/useDailyLog'
 import { EarningsCard } from '@/components/features/home/EarningsCard'
-import { DoctorStatusCard } from '@/components/features/home/DoctorStatusCard'
+import { DoctorTicketStatsCard } from '@/components/features/home/DoctorTicketStatsCard'
 import { IncidentSummaryCard } from '@/components/features/home/IncidentSummaryCard'
 import { TicketQuotaCard } from '@/components/features/home/TicketQuotaCard'
 import { FarmStatusCard } from '@/components/features/home/FarmStatusCard'
@@ -21,17 +20,11 @@ import { TipsCard } from '@/components/features/home/TipsCard'
 
 const NotiIcon = icons.notiBgSvg
 
-function DoctorHome({ isApproved }: { isApproved: boolean }) {
-  const { data: activeData } = useDoctorIncidentList(1, false)
-  const { data: resolvedData } = useDoctorIncidentList(1, true)
-  const allTickets = [...(activeData?.data ?? []), ...(resolvedData?.data ?? [])]
-  const activeCount = activeData?.data?.length ?? 0
-
+function DoctorHome() {
   return (
     <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
       <EarningsCard />
-      <TodayScheduleCard tickets={allTickets} delay={150} />
-      <DoctorStatusCard isApproved={isApproved} activeCount={activeCount} />
+      <DoctorTicketStatsCard delay={150} />
       <TipsCard
         title='Hướng dẫn bác sĩ FarmOS'
         description='Tìm hiểu cách nhận và xử lý sự cố từ nông dân hiệu quả'
@@ -125,7 +118,6 @@ function FarmerHome() {
 export default function HomeScreen() {
   const { user } = useAuth()
   const isDoctor = user?.role === 'doctor'
-  const isApproved = user?.isActive ?? false
   const userName = user?.fullName ?? 'FarmOS'
 
   return (
@@ -154,10 +146,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {isDoctor
-        ? <DoctorHome isApproved={isApproved} />
-        : <FarmerHome />
-      }
+      {isDoctor ? <DoctorHome /> : <FarmerHome />}
     </SafeAreaView>
   )
 }

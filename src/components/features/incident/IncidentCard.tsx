@@ -1,4 +1,5 @@
 import { View, TouchableOpacity, StyleSheet } from 'react-native'
+import { MaterialIcons } from '@expo/vector-icons'
 import { Text } from '@/components/ui'
 import { SEVERITY_META } from '@/constants/incident'
 import { IncidentStatusBadge } from './IncidentStatusBadge'
@@ -26,7 +27,15 @@ export function IncidentCard({ item, categoryName, onPress }: Props) {
           <View style={[styles.severityDot, { backgroundColor: severity.color }]} />
           <Text style={[styles.severityText, { color: severity.color }]}>{severity.label}</Text>
         </View>
-        <Text style={styles.date}>{dateStr}</Text>
+        <View style={styles.bottomRight}>
+          {item.isAiResolved ? (
+            <View style={styles.aiBadge}>
+              <MaterialIcons name='auto-awesome' size={11} color='#7C3AED' />
+              <Text style={styles.aiBadgeText}>AI</Text>
+            </View>
+          ) : null}
+          <Text style={styles.date}>{dateStr}</Text>
+        </View>
       </View>
 
       {(categoryName || item.zone) ? (
@@ -73,6 +82,22 @@ const styles = StyleSheet.create({
   severityChip: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   severityDot: { width: 6, height: 6, borderRadius: 3 },
   severityText: { fontSize: 14, fontFamily: 'Inter_500Medium' },
+  bottomRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  aiBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#F5F3FF',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 100,
+  },
+  aiBadgeText: {
+    fontSize: 10,
+    color: '#7C3AED',
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: 0.5,
+  },
   date: { fontSize: 14, color: '#4B5563', fontFamily: 'Inter_400Regular' },
   meta: { fontSize: 13, color: '#6B7280', fontFamily: 'Inter_400Regular', marginTop: 6 },
 })

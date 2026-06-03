@@ -62,6 +62,9 @@ export type IncidentTicket = {
   commissionPercentSnapshot: number | null
   source: TicketSource | null
   sourceLedgerId: string | null
+  // AI fallback fields — true khi AI fallback resolve ticket (owner chọn FALLBACK_AI).
+  isAiResolved: boolean
+  aiResolvedAt: string | null
 }
 
 export type CreateIncidentBody = {
