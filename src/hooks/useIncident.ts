@@ -26,7 +26,11 @@ export function useCreateIncident() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (body: CreateIncidentBody) => incidentApi.create(body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['incident', 'list'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['incident', 'list'] })
+      // BE trừ quota khi create — refresh card "Quota sự cố" ở Home ngay.
+      qc.invalidateQueries({ queryKey: queryKeys.ticketBalance })
+    },
   })
 }
 
@@ -38,6 +42,11 @@ export function useCancelIncident() {
     onSuccess: (_data, { ticketId }) => {
       qc.invalidateQueries({ queryKey: ['incident', 'list'] })
       qc.invalidateQueries({ queryKey: queryKeys.incident.detail(ticketId) })
+      qc.invalidateQueries({ queryKey: queryKeys.ticketFull(ticketId) })
+      // BE refund quota khi cancel ticket chưa assigned.
+      qc.invalidateQueries({ queryKey: queryKeys.ticketBalance })
+      // Cancel ảnh hưởng tới breakdown.byStatus của doctor (nếu đã accept).
+      qc.invalidateQueries({ queryKey: ['incident', 'doctor-stats'] })
     },
   })
 }

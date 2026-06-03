@@ -12,13 +12,24 @@ export function useTicketFull(ticketId: string, enabled = true) {
   })
 }
 
+// Common: ticket-level invalidates dùng cho mọi mutation liên quan tới 1 ticket cụ thể.
+// Bao gồm cả farmer (`incident.detail`) lẫn doctor (`incident.doctorDetail`) + ticketFull (/full)
+// + list (broad).
+function invalidateTicket(qc: ReturnType<typeof useQueryClient>, ticketId: string) {
+  qc.invalidateQueries({ queryKey: queryKeys.incident.detail(ticketId) })
+  qc.invalidateQueries({ queryKey: queryKeys.incident.doctorDetail(ticketId) })
+  qc.invalidateQueries({ queryKey: queryKeys.ticketFull(ticketId) })
+  qc.invalidateQueries({ queryKey: ['incident', 'list'] })
+  qc.invalidateQueries({ queryKey: ['incident', 'doctor-list'] })
+}
+
 export function useCloseTicket(ticketId: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: () => ticketLifecycleApi.close(ticketId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.incident.detail(ticketId) })
-      qc.invalidateQueries({ queryKey: ['incident', 'list'] })
+      invalidateTicket(qc, ticketId)
+      qc.invalidateQueries({ queryKey: ['incident', 'doctor-stats'] })
     },
   })
 }
@@ -28,7 +39,10 @@ export function useRateTicket(ticketId: string) {
   return useMutation({
     mutationFn: (body: RateTicketBody) => ticketLifecycleApi.rate(ticketId, body),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.incident.detail(ticketId) })
+      invalidateTicket(qc, ticketId)
+      // Rating ảnh hưởng DQS tier (doctor quality score) + stats (avg rating field bên BE).
+      qc.invalidateQueries({ queryKey: queryKeys.doctor.dqs })
+      qc.invalidateQueries({ queryKey: ['incident', 'doctor-stats'] })
     },
   })
 }
@@ -38,9 +52,10 @@ export function useAbandonResolution(ticketId: string) {
   return useMutation({
     mutationFn: (body: AbandonResolutionBody) => ticketLifecycleApi.abandon(ticketId, body),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.incident.detail(ticketId) })
-      qc.invalidateQueries({ queryKey: queryKeys.ticketFull(ticketId) })
-      qc.invalidateQueries({ queryKey: ['incident', 'list'] })
+      invalidateTicket(qc, ticketId)
+      // REFUND_TICKET → BE hoàn quota. FALLBACK_AI cũng có thể trừ/hoàn tuỳ flow.
+      qc.invalidateQueries({ queryKey: queryKeys.ticketBalance })
+      qc.invalidateQueries({ queryKey: ['incident', 'doctor-stats'] })
     },
   })
 }
@@ -51,6 +66,9 @@ export function useRejectTicket(ticketId: string) {
     mutationFn: () => ticketLifecycleApi.reject(ticketId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['broadcast'] })
+      qc.invalidateQueries({ queryKey: queryKeys.incident.doctorDetail(ticketId) })
+      // Reject làm giảm acceptanceRate trong stats.
+      qc.invalidateQueries({ queryKey: ['incident', 'doctor-stats'] })
     },
   })
 }
@@ -60,9 +78,12 @@ export function useResolveTicket(ticketId: string) {
   return useMutation({
     mutationFn: (body: ResolveTicketBody) => ticketLifecycleApi.resolve(ticketId, body),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.incident.detail(ticketId) })
-      qc.invalidateQueries({ queryKey: queryKeys.incident.doctorDetail(ticketId) })
+      invalidateTicket(qc, ticketId)
       qc.invalidateQueries({ queryKey: queryKeys.prescriptions.list(ticketId) })
+      // Resolve = doctor được ghi nhận commission vào ví + counter performance/revenue stats.
+      qc.invalidateQueries({ queryKey: queryKeys.doctorWallet.summary })
+      qc.invalidateQueries({ queryKey: ['doctor-wallet', 'transactions'] })
+      qc.invalidateQueries({ queryKey: ['incident', 'doctor-stats'] })
     },
   })
 }
@@ -73,6 +94,8 @@ export function useAddAddendum(ticketId: string) {
     mutationFn: (body: AddAddendumBody) => ticketLifecycleApi.addAddendum(ticketId, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.incident.detail(ticketId) })
+      // Addenda nằm trong /full payload → cần refresh detail screen.
+      qc.invalidateQueries({ queryKey: queryKeys.ticketFull(ticketId) })
     },
   })
 }

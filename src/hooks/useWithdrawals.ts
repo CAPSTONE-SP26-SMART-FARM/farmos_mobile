@@ -44,6 +44,9 @@ export function useCancelWithdrawal(id: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.withdrawal.detail(id) })
       qc.invalidateQueries({ queryKey: queryKeys.withdrawal.list() })
+      // Cancel withdrawal đang pending → BE trả tiền về ví doctor.
+      qc.invalidateQueries({ queryKey: queryKeys.doctorWallet.summary })
+      qc.invalidateQueries({ queryKey: queryKeys.doctorWallet.transactions() })
     },
   })
 }

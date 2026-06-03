@@ -286,6 +286,10 @@ export default function IncidentsScreen() {
         try {
           await ticketLifecycleApi.abandon(payload.ticketId, { resolution })
           qc.invalidateQueries({ queryKey: queryKeys.incident.list() })
+          qc.invalidateQueries({ queryKey: queryKeys.incident.detail(payload.ticketId) })
+          qc.invalidateQueries({ queryKey: queryKeys.ticketFull(payload.ticketId) })
+          // REFUND_TICKET → quota hoàn. FALLBACK_AI cũng có thể đụng quota tuỳ flow BE.
+          qc.invalidateQueries({ queryKey: queryKeys.ticketBalance })
           showToast.success({ message: successMsg })
         } catch (e) {
           if (resolution === 'FALLBACK_AI') {
