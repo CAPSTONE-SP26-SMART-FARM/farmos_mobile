@@ -1,10 +1,12 @@
 import { View, ScrollView, StyleSheet, ActivityIndicator } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
+import { MaterialIcons } from '@expo/vector-icons'
 import { Text, EmptyState } from '@/components/ui'
 import { SheetHeader } from '@/components/features/incident/SheetHeader'
 import { useTicketFull } from '@/hooks/useTicketLifecycle'
 import { icons } from '@/constants/icon'
+import { AI_AUTHOR_ID } from '@/types/prescription'
 import type { PrescriptionItemRes } from '@/types/medicine'
 
 function ItemRow({ item }: { item: PrescriptionItemRes }) {
@@ -47,8 +49,10 @@ export default function PrescriptionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
   const { data, isLoading } = useTicketFull(id)
-  const items = data?.prescription?.items ?? []
-  const generalNotes = data?.prescription?.generalNotes
+  const prescription = data?.prescription
+  const items = prescription?.items ?? []
+  const generalNotes = prescription?.generalNotes
+  const isAi = prescription?.authorId === AI_AUTHOR_ID
 
   return (
     <SafeAreaView edges={['bottom', 'left', 'right']} style={styles.container}>
@@ -64,6 +68,18 @@ export default function PrescriptionScreen() {
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
+          {isAi ? (
+            <View style={styles.aiBanner}>
+              <View style={styles.aiBannerHeader}>
+                <MaterialIcons name='auto-awesome' size={18} color='#7C3AED' />
+                <Text style={styles.aiBannerTitle}>Đơn thuốc gợi ý bởi AI</Text>
+              </View>
+              <Text style={styles.aiBannerBody}>
+                Đây là đơn thuốc do AI sinh ra dựa trên mô tả sự cố — KHÔNG thay thế chỉ định của
+                bác sĩ thú y có giấy phép. Vui lòng đối chiếu với chuyên gia trước khi sử dụng.
+              </Text>
+            </View>
+          ) : null}
           {generalNotes ? (
             <View style={styles.notesCard}>
               <Text style={styles.label}>Ghi chú chung</Text>
@@ -101,5 +117,26 @@ const styles = StyleSheet.create({
   notesCard: {
     backgroundColor: '#FFFFFF', borderRadius: 16,
     padding: 16, gap: 6,
+  },
+
+  aiBanner: {
+    backgroundColor: '#FAF5FF',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#DDD6FE',
+    gap: 6,
+  },
+  aiBannerHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  aiBannerTitle: {
+    fontSize: 14,
+    color: '#5B21B6',
+    fontFamily: 'Inter_600SemiBold',
+  },
+  aiBannerBody: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#5B21B6',
+    fontFamily: 'Inter_400Regular',
   },
 })

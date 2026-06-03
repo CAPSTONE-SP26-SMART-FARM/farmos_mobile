@@ -33,6 +33,7 @@ import { useToast } from '@/hooks/useToast'
 import { getErrorMessage } from '@/utils/error'
 import { socketService } from '@/services/socket/socketService'
 import { useActiveTicketStore } from '@/stores/activeTicketStore'
+import { useAiProcessingStore } from '@/stores/aiProcessingStore'
 import { SEVERITY_META, STATUS_META } from '@/constants/incident'
 import { icons } from '@/constants/icon'
 import { queryKeys } from '@/constants/queryKeys'
@@ -254,20 +255,42 @@ export default function IncidentsScreen() {
       qc.invalidateQueries({ queryKey: queryKeys.incident.list() })
       showToast.success({ message: 'Bác sĩ vừa giải quyết một sự cố' })
     }
-    const onAiResolved = () => {
+    const onAiResolved = (payload: { ticketId: string }) => {
       if (isDoctor) return
+      // Khi AI xong → clear processing flag (an toàn dù user đang ở list hay detail).
+      useAiProcessingStore.getState().stop(payload.ticketId)
       qc.invalidateQueries({ queryKey: queryKeys.incident.list() })
       showToast.success({ message: 'AI đã xử lý xong sự cố' })
+    }
+    const onAutoRefunded = (payload: { ticketId: string; reason?: string }) => {
+      if (isDoctor) return
+      // Owner không phản hồi modal FALLBACK_AI/REFUND_TICKET trong thời hạn (default 30 phút) →
+      // BE auto-refund + cancel ticket. Clear AI processing flag (nếu lỡ bật) + reload.
+      useAiProcessingStore.getState().stop(payload.ticketId)
+      qc.invalidateQueries({ queryKey: queryKeys.incident.list() })
+      qc.invalidateQueries({ queryKey: queryKeys.ticketBalance })
+      showToast.warning({
+        message: 'Sự cố đã được tự động hoàn vì bạn chưa kịp phản hồi.',
+      })
     }
     const onAiOffered = (payload: { ticketId: string; title?: string }) => {
       if (isDoctor) return
       if (useActiveTicketStore.getState().activeTicketId === payload.ticketId) return
       const respond = async (resolution: 'FALLBACK_AI' | 'REFUND_TICKET', successMsg: string) => {
+        // Với FALLBACK_AI: bật flag + push detail ngay để user thấy banner "AI đang phân tích".
+        // Mutation chạy nền — nếu fail thì rollback flag.
+        if (resolution === 'FALLBACK_AI') {
+          useAiProcessingStore.getState().start(payload.ticketId)
+          router.push(`/(app)/incident/${payload.ticketId}`)
+        }
         try {
           await ticketLifecycleApi.abandon(payload.ticketId, { resolution })
           qc.invalidateQueries({ queryKey: queryKeys.incident.list() })
           showToast.success({ message: successMsg })
         } catch (e) {
+          if (resolution === 'FALLBACK_AI') {
+            useAiProcessingStore.getState().stop(payload.ticketId)
+          }
           showToast.error({ message: getErrorMessage(e, 'Có lỗi xảy ra, vui lòng thử lại') })
         }
       }
@@ -290,14 +313,16 @@ export default function IncidentsScreen() {
     socketService.on('ticket.resolved', onResolved)
     socketService.on('ticket.ai.resolved', onAiResolved)
     socketService.on('ticket.ai.fallback.offered', onAiOffered)
+    socketService.on('ticket.abandon.auto_refunded', onAutoRefunded)
     return () => {
       socketService.off('ticket.broadcast', onBroadcast)
       socketService.off('ticket.incident.created', onCreated)
       socketService.off('ticket.resolved', onResolved)
       socketService.off('ticket.ai.resolved', onAiResolved)
       socketService.off('ticket.ai.fallback.offered', onAiOffered)
+      socketService.off('ticket.abandon.auto_refunded', onAutoRefunded)
     }
-  }, [isDoctor, qc, showToast])
+  }, [isDoctor, qc, showToast, router])
 
   // Broadcasts endpoint không support search param → filter client-side theo title / description / ticketNumber.
   // Dataset broadcasts thường nhỏ (chỉ pending) nên cost OK.

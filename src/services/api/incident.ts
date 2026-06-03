@@ -4,6 +4,9 @@ import type {
   ListTicketsFilter, ListDoctorTicketsFilter,
 } from '@/types/incident'
 import type { FarmerMyMilestone } from '@/types/production'
+import type {
+  DoctorTicketStatsQuery, DoctorTicketStatsRes,
+} from '@/types/doctorTicketStats'
 
 export const incidentApi = {
   // Farmer endpoints — v2
@@ -69,5 +72,19 @@ export const incidentApi = {
   acceptIncident: (ticketId: string) =>
     apiClient
       .put<{ data: IncidentTicket }>(`/ticket/incident/doctor/${ticketId}/accept`, {})
+      .then((r) => r.data.data),
+
+  // Doctor ticket stats — BE handoff 2026-06-03. Server-side aggregate, không cần sample tay.
+  doctorTicketStats: (q: DoctorTicketStatsQuery = {}) =>
+    apiClient
+      .get<{ data: DoctorTicketStatsRes }>('/ticket/incident/doctor/stats', {
+        params: {
+          ...(q.dateRange && { dateRange: q.dateRange }),
+          ...(q.from && { from: q.from }),
+          ...(q.to && { to: q.to }),
+          ...(q.includeRecent !== undefined && { includeRecent: q.includeRecent }),
+          ...(q.includeTrend !== undefined && { includeTrend: q.includeTrend }),
+        },
+      })
       .then((r) => r.data.data),
 }

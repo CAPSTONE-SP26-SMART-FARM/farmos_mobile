@@ -8,6 +8,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useFocusEffect } from '@react-navigation/native'
 import { useCallback, useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import dayjs from 'dayjs'
 import { Text, EmptyState, TopBar, BottomSheet, PrimaryButton, TextField } from '@/components/ui'
 import { usePrescriptions, useCreatePrescription } from '@/hooks/usePrescription'
 import { useAcceptIncident, useDoctorIncidentDetail } from '@/hooks/useDoctor'
@@ -25,6 +26,8 @@ import { IncidentInfoList } from '@/components/features/incident/IncidentInfoLis
 import { IncidentFooterActions } from '@/components/features/incident/IncidentFooterActions'
 import { CloseRateModal } from '@/components/features/incident/CloseRateModal'
 import { AbandonModal } from '@/components/features/incident/AbandonModal'
+import { AiProcessingBanner } from '@/components/features/incident/AiProcessingBanner'
+import { useAiProcessingStore } from '@/stores/aiProcessingStore'
 import { useAddAddendum } from '@/hooks/useTicketLifecycle'
 import { getErrorMessage } from '@/utils/error'
 import type { CreatePrescriptionBody } from '@/types/prescription'
@@ -85,6 +88,15 @@ export default function IncidentDetailScreen() {
     }
   }, [isDoctor, ticketFullQuery.data?.pendingFallbackChoice])
 
+  const isAiProcessing = useAiProcessingStore((s) => !!s.pending[id])
+  // Safety net: nếu data refresh mà thấy solution.source === 'AI' → clear flag
+  // (phòng trường hợp socket ai.resolved miss).
+  useEffect(() => {
+    if (ticketFullQuery.data?.solution?.source === 'AI') {
+      useAiProcessingStore.getState().stop(id)
+    }
+  }, [id, ticketFullQuery.data?.solution?.source])
+
   const { data: rxData, isLoading: rxLoading, refetch: refetchRx } = usePrescriptions(id)
   const { mutate: acceptIncident, isPending: isAccepting } = useAcceptIncident()
   const { mutate: createPrescription, isPending: isCreatingRx } = useCreatePrescription(id)
@@ -137,12 +149,24 @@ export default function IncidentDetailScreen() {
     })
     const onClosed = onlyThisTicket(invalidateDetail)
     const onAiResolved = onlyThisTicket(() => {
+      useAiProcessingStore.getState().stop(id)
       invalidateDetail()
       showToast.success({ message: 'AI đã xử lý xong sự cố' })
     })
     const onAbandonRefunded = onlyThisTicket(() => {
       invalidateDetail()
+      qc.invalidateQueries({ queryKey: queryKeys.ticketBalance })
       showToast.success({ message: 'Sự cố đã được hoàn lại' })
+    })
+    const onAutoRefunded = onlyThisTicket(() => {
+      // Owner để timeout không chọn FALLBACK_AI/REFUND_TICKET → BE auto-refund.
+      useAiProcessingStore.getState().stop(id)
+      setAbandonModalVisible(false)
+      invalidateDetail()
+      qc.invalidateQueries({ queryKey: queryKeys.ticketBalance })
+      showToast.warning({
+        message: 'Sự cố đã được tự động hoàn vì bạn chưa kịp phản hồi.',
+      })
     })
     // Open AbandonModal khi nhận fallback offer / required (cũ).
     // Detail screen dùng modal có context, list screen dùng native Alert (xem incidents.tsx).
@@ -158,6 +182,7 @@ export default function IncidentDetailScreen() {
       ['ticket.ai.resolved', onAiResolved],
       ['ticket.ai.fallback.offered', openAbandonModal],
       ['ticket.abandon.refunded', onAbandonRefunded],
+      ['ticket.abandon.auto_refunded', onAutoRefunded],
     ] as const
 
     listeners.forEach(([event, handler]) => socketService.on(event, handler))
@@ -238,16 +263,25 @@ export default function IncidentDetailScreen() {
   }
 
   const handleAbandon = (resolution: AbandonResolution) => {
+    // Với FALLBACK_AI: đóng modal + bật flag ngay để UI render banner "AI đang phân tích".
+    // Mutation chạy nền; nếu fail → rollback flag.
+    if (resolution === 'FALLBACK_AI') {
+      setAbandonModalVisible(false)
+      useAiProcessingStore.getState().start(id)
+    }
     abandonResolution(
       { resolution },
       {
         onSuccess: () => {
-          setAbandonModalVisible(false)
+          if (resolution !== 'FALLBACK_AI') setAbandonModalVisible(false)
           showToast.success({
             message: resolution === 'FALLBACK_AI' ? 'Đã chuyển sang AI xử lý' : 'Đã hoàn ticket',
           })
         },
-        onError: (err) => showToast.error({ message: getErrorMessage(err, 'Thao tác thất bại') }),
+        onError: (err) => {
+          if (resolution === 'FALLBACK_AI') useAiProcessingStore.getState().stop(id)
+          showToast.error({ message: getErrorMessage(err, 'Thao tác thất bại') })
+        },
       }
     )
   }
@@ -319,6 +353,15 @@ export default function IncidentDetailScreen() {
           {metaParts.length > 0 && (
             <Text style={styles.titleMeta}>{metaParts.join(' · ')}</Text>
           )}
+          {data.isAiResolved ? (
+            <View style={styles.aiResolvedBanner}>
+              <MaterialIcons name='auto-awesome' size={14} color='#7C3AED' />
+              <Text style={styles.aiResolvedText}>
+                Đã giải quyết bằng AI
+                {data.aiResolvedAt ? ` lúc ${dayjs(data.aiResolvedAt).format('DD/MM HH:mm')}` : ''}
+              </Text>
+            </View>
+          ) : null}
           {timeLeft !== null && (
             <View style={styles.timerBanner}>
               <View style={styles.timerRow}>
@@ -368,6 +411,10 @@ export default function IncidentDetailScreen() {
               ⚠️ Thuốc trong đơn có thời gian ngừng thuốc trước thu hoạch. Vui lòng tuân thủ hướng dẫn của bác sĩ.
             </Text>
           </View>
+        )}
+
+        {isAiProcessing && ticketFullQuery.data?.solution?.source !== 'AI' && (
+          <AiProcessingBanner />
         )}
 
         {ticketFullQuery.data?.solution?.source === 'AI' && (
@@ -501,6 +548,23 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   timerText: { fontSize: 13, fontFamily: 'Inter_500Medium', color: '#6B7280' },
+
+  aiResolvedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    backgroundColor: '#F5F3FF',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 100,
+    marginBottom: 12,
+  },
+  aiResolvedText: {
+    fontSize: 12,
+    color: '#5B21B6',
+    fontFamily: 'Inter_500Medium',
+  },
 
   withdrawalBanner: {
     backgroundColor: '#FEF2F2',

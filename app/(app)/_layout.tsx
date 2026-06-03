@@ -45,6 +45,7 @@ export default function AppLayout() {
       <Stack.Screen name='farmer-profile-info' />
       <Stack.Screen name='doctor-profile-info' />
       <Stack.Screen name='doctor-dqs' options={fitContentSheetOptions} />
+      <Stack.Screen name='doctor-ticket-analytics' />
     </Stack>
   )
 }

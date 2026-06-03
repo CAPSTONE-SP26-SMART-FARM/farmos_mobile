@@ -8,67 +8,23 @@ import { useAuth } from '@/hooks/useAuth'
 import { icons } from '@/constants/icon'
 import { getDefaultAvatar } from '@/constants/user'
 import { CONFIG } from '@/constants/config'
-import { useDoctorIncidentList } from '@/hooks/useDoctor'
 import { useIncidentList } from '@/hooks/useIncident'
 import { useTasksForDailyLog } from '@/hooks/useDailyLog'
 import { EarningsCard } from '@/components/features/home/EarningsCard'
-import { DoctorStatusCard } from '@/components/features/home/DoctorStatusCard'
+import { DoctorTicketStatsCard } from '@/components/features/home/DoctorTicketStatsCard'
 import { IncidentSummaryCard } from '@/components/features/home/IncidentSummaryCard'
+import { TicketQuotaCard } from '@/components/features/home/TicketQuotaCard'
 import { FarmStatusCard } from '@/components/features/home/FarmStatusCard'
 import { TodayScheduleCard } from '@/components/features/home/TodayScheduleCard'
-import { QuickActionsCard, type QuickActionItem } from '@/components/features/home/QuickActionsCard'
 import { TipsCard } from '@/components/features/home/TipsCard'
 
 const NotiIcon = icons.notiBgSvg
-const EditProfileBgIcon = icons.editProfileBgSvg
-const IncidentIcon = icons.incidentSvg
-const AlertIcon = icons.alertSvg
-const PlusIcon = icons.plusSvg
 
-const DOCTOR_QUICK_ACTIONS: QuickActionItem[] = [
-  {
-    Icon: EditProfileBgIcon,
-    label: 'Cập nhật hồ sơ',
-    onPress: () => router.push('/(app)/(tabs)/profile'),
-    selfContained: true,
-  },
-  {
-    Icon: IncidentIcon,
-    label: 'Kê khai sự cố',
-    onPress: () => router.push('/(app)/(tabs)/incidents'),
-  },
-]
-
-const FARMER_QUICK_ACTIONS: QuickActionItem[] = [
-  {
-    Icon: PlusIcon,
-    label: 'Tạo sự cố',
-    onPress: () => router.push('/(app)/incident/create'),
-  },
-  {
-    Icon: IncidentIcon,
-    label: 'Sự cố',
-    onPress: () => router.push('/(app)/(tabs)/incidents'),
-  },
-  {
-    Icon: AlertIcon,
-    label: 'Cảnh báo',
-    onPress: () => router.push('/(app)/(tabs)/alerts'),
-  },
-]
-
-function DoctorHome({ isApproved }: { isApproved: boolean }) {
-  const { data: activeData } = useDoctorIncidentList(1, false)
-  const { data: resolvedData } = useDoctorIncidentList(1, true)
-  const allTickets = [...(activeData?.data ?? []), ...(resolvedData?.data ?? [])]
-  const activeCount = activeData?.data?.length ?? 0
-
+function DoctorHome() {
   return (
     <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
       <EarningsCard />
-      <TodayScheduleCard tickets={allTickets} delay={150} />
-      <DoctorStatusCard isApproved={isApproved} activeCount={activeCount} />
-      <QuickActionsCard items={DOCTOR_QUICK_ACTIONS} delay={200} />
+      <DoctorTicketStatsCard delay={150} />
       <TipsCard
         title='Hướng dẫn bác sĩ FarmOS'
         description='Tìm hiểu cách nhận và xử lý sự cố từ nông dân hiệu quả'
@@ -133,6 +89,7 @@ function FarmerHome() {
   return (
     <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
       <IncidentSummaryCard tickets={tickets} />
+      <TicketQuotaCard delay={120} />
       <TodayScheduleCard
         tickets={tickets}
         tasksCount={tasksCount}
@@ -141,7 +98,6 @@ function FarmerHome() {
         delay={150}
       />
       <FarmStatusCard />
-      <QuickActionsCard items={FARMER_QUICK_ACTIONS} delay={200} />
       <TipsCard
         title='Hướng dẫn báo cáo sự cố'
         description='Mô tả chi tiết và chọn đúng mức độ để được hỗ trợ nhanh nhất'
@@ -162,7 +118,6 @@ function FarmerHome() {
 export default function HomeScreen() {
   const { user } = useAuth()
   const isDoctor = user?.role === 'doctor'
-  const isApproved = user?.isActive ?? false
   const userName = user?.fullName ?? 'FarmOS'
 
   return (
@@ -191,10 +146,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {isDoctor
-        ? <DoctorHome isApproved={isApproved} />
-        : <FarmerHome />
-      }
+      {isDoctor ? <DoctorHome /> : <FarmerHome />}
     </SafeAreaView>
   )
 }

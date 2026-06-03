@@ -18,6 +18,7 @@ export const queryKeys = {
         ended === undefined ? 'all' : ended ? 'ended' : 'active',
         filter ?? {},
       ] as const,
+    doctorStats: (q?: object) => ['incident', 'doctor-stats', q ?? {}] as const,
   },
   doctor: {
     myProfile: ['doctor', 'my-profile'] as const,
