@@ -8,6 +8,7 @@ import {
   Alert,
   TextInput,
   ScrollView,
+  Switch,
 } from 'react-native'
 import { MaterialIcons, Ionicons } from '@expo/vector-icons'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -23,7 +24,7 @@ import { IncidentStatusFilter } from '@/components/features/incident/IncidentSta
 import { useIncidentList } from '@/hooks/useIncident'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { useActiveTicketCategories } from '@/hooks/useTicketCategory'
-import { useDoctorProfile } from '@/hooks/useDoctor'
+import { useDoctorProfile, useUpdateDoctorOnlineStatus } from '@/hooks/useDoctor'
 import { usePendingBroadcasts } from '@/hooks/useBroadcast'
 import { useRejectTicket } from '@/hooks/useTicketLifecycle'
 import { ticketLifecycleApi } from '@/services/api/ticketLifecycle'
@@ -77,6 +78,52 @@ function DoctorGuardScreen({ message }: { message: string }) {
         <EmptyState message={message} />
       </View>
     </SafeAreaView>
+  )
+}
+
+function OnlineToggleBanner({ isOnline, isApproved }: { isOnline: boolean; isApproved: boolean }) {
+  const { showToast } = useToast()
+  const { mutate: updateOnlineStatus, isPending } = useUpdateDoctorOnlineStatus()
+
+  const handleToggle = () => {
+    if (!isApproved) {
+      showToast.error({ message: 'Cần được phê duyệt trước khi bật online' })
+      return
+    }
+    updateOnlineStatus(
+      { isOnline: !isOnline },
+      {
+        onSuccess: () =>
+          showToast.success({ message: `Đã chuyển sang ${!isOnline ? 'Online' : 'Offline'}` }),
+        onError: (err: any) =>
+          showToast.error({ message: err?.response?.data?.message ?? 'Cập nhật thất bại' }),
+      },
+    )
+  }
+
+  return (
+    <View style={styles.onlineBanner}>
+      <View style={styles.onlineLeft}>
+        <MaterialIcons
+          name={isOnline ? 'wifi' : 'wifi-off'}
+          size={22}
+          color={isOnline ? '#059669' : '#9CA3AF'}
+        />
+        <View>
+          <Text style={styles.onlineLabel}>Nhận sự cố</Text>
+          <Text style={styles.onlineSub}>
+            {!isApproved ? 'Cần phê duyệt' : isOnline ? 'Đang bật' : 'Đang tắt'}
+          </Text>
+        </View>
+      </View>
+      <Switch
+        value={isOnline}
+        onValueChange={handleToggle}
+        disabled={!isApproved || isPending}
+        trackColor={{ false: '#E5E7EB', true: '#BBF7D0' }}
+        thumbColor={isOnline ? '#059669' : '#9CA3AF'}
+      />
+    </View>
   )
 }
 
@@ -271,10 +318,6 @@ export default function IncidentsScreen() {
     return (
       <DoctorGuardScreen message='Hồ sơ chưa được phê duyệt. Vào tab Hồ sơ để hoàn tất.' />
     )
-  if (isDoctor && !isOnline)
-    return (
-      <DoctorGuardScreen message='Bạn đang offline. Bật online ở tab Hồ sơ để nhận sự cố.' />
-    )
 
   const showLoading = isBroadcastTab ? broadcastQuery.isLoading : isLoading
   const showError = !isBroadcastTab && isError
@@ -305,6 +348,11 @@ export default function IncidentsScreen() {
             onChange={setDoctorView}
             style={styles.doctorTabs}
           />
+        )}
+
+        {/* Online toggle — doctor bật/tắt nhận sự cố ngay tại đây (thay vì ở tab Hồ sơ) */}
+        {isDoctor && (
+          <OnlineToggleBanner isOnline={!!isOnline} isApproved={!!isApproved} />
         )}
 
         {/* Search bar — hiện ở mọi tab. Broadcasts filter client-side, ticket list filter server-side. */}
@@ -367,15 +415,17 @@ export default function IncidentsScreen() {
         ) : itemCount === 0 ? (
           <EmptyState
             message={
-              isBroadcastTab
-                ? 'Không có yêu cầu mới nào.'
-                : debouncedSearch
-                  ? `Không tìm thấy kết quả cho "${debouncedSearch}".`
-                  : statusFilter !== 'all' || dateFilter !== 'all'
-                    ? 'Không có sự cố nào khớp bộ lọc hiện tại.'
-                    : isDoctor
-                      ? 'Chưa có sự cố nào.'
-                      : 'Chưa có sự cố nào được báo cáo.'
+              isDoctor && !isOnline && isBroadcastTab
+                ? 'Bạn đang offline. Bật "Nhận sự cố" ở trên để nhận yêu cầu mới.'
+                : isBroadcastTab
+                  ? 'Không có yêu cầu mới nào.'
+                  : debouncedSearch
+                    ? `Không tìm thấy kết quả cho "${debouncedSearch}".`
+                    : statusFilter !== 'all' || dateFilter !== 'all'
+                      ? 'Không có sự cố nào khớp bộ lọc hiện tại.'
+                      : isDoctor
+                        ? 'Chưa có sự cố nào.'
+                        : 'Chưa có sự cố nào được báo cáo.'
             }
             Icon={icons.emptyCartSvg}
             actionLabel={
@@ -441,6 +491,19 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   title: { fontSize: 24, lineHeight: 36, color: '#111827', fontFamily: 'Inter_600SemiBold' },
+  onlineBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginBottom: 10,
+  },
+  onlineLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  onlineLabel: { fontSize: 15, color: '#111827', fontFamily: 'Inter_500Medium' },
+  onlineSub: { fontSize: 12, color: '#6B7280', fontFamily: 'Inter_400Regular', marginTop: 1 },
   createBtn: {
     flexDirection: 'row',
     alignItems: 'center',

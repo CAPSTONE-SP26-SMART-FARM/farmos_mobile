@@ -2,6 +2,7 @@ import {
   View, ScrollView, ActivityIndicator, StyleSheet, RefreshControl,
   Image, TouchableOpacity, Modal, Pressable,
 } from 'react-native'
+import { MaterialIcons } from '@expo/vector-icons'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useFocusEffect } from '@react-navigation/native'
@@ -11,15 +12,12 @@ import { Text, EmptyState, TopBar, BottomSheet, PrimaryButton, TextField } from 
 import { usePrescriptions, useCreatePrescription } from '@/hooks/usePrescription'
 import { useAcceptIncident, useDoctorIncidentDetail } from '@/hooks/useDoctor'
 import { useIncidentDetail, useCancelIncident } from '@/hooks/useIncident'
-import { useActiveTicketCategories } from '@/hooks/useTicketCategory'
 import { useCloseTicket, useRateTicket, useAbandonResolution, useTicketFull } from '@/hooks/useTicketLifecycle'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
-import { SEVERITY_META } from '@/constants/incident'
 import { socketService } from '@/services/socket/socketService'
 import { useActiveTicketStore } from '@/stores/activeTicketStore'
 import { queryKeys } from '@/constants/queryKeys'
-import { IncidentStatusBadge } from '@/components/features/incident/IncidentStatusBadge'
 import { PrescriptionModal } from '@/components/features/incident/PrescriptionModal'
 import { PrescriptionSection } from '@/components/features/incident/PrescriptionSection'
 import { AiSolutionSection } from '@/components/features/incident/AiSolutionSection'
@@ -28,7 +26,6 @@ import { IncidentFooterActions } from '@/components/features/incident/IncidentFo
 import { CloseRateModal } from '@/components/features/incident/CloseRateModal'
 import { AbandonModal } from '@/components/features/incident/AbandonModal'
 import { useAddAddendum } from '@/hooks/useTicketLifecycle'
-import type { AddAddendumBody } from '@/types/medicine'
 import { getErrorMessage } from '@/utils/error'
 import type { CreatePrescriptionBody } from '@/types/prescription'
 import type { AbandonResolution } from '@/types/ticketLifecycle'
@@ -50,10 +47,6 @@ function formatCountdown(ms: number) {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
-const SOURCE_LABEL: Record<string, string> = {
-  SUBSCRIPTION_GRANT: 'Từ gói',
-  PURCHASED: 'Mua lẻ',
-}
 
 export default function IncidentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -70,8 +63,8 @@ export default function IncidentDetailScreen() {
   const [addendumVisible, setAddendumVisible] = useState(false)
   const [addendumContent, setAddendumContent] = useState('')
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
+  const [showSlaInfo, setShowSlaInfo] = useState(false)
 
-  const { data: categories = [] } = useActiveTicketCategories(!isDoctor)
   const { mutate: cancelIncident, isPending: isCancelling } = useCancelIncident()
   const { mutate: closeTicket, isPending: isClosing } = useCloseTicket(id)
   const { mutate: rateTicket, isPending: isRating } = useRateTicket(id)
@@ -187,7 +180,6 @@ export default function IncidentDetailScreen() {
   const isAssignee = isDoctor && data?.assignee?.id === user?.id
   const isCreator = !isDoctor && data?.creator?.id === user?.id
   const canAccept = isDoctor && status === 'open' && !data?.assignee
-  const canPrescribe = isAssignee && PRESCRIBABLE_STATUSES.includes(status as any)
   const isClosed = CLOSED_STATUSES.includes(status as any)
   const canCancel = isCreator && status === 'open'
   const canClose = isCreator && status === 'resolved'
@@ -208,10 +200,6 @@ export default function IncidentDetailScreen() {
       }
     )
   }
-
-  const categoryName = data?.categoryConfigId
-    ? categories.find((c) => c.id === data.categoryConfigId)?.name
-    : undefined
 
   const handleCancel = () => {
     cancelIncident(
@@ -331,29 +319,26 @@ export default function IncidentDetailScreen() {
           {metaParts.length > 0 && (
             <Text style={styles.titleMeta}>{metaParts.join(' · ')}</Text>
           )}
-          <View style={styles.badges}>
-            <View style={[styles.badge, { backgroundColor: SEVERITY_META[data.severity].bg }]}>
-              <Text style={[styles.badgeText, { color: SEVERITY_META[data.severity].color }]}>
-                {SEVERITY_META[data.severity].label}
-              </Text>
-            </View>
-            <IncidentStatusBadge status={data.status} />
-            {categoryName ? (
-              <View style={styles.badgeCategory}>
-                <Text style={styles.badgeCategoryText}>{categoryName}</Text>
-              </View>
-            ) : null}
-            {data.source && SOURCE_LABEL[data.source] ? (
-              <View style={styles.badgeSource}>
-                <Text style={styles.badgeSourceText}>{SOURCE_LABEL[data.source]}</Text>
-              </View>
-            ) : null}
-          </View>
           {timeLeft !== null && (
-            <View style={[styles.timerBanner, timeLeft < 10 * 60 * 1000 && styles.timerBannerUrgent]}>
-              <Text style={[styles.timerText, timeLeft < 10 * 60 * 1000 && styles.timerTextUrgent]}>
-                ⏱  Còn lại: {formatCountdown(timeLeft)}
-              </Text>
+            <View style={styles.timerBanner}>
+              <View style={styles.timerRow}>
+                <MaterialIcons name='hourglass-bottom' size={16} color='#6B7280' />
+                <Text style={styles.timerText}>
+                  Còn lại: {formatCountdown(timeLeft)}
+                </Text>
+                <Pressable
+                  onPress={() => setShowSlaInfo((v) => !v)}
+                  hitSlop={10}
+                  style={({ pressed }) => pressed && { opacity: 0.5 }}
+                >
+                  <MaterialIcons name='help-outline' size={16} color='#9CA3AF' />
+                </Pressable>
+              </View>
+              {showSlaInfo && (
+                <Text style={styles.slaInfoText}>
+                  Thời gian còn lại để xử lý sự cố theo cam kết (SLA). Quá hạn có thể ảnh hưởng đến điểm chất lượng của bạn.
+                </Text>
+              )}
             </View>
           )}
 
@@ -495,19 +480,11 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 20, lineHeight: 28, color: '#111827', fontFamily: 'Inter_600SemiBold', marginBottom: 4 },
   titleMeta: { fontSize: 13, color: '#6B7280', fontFamily: 'Inter_400Regular', marginBottom: 10 },
-  badges: { flexDirection: 'row', gap: 8, marginBottom: 16, flexWrap: 'wrap' },
-  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  badgeText: { fontSize: 12, fontFamily: 'Inter_500Medium' },
   divider: { height: 1, backgroundColor: '#F3F4F6', marginBottom: 12 },
   cardLabel: { fontSize: 13, color: '#6B7280', fontFamily: 'Inter_500Medium', marginBottom: 8 },
   description: { fontSize: 15, color: '#374151', fontFamily: 'Inter_400Regular', lineHeight: 22 },
   section: { gap: 6 },
   sectionLabel: { fontSize: 13, color: '#6B7280', fontFamily: 'Inter_500Medium' },
-
-  badgeCategory: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, backgroundColor: '#F3F4F6' },
-  badgeCategoryText: { fontSize: 12, fontFamily: 'Inter_500Medium', color: '#374151' },
-  badgeSource: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, backgroundColor: '#ECFDF5' },
-  badgeSourceText: { fontSize: 12, fontFamily: 'Inter_500Medium', color: '#059669' },
 
   attachRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   attachThumb: { width: 80, height: 80, borderRadius: 10, backgroundColor: '#F3F4F6' },
@@ -515,9 +492,15 @@ const styles = StyleSheet.create({
   timerBanner: {
     marginBottom: 12,
   },
-  timerBannerUrgent: {},
-  timerText: { fontSize: 13, fontFamily: 'Inter_500Medium', color: '#059669' },
-  timerTextUrgent: { color: '#D97706' },
+  timerRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  slaInfoText: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#6B7280',
+    fontFamily: 'Inter_400Regular',
+    marginTop: 6,
+  },
+  timerText: { fontSize: 13, fontFamily: 'Inter_500Medium', color: '#6B7280' },
 
   withdrawalBanner: {
     backgroundColor: '#FEF2F2',

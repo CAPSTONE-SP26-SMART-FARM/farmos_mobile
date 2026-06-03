@@ -10,6 +10,7 @@ import { FormTextField } from '@/components/react-hook-form/FormTextField'
 import { FormSelectField } from '@/components/react-hook-form/FormSelectField'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
+import { useUpdateAvatar } from '@/hooks/useUpdateAvatar'
 import { getDefaultAvatar } from '@/constants/user'
 import {
   useDoctorProfile,
@@ -39,7 +40,8 @@ type RequestForm = z.infer<typeof requestSchema>
 export default function EditDoctorProfileScreen() {
   const router = useRouter()
   const { showToast } = useToast()
-  const { user, updateProfile } = useAuth()
+  const { user } = useAuth()
+  const handleAvatarChange = useUpdateAvatar()
 
   const { data: profile, isLoading: profileLoading } = useDoctorProfile()
   const { data: requestsData } = useDoctorRequestsList()
@@ -96,15 +98,6 @@ export default function EditDoctorProfileScreen() {
           showToast.error({ message: err?.response?.data?.message ?? 'Cập nhật thất bại' }),
       },
     )
-  }
-
-  const handleAvatarChange = async (avatarUrl: string | null) => {
-    await updateProfile({
-      fullName: user?.fullName ?? '',
-      phone: user?.phone ?? null,
-      avatarUrl,
-    })
-    showToast.success({ message: avatarUrl ? 'Cập nhật ảnh đại diện thành công!' : 'Đã xoá ảnh đại diện' })
   }
 
   const handleSubmitRequest = (data: RequestForm) => {

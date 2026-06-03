@@ -4,23 +4,14 @@ import { useRouter } from 'expo-router'
 import { MaterialIcons } from '@expo/vector-icons'
 import { Text, AvatarPicker } from '@/components/ui'
 import { useAuth } from '@/hooks/useAuth'
-import { useToast } from '@/hooks/useToast'
+import { useUpdateAvatar } from '@/hooks/useUpdateAvatar'
 import { ROLE_LABEL, getDefaultAvatar } from '@/constants/user'
 
 export default function FarmerProfileScreen() {
-  const { user, logout, updateProfile } = useAuth()
-  const { showToast } = useToast()
+  const { user, logout } = useAuth()
   const router = useRouter()
+  const handleAvatarChange = useUpdateAvatar()
   const roleLabel = ROLE_LABEL[user?.role ?? ''] ?? user?.role ?? '—'
-
-  const handleAvatarChange = async (avatarUrl: string | null) => {
-    await updateProfile({
-      fullName: user?.fullName ?? '',
-      phone: user?.phone ?? null,
-      avatarUrl,
-    })
-    showToast.success({ message: avatarUrl ? 'Cập nhật ảnh đại diện thành công!' : 'Đã xoá ảnh đại diện' })
-  }
 
   const handleLogout = () => {
     Alert.alert('Đăng xuất', 'Bạn có chắc muốn đăng xuất không?', [

@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
+import { useUpdateAvatar } from '@/hooks/useUpdateAvatar'
 import { FormTextField } from '@/components/react-hook-form/FormTextField'
 import { PrimaryButton, Text, TextField, TopBar, AvatarPicker } from '@/components/ui'
 import { getDefaultAvatar } from '@/constants/user'
@@ -19,6 +20,7 @@ type EditForm = z.infer<typeof schema>
 export default function EditProfileScreen() {
   const { user, updateProfile, isLoading } = useAuth()
   const { showToast } = useToast()
+  const handleAvatarChange = useUpdateAvatar()
 
   const { control, handleSubmit } = useForm<EditForm>({
     resolver: zodResolver(schema),
@@ -36,15 +38,6 @@ export default function EditProfileScreen() {
     } catch (err: any) {
       showToast.error({ message: err?.response?.data?.message ?? 'Cập nhật thất bại, vui lòng thử lại' })
     }
-  }
-
-  const handleAvatarChange = async (avatarUrl: string | null) => {
-    await updateProfile({
-      fullName: user?.fullName ?? '',
-      phone: user?.phone ?? null,
-      avatarUrl,
-    })
-    showToast.success({ message: avatarUrl ? 'Cập nhật ảnh đại diện thành công!' : 'Đã xoá ảnh đại diện' })
   }
 
   return (
