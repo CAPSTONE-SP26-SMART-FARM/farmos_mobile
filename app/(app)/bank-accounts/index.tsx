@@ -6,12 +6,11 @@ import {
   Pressable,
   StyleSheet,
   ActivityIndicator,
-  Alert,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { MaterialIcons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
-import { Text, TopBar, BottomSheet } from '@/components/ui'
+import { Text, TopBar, BottomSheet, useConfirm } from '@/components/ui'
 import {
   useBankAccountList,
   useDeleteBankAccount,
@@ -104,6 +103,7 @@ function BankAccountCard({ account }: { account: DoctorBankAccount }) {
 function BankAccountAction({ account }: { account: DoctorBankAccount }) {
   const router = useRouter()
   const { showToast } = useToast()
+  const confirm = useConfirm()
   const { mutate: deleteAccount } = useDeleteBankAccount()
   const { mutate: setDefault } = useSetDefaultBankAccount()
   const [visible, setVisible] = useState(false)
@@ -123,20 +123,22 @@ function BankAccountAction({ account }: { account: DoctorBankAccount }) {
     })
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     onClose()
-    Alert.alert('Xoá tài khoản?', `Xoá ${account.bankName} - ${account.accountNumber}?`, [
-      { text: 'Huỷ', style: 'cancel' },
-      {
-        text: 'Xoá',
-        style: 'destructive',
-        onPress: () =>
-          deleteAccount(account.id, {
-            onSuccess: () => showToast.success({ message: 'Đã xoá tài khoản' }),
-            onError: () => showToast.error({ message: 'Xoá thất bại' }),
-          }),
-      },
-    ])
+    const choice = await confirm.show({
+      title: 'Xoá tài khoản?',
+      message: `Xoá ${account.bankName} - ${account.accountNumber}?`,
+      icon: 'warning',
+      actions: [
+        { key: 'cancel', label: 'Huỷ', variant: 'cancel' },
+        { key: 'delete', label: 'Xoá', variant: 'destructive' },
+      ],
+    })
+    if (choice !== 'delete') return
+    deleteAccount(account.id, {
+      onSuccess: () => showToast.success({ message: 'Đã xoá tài khoản' }),
+      onError: () => showToast.error({ message: 'Xoá thất bại' }),
+    })
   }
 
   const actions = [

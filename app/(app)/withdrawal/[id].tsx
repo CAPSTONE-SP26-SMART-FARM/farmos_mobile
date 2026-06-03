@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import {
-  View, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, Alert,
+  View, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity,
   TextInput,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { Text, TopBar, BottomSheet, PrimaryButton } from '@/components/ui'
+import { Text, TopBar, BottomSheet, PrimaryButton, useConfirm } from '@/components/ui'
 import {
   useWithdrawalDetail, useCancelWithdrawal,
   useConfirmWithdrawalReceived, useReportWithdrawalNotReceived,
@@ -22,6 +22,7 @@ export default function WithdrawalDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const { data, isLoading } = useWithdrawalDetail(id || '')
   const { showToast } = useToast()
+  const confirm = useConfirm()
   const [reportSheetVisible, setReportSheetVisible] = useState(false)
   const [reportReason, setReportReason] = useState('')
 
@@ -40,39 +41,47 @@ export default function WithdrawalDetailScreen() {
 
   const meta = WD_STATUS_META[data.status]
 
-  const handleCancel = () => {
-    Alert.alert('Huỷ yêu cầu?', 'Số tiền sẽ được hoàn lại vào ví', [
-      { text: 'Không', style: 'cancel' },
-      {
-        text: 'Huỷ yêu cầu', style: 'destructive',
-        onPress: () => cancel(undefined, {
-          onSuccess: () => {
-            showToast.success({ message: 'Đã huỷ yêu cầu' })
-            router.back()
-          },
-          onError: (err: any) => {
-            const msg = err?.response?.data?.message || 'Không thể huỷ'
-            showToast.error({ message: String(msg) })
-          },
-        }),
+  const handleCancel = async () => {
+    const choice = await confirm.show({
+      title: 'Huỷ yêu cầu rút?',
+      message: 'Số tiền sẽ được hoàn lại vào ví của bạn.',
+      icon: 'warning',
+      actions: [
+        { key: 'cancel', label: 'Không', variant: 'cancel' },
+        { key: 'confirm', label: 'Huỷ yêu cầu', variant: 'destructive' },
+      ],
+    })
+    if (choice !== 'confirm') return
+    cancel(undefined, {
+      onSuccess: () => {
+        showToast.success({ message: 'Đã huỷ yêu cầu' })
+        router.back()
       },
-    ])
+      onError: (err: any) => {
+        const msg = err?.response?.data?.message || 'Không thể huỷ'
+        showToast.error({ message: String(msg) })
+      },
+    })
   }
 
-  const handleConfirmReceived = () => {
-    Alert.alert('Xác nhận đã nhận tiền?', 'Yêu cầu sẽ chuyển sang Hoàn tất', [
-      { text: 'Huỷ', style: 'cancel' },
-      {
-        text: 'Đã nhận',
-        onPress: () => confirmReceived(undefined, {
-          onSuccess: () => showToast.success({ message: 'Cảm ơn xác nhận của bạn' }),
-          onError: (err: any) => {
-            const msg = err?.response?.data?.message || 'Không thể xác nhận'
-            showToast.error({ message: String(msg) })
-          },
-        }),
+  const handleConfirmReceived = async () => {
+    const choice = await confirm.show({
+      title: 'Xác nhận đã nhận tiền?',
+      message: 'Yêu cầu sẽ chuyển sang trạng thái Hoàn tất.',
+      icon: 'question',
+      actions: [
+        { key: 'cancel', label: 'Huỷ', variant: 'cancel' },
+        { key: 'confirm', label: 'Đã nhận', variant: 'primary' },
+      ],
+    })
+    if (choice !== 'confirm') return
+    confirmReceived(undefined, {
+      onSuccess: () => showToast.success({ message: 'Cảm ơn xác nhận của bạn' }),
+      onError: (err: any) => {
+        const msg = err?.response?.data?.message || 'Không thể xác nhận'
+        showToast.error({ message: String(msg) })
       },
-    ])
+    })
   }
 
   const handleSubmitReport = () => {

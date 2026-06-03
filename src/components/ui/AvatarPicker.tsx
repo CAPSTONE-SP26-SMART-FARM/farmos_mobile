@@ -6,11 +6,11 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
 } from 'react-native'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import * as ImagePicker from 'expo-image-picker'
 import { Text } from './Text'
+import { useConfirm } from './ConfirmDialog'
 import { useToast } from '@/hooks/useToast'
 import { uploadImageToCloudinary } from '@/utils/cloudinary'
 
@@ -49,6 +49,7 @@ export const AvatarPicker = ({
   onRemoved,
 }: AvatarPickerProps) => {
   const { showToast } = useToast()
+  const confirm = useConfirm()
   const [isUploading, setIsUploading] = useState(false)
 
   const pickAndUpload = async () => {
@@ -77,25 +78,25 @@ export const AvatarPicker = ({
     }
   }
 
-  const confirmRemove = () => {
+  const confirmRemove = async () => {
     if (!onRemoved) return
-    Alert.alert('Xoá ảnh đại diện', 'Bạn có chắc muốn xoá ảnh đại diện?', [
-      { text: 'Huỷ', style: 'cancel' },
-      {
-        text: 'Xoá',
-        style: 'destructive',
-        onPress: async () => {
-          setIsUploading(true)
-          try {
-            await onRemoved()
-          } catch {
-            showToast.error({ message: 'Xoá ảnh đại diện thất bại' })
-          } finally {
-            setIsUploading(false)
-          }
-        },
-      },
-    ])
+    const choice = await confirm.show({
+      title: 'Xoá ảnh đại diện',
+      message: 'Bạn có chắc muốn xoá ảnh đại diện?',
+      actions: [
+        { key: 'cancel', label: 'Huỷ', variant: 'cancel' },
+        { key: 'delete', label: 'Xoá', variant: 'destructive' },
+      ],
+    })
+    if (choice !== 'delete') return
+    setIsUploading(true)
+    try {
+      await onRemoved()
+    } catch {
+      showToast.error({ message: 'Xoá ảnh đại diện thất bại' })
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   const initials = getInitials(name)

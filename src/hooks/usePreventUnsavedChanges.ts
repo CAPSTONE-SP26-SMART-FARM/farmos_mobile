@@ -1,6 +1,6 @@
-import { Alert } from 'react-native'
 import { useNavigation } from 'expo-router'
 import { usePreventRemove, type NavigationAction } from '@react-navigation/native'
+import { useConfirm } from '@/components/ui'
 
 export function usePreventUnsavedChanges(
   shouldPrevent: boolean,
@@ -13,25 +13,27 @@ export function usePreventUnsavedChanges(
   },
 ) {
   const navigation = useNavigation()
+  const confirm = useConfirm()
   const {
     title = 'Bạn chưa lưu thay đổi',
-    message,
+    message = 'Thoát ra sẽ mất các thay đổi đang nhập. Bạn có muốn rời đi?',
     stayText = 'Tiếp tục',
     exitText = 'Không lưu',
     onBeforeExit,
   } = options ?? {}
 
-  usePreventRemove(shouldPrevent, ({ data }: { data: { action: NavigationAction } }) => {
-    Alert.alert(title, message, [
-      { text: stayText, style: 'cancel' },
-      {
-        text: exitText,
-        style: 'destructive',
-        onPress: async () => {
-          if (onBeforeExit) await onBeforeExit()
-          navigation.dispatch(data.action)
-        },
-      },
-    ])
+  usePreventRemove(shouldPrevent, async ({ data }: { data: { action: NavigationAction } }) => {
+    const choice = await confirm.show({
+      title,
+      message,
+      icon: 'warning',
+      actions: [
+        { key: 'stay', label: stayText, variant: 'cancel' },
+        { key: 'exit', label: exitText, variant: 'destructive' },
+      ],
+    })
+    if (choice !== 'exit') return
+    if (onBeforeExit) await onBeforeExit()
+    navigation.dispatch(data.action)
   })
 }
