@@ -7,6 +7,7 @@ import
         PrimaryButton,
         Text,
         TopBar,
+        useConfirm,
     } from '@/components/ui'
 import { icons } from '@/constants/icon'
 import { useDeleteDailyLog, useMyDailyLogsByTask } from '@/hooks/useDailyLog'
@@ -23,7 +24,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import
     {
         ActivityIndicator,
-        Alert,
         FlatList,
         Pressable,
         RefreshControl,
@@ -57,6 +57,7 @@ export default function EmployeeTaskDetailScreen() {
     description?: string
   }>()
   const { showToast } = useToast()
+  const confirm = useConfirm()
 
   const initialProgress = Math.max(0, Math.min(100, Math.round(Number(progress ?? 0))))
   const [progressValue, setProgressValue] = useState(initialProgress)
@@ -147,37 +148,34 @@ export default function EmployeeTaskDetailScreen() {
     [router, taskId, title],
   )
   const handleDeleteLog = useCallback(
-    (log: DailyLog) => {
+    async (log: DailyLog) => {
       if (!isWithinDailyLogWindow()) {
         showToast.error({
           message: 'Ngoài khung giờ làm việc. Chỉ xóa nhật ký trong 07:00–17:00.',
         })
         return
       }
-      Alert.alert(
-        'Xóa nhật ký?',
-        'Bạn có chắc muốn xóa nhật ký này? Hành động này không thể hoàn tác.',
-        [
-          { text: 'Hủy', style: 'cancel' },
-          {
-            text: 'Xóa',
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                await deleteLog(log.id)
-                showToast.success({ message: 'Đã xóa nhật ký' })
-              } catch (err) {
-                const msg =
-                  getDailyLogErrorMessage(err) ??
-                  getErrorMessage(err, 'Không thể xóa nhật ký')
-                showToast.error({ message: msg })
-              }
-            },
-          },
+      const choice = await confirm.show({
+        title: 'Xoá nhật ký?',
+        message: 'Bạn có chắc muốn xoá nhật ký này? Hành động không thể hoàn tác.',
+        icon: 'warning',
+        actions: [
+          { key: 'cancel', label: 'Huỷ', variant: 'cancel' },
+          { key: 'delete', label: 'Xoá', variant: 'destructive' },
         ],
-      )
+      })
+      if (choice !== 'delete') return
+      try {
+        await deleteLog(log.id)
+        showToast.success({ message: 'Đã xoá nhật ký' })
+      } catch (err) {
+        const msg =
+          getDailyLogErrorMessage(err) ??
+          getErrorMessage(err, 'Không thể xoá nhật ký')
+        showToast.error({ message: msg })
+      }
     },
-    [deleteLog, showToast],
+    [deleteLog, showToast, confirm],
   )
 
   const renderItem = useCallback(

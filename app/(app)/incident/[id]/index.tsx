@@ -6,10 +6,10 @@ import { MaterialIcons } from '@expo/vector-icons'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useFocusEffect } from '@react-navigation/native'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
-import { Text, EmptyState, TopBar, BottomSheet, PrimaryButton, TextField } from '@/components/ui'
+import { Text, EmptyState, TopBar, BottomSheet, PrimaryButton, TextField, useConfirm } from '@/components/ui'
 import { usePrescriptions, useCreatePrescription } from '@/hooks/usePrescription'
 import { useAcceptIncident, useDoctorIncidentDetail } from '@/hooks/useDoctor'
 import { useIncidentDetail, useCancelIncident } from '@/hooks/useIncident'
@@ -25,7 +25,6 @@ import { AiSolutionSection } from '@/components/features/incident/AiSolutionSect
 import { IncidentInfoList } from '@/components/features/incident/IncidentInfoList'
 import { IncidentFooterActions } from '@/components/features/incident/IncidentFooterActions'
 import { CloseRateModal } from '@/components/features/incident/CloseRateModal'
-import { AbandonModal } from '@/components/features/incident/AbandonModal'
 import { AiProcessingBanner } from '@/components/features/incident/AiProcessingBanner'
 import { useAiProcessingStore } from '@/stores/aiProcessingStore'
 import { useAddAddendum } from '@/hooks/useTicketLifecycle'
@@ -56,13 +55,13 @@ export default function IncidentDetailScreen() {
   const router = useRouter()
   const { user } = useAuth()
   const { showToast } = useToast()
+  const confirm = useConfirm()
   const qc = useQueryClient()
   const isDoctor = user?.role === 'doctor'
 
   const [rxModalVisible, setRxModalVisible] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [closeModalVisible, setCloseModalVisible] = useState(false)
-  const [abandonModalVisible, setAbandonModalVisible] = useState(false)
   const [addendumVisible, setAddendumVisible] = useState(false)
   const [addendumContent, setAddendumContent] = useState('')
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
@@ -71,7 +70,7 @@ export default function IncidentDetailScreen() {
   const { mutate: cancelIncident, isPending: isCancelling } = useCancelIncident()
   const { mutate: closeTicket, isPending: isClosing } = useCloseTicket(id)
   const { mutate: rateTicket, isPending: isRating } = useRateTicket(id)
-  const { mutate: abandonResolution, isPending: isAbandoning } = useAbandonResolution(id)
+  const { mutate: abandonResolution } = useAbandonResolution(id)
   const { mutate: addAddendum, isPending: isAddingAddendum } = useAddAddendum(id)
 
   // Chỉ chạy 1 query theo role — tránh duplicate API call (cả 2 đều gọi /tickets/:id v2)
@@ -79,14 +78,46 @@ export default function IncidentDetailScreen() {
   const doctorQuery = useDoctorIncidentDetail(isDoctor ? id : '')
   const { data, isLoading, isError, refetch } = isDoctor ? doctorQuery : farmerQuery
 
-  // Farmer-only: gọi /full để đọc pendingFallbackChoice — auto-open AbandonModal nếu
+  // Farmer-only: gọi /full để đọc pendingFallbackChoice — auto-open dialog nếu
   // owner mở screen mà worker đã reset ticket (offline → mất WS event).
   const ticketFullQuery = useTicketFull(id, !isDoctor)
+
+  // Mở dialog "Bác sĩ chưa phản hồi" qua ConfirmDialog global.
+  // Dùng ref guard để tránh re-show liên tục khi pendingFallbackChoice vẫn true sau dismiss.
+  const abandonShownForRef = useRef<string | null>(null)
+  const openAbandonChoice = useCallback(async () => {
+    if (abandonShownForRef.current === id) return
+    abandonShownForRef.current = id
+    const choice = await confirm.show({
+      title: 'Bác sĩ chưa phản hồi',
+      message: 'Bác sĩ đã tiếp nhận sự cố nhưng không phản hồi. Bạn muốn xử lý thế nào?',
+      icon: 'warning',
+      cancelable: false,
+      actions: [
+        {
+          key: 'FALLBACK_AI',
+          label: 'Chuyển sang AI',
+          description: 'AI sẽ phân tích và đưa ra giải pháp thay thế.',
+          variant: 'primary',
+        },
+        {
+          key: 'REFUND_TICKET',
+          label: 'Hoàn sự cố',
+          description: 'Sự cố bị huỷ, quota được hoàn lại cho bạn.',
+          variant: 'destructive',
+        },
+      ],
+    })
+    if (choice === 'FALLBACK_AI' || choice === 'REFUND_TICKET') {
+      handleAbandon(choice as AbandonResolution)
+    }
+  }, [confirm, id])
+
   useEffect(() => {
     if (!isDoctor && ticketFullQuery.data?.pendingFallbackChoice) {
-      setAbandonModalVisible(true)
+      openAbandonChoice()
     }
-  }, [isDoctor, ticketFullQuery.data?.pendingFallbackChoice])
+  }, [isDoctor, ticketFullQuery.data?.pendingFallbackChoice, openAbandonChoice])
 
   const isAiProcessing = useAiProcessingStore((s) => !!s.pending[id])
   // Safety net: nếu data refresh mà thấy solution.source === 'AI' → clear flag
@@ -158,31 +189,17 @@ export default function IncidentDetailScreen() {
       qc.invalidateQueries({ queryKey: queryKeys.ticketBalance })
       showToast.success({ message: 'Sự cố đã được hoàn lại' })
     })
-    const onAutoRefunded = onlyThisTicket(() => {
-      // Owner để timeout không chọn FALLBACK_AI/REFUND_TICKET → BE auto-refund.
-      useAiProcessingStore.getState().stop(id)
-      setAbandonModalVisible(false)
-      invalidateDetail()
-      qc.invalidateQueries({ queryKey: queryKeys.ticketBalance })
-      showToast.warning({
-        message: 'Sự cố đã được tự động hoàn vì bạn chưa kịp phản hồi.',
-      })
-    })
-    // Open AbandonModal khi nhận fallback offer / required (cũ).
-    // Detail screen dùng modal có context, list screen dùng native Alert (xem incidents.tsx).
-    const openAbandonModal = onlyThisTicket(() => {
-      setAbandonModalVisible(true)
-      qc.invalidateQueries({ queryKey: queryKeys.ticketFull(id) })
-    })
 
+    // NOTE: `ticket.ai.fallback.offered`, `ticket.fallback-required`,
+    // `ticket.abandon.auto_refunded` đăng ký ở root layout qua
+    // `useGlobalIncidentRealtime` — listener đó tự invalidate detail/full key của
+    // ticket này nên detail screen sẽ re-fetch và useEffect(pendingFallbackChoice)
+    // mở dialog khi cần (cho cả live event + offline recovery).
     const listeners = [
       ['ticket.resolved', onResolved],
-      ['ticket.fallback-required', openAbandonModal],
       ['ticket.closed', onClosed],
       ['ticket.ai.resolved', onAiResolved],
-      ['ticket.ai.fallback.offered', openAbandonModal],
       ['ticket.abandon.refunded', onAbandonRefunded],
-      ['ticket.abandon.auto_refunded', onAutoRefunded],
     ] as const
 
     listeners.forEach(([event, handler]) => socketService.on(event, handler))
@@ -263,19 +280,17 @@ export default function IncidentDetailScreen() {
   }
 
   const handleAbandon = (resolution: AbandonResolution) => {
-    // Với FALLBACK_AI: đóng modal + bật flag ngay để UI render banner "AI đang phân tích".
+    // Với FALLBACK_AI: bật flag ngay để UI render banner "AI đang phân tích".
     // Mutation chạy nền; nếu fail → rollback flag.
     if (resolution === 'FALLBACK_AI') {
-      setAbandonModalVisible(false)
       useAiProcessingStore.getState().start(id)
     }
     abandonResolution(
       { resolution },
       {
         onSuccess: () => {
-          if (resolution !== 'FALLBACK_AI') setAbandonModalVisible(false)
           showToast.success({
-            message: resolution === 'FALLBACK_AI' ? 'Đã chuyển sang AI xử lý' : 'Đã hoàn ticket',
+            message: resolution === 'FALLBACK_AI' ? 'Đã chuyển sang AI xử lý' : 'Đã hoàn sự cố',
           })
         },
         onError: (err) => {
@@ -471,13 +486,6 @@ export default function IncidentDetailScreen() {
         isRating={isRating}
         onClose={() => setCloseModalVisible(false)}
         onSubmit={handleCloseSubmit}
-      />
-
-      <AbandonModal
-        visible={abandonModalVisible}
-        isPending={isAbandoning}
-        onClose={() => setAbandonModalVisible(false)}
-        onSelect={handleAbandon}
       />
 
       <PrescriptionModal

@@ -18,10 +18,12 @@ import { queryClient } from '@/lib/queryClient'
 import { useAuthStore } from '@/stores/authStore'
 import { registerUnauthorizedHandler } from '@/services/api/client'
 import { Toast, useToastState } from '@/components/ui/Toast'
+import { ConfirmProvider } from '@/components/ui'
 import { AppContext } from '@/hooks/useToast'
 import { socketService } from '@/services/socket/socketService'
 import { NotificationBanner } from '@/components/features/notification/NotificationBanner'
 import { ChatNotificationBanner } from '@/components/features/incident/ChatNotificationBanner'
+import { useGlobalIncidentRealtime } from '@/hooks/useGlobalIncidentRealtime'
 
 LogBox.ignoreLogs(['SafeAreaView has been deprecated'])
 SplashScreen.preventAutoHideAsync()
@@ -29,6 +31,11 @@ registerUnauthorizedHandler(() => {
   socketService.disconnect()
   useAuthStore.getState().logout()
 })
+
+function GlobalRealtimeBridge() {
+  useGlobalIncidentRealtime()
+  return null
+}
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -68,18 +75,22 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <SafeAreaProvider>
           <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Protected guard={isAuthenticated}>
-                <Stack.Screen name='(app)' options={{ animation: 'fade' }} />
-              </Stack.Protected>
-              <Stack.Protected guard={!isAuthenticated}>
-                <Stack.Screen name='(auth)' options={{ animation: 'fade' }} />
-              </Stack.Protected>
-            </Stack>
-            {/* Banners return null until a notification arrives — no native views at startup */}
-            <NotificationBanner />
-            <ChatNotificationBanner />
-            {toast.visible && <Toast {...toast} onHide={hideToast} />}
+            <ConfirmProvider>
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Protected guard={isAuthenticated}>
+                  <Stack.Screen name='(app)' options={{ animation: 'fade' }} />
+                </Stack.Protected>
+                <Stack.Protected guard={!isAuthenticated}>
+                  <Stack.Screen name='(auth)' options={{ animation: 'fade' }} />
+                </Stack.Protected>
+              </Stack>
+              {/* Banners return null until a notification arrives — no native views at startup */}
+              <NotificationBanner />
+              <ChatNotificationBanner />
+              {/* Root-level realtime — popup fallback AI hoạt động kể cả khi user chưa từng mở tab Incidents (lazy mount). */}
+              <GlobalRealtimeBridge />
+              {toast.visible && <Toast {...toast} onHide={hideToast} />}
+            </ConfirmProvider>
           </GestureHandlerRootView>
         </SafeAreaProvider>
       </QueryClientProvider>

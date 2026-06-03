@@ -1,8 +1,8 @@
-import { View, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native'
+import { View, ScrollView, StyleSheet, TouchableOpacity } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { MaterialIcons } from '@expo/vector-icons'
-import { Text, AvatarPicker } from '@/components/ui'
+import { Text, AvatarPicker, useConfirm } from '@/components/ui'
 import { useAuth } from '@/hooks/useAuth'
 import { useUpdateAvatar } from '@/hooks/useUpdateAvatar'
 import { getDefaultAvatar } from '@/constants/user'
@@ -10,13 +10,20 @@ import { getDefaultAvatar } from '@/constants/user'
 export default function DoctorProfileScreen() {
   const { user, logout } = useAuth()
   const router = useRouter()
+  const confirm = useConfirm()
   const handleAvatarChange = useUpdateAvatar()
 
-  const handleLogout = () => {
-    Alert.alert('Đăng xuất', 'Bạn có chắc muốn đăng xuất không?', [
-      { text: 'Hủy', style: 'cancel' },
-      { text: 'Đăng xuất', style: 'destructive', onPress: async () => { try { await logout() } catch {} } },
-    ])
+  const handleLogout = async () => {
+    const choice = await confirm.show({
+      title: 'Đăng xuất',
+      message: 'Bạn có chắc muốn đăng xuất không?',
+      actions: [
+        { key: 'cancel', label: 'Huỷ', variant: 'cancel' },
+        { key: 'logout', label: 'Đăng xuất', variant: 'destructive' },
+      ],
+    })
+    if (choice !== 'logout') return
+    try { await logout() } catch {}
   }
 
   return (
