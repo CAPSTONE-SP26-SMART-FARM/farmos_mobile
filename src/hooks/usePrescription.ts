@@ -45,6 +45,10 @@ export function useCreatePrescription(ticketId: string) {
     mutationFn: (body: CreatePrescriptionBody) => prescriptionApi.create(ticketId, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.prescriptions.list(ticketId) })
+      // Prescription nằm trong /full payload + status ticket có thể chuyển.
+      qc.invalidateQueries({ queryKey: queryKeys.ticketFull(ticketId) })
+      qc.invalidateQueries({ queryKey: queryKeys.incident.detail(ticketId) })
+      qc.invalidateQueries({ queryKey: queryKeys.incident.doctorDetail(ticketId) })
     },
   })
 }

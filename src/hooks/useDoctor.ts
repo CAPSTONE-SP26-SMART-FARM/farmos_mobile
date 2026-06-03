@@ -137,6 +137,13 @@ export function useAcceptIncident() {
     onSuccess: (_data, ticketId) => {
       qc.invalidateQueries({ queryKey: ['incident', 'doctor-list'] })
       qc.invalidateQueries({ queryKey: queryKeys.incident.doctorDetail(ticketId) })
+      // v2 endpoint trả về cùng ticket — invalidate cả detail key.
+      qc.invalidateQueries({ queryKey: queryKeys.incident.detail(ticketId) })
+      qc.invalidateQueries({ queryKey: queryKeys.ticketFull(ticketId) })
+      // Broadcast pending list: ticket vừa accept không còn trong "Yêu cầu mới".
+      qc.invalidateQueries({ queryKey: queryKeys.broadcast.pending })
+      // Accept tăng acceptanceRate + byStatus(open→assigned) trong stats.
+      qc.invalidateQueries({ queryKey: ['incident', 'doctor-stats'] })
     },
   })
 }
