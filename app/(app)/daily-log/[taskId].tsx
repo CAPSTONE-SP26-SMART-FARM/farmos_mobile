@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  View, ScrollView, StyleSheet,
-  KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback,
+  View, StyleSheet, useWindowDimensions,
 } from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { MaterialIcons } from '@expo/vector-icons'
@@ -19,8 +19,12 @@ import { uploadImageToCloudinary } from '@/utils/cloudinary'
 
 const MAX_IMAGES = 5
 
+// Phần cố định phía trên vùng scroll (grabber + SheetHeader) trong formSheet.
+const HEADER_HEIGHT = 160
+
 export default function DailyLogSubmitScreen() {
   const router = useRouter()
+  const { height: screenHeight } = useWindowDimensions()
   const { taskId } = useLocalSearchParams<{ taskId: string }>()
 
   const { showToast } = useToast()
@@ -158,14 +162,14 @@ export default function DailyLogSubmitScreen() {
           canDone={canSubmit && !isLoading}
         />
 
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <ScrollView
-              style={styles.scrollView}
-              contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps='handled'
-            >
+        <KeyboardAwareScrollView
+          style={[styles.scrollView, { height: screenHeight - HEADER_HEIGHT }]}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps='handled'
+          enableOnAndroid
+          extraHeight={150}
+        >
               <WindowBanner />
 
               {serverError ? (
@@ -222,9 +226,7 @@ export default function DailyLogSubmitScreen() {
                   onRemove={remove}
                 />
               </View>
-            </ScrollView>
-          </TouchableWithoutFeedback>
-        </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
       </SafeAreaView>
     </View>
   )

@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  View, ScrollView, StyleSheet, Image, Pressable,
-  KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback,
-  ActivityIndicator,
+  View, StyleSheet, Image, Pressable, ActivityIndicator, useWindowDimensions,
 } from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
@@ -21,6 +20,9 @@ import { extractApiError, getDailyLogErrorMessage } from '@/utils/error'
 import type { AttachmentItem, DailyLog, MyDailyLogsRes } from '@/types/dailyLog'
 
 const MAX_IMAGES = 5
+
+// Phần cố định phía trên vùng scroll (grabber + SheetHeader) trong formSheet.
+const HEADER_HEIGHT = 160
 
 type CachedPages = { pages: MyDailyLogsRes[]; pageParams: unknown[] }
 
@@ -48,6 +50,7 @@ function useCachedLog(taskId: string | undefined, logId: string): DailyLog | und
 
 export default function DailyLogEditScreen() {
   const router = useRouter()
+  const { height: screenHeight } = useWindowDimensions()
   const { logId, taskId } = useLocalSearchParams<{
     logId: string
     taskId?: string
@@ -239,14 +242,14 @@ export default function DailyLogEditScreen() {
           canDone={canSubmit && !isLoading}
         />
 
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <ScrollView
-              style={styles.scrollView}
-              contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps='handled'
-            >
+        <KeyboardAwareScrollView
+          style={[styles.scrollView, { height: screenHeight - HEADER_HEIGHT }]}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps='handled'
+          enableOnAndroid
+          extraHeight={150}
+        >
               <WindowBanner />
 
               {serverError ? (
@@ -320,9 +323,7 @@ export default function DailyLogEditScreen() {
                   onRemove={remove}
                 />
               </View>
-            </ScrollView>
-          </TouchableWithoutFeedback>
-        </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
       </SafeAreaView>
     </View>
   )

@@ -1,7 +1,5 @@
-import {
-  View, ScrollView, StyleSheet, KeyboardAvoidingView, Platform,
-  Keyboard, TouchableWithoutFeedback,
-} from 'react-native'
+import { View, StyleSheet, useWindowDimensions, Keyboard } from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { useForm } from 'react-hook-form'
@@ -18,8 +16,12 @@ import type { CreateBankAccountBody } from '@/types/bankAccount'
 
 type FormData = CreateBankAccountBody
 
+// Phần cố định phía trên vùng scroll (grabber + SheetHeader) trong formSheet.
+const HEADER_HEIGHT = 160
+
 export default function BankAccountFormScreen() {
   const router = useRouter()
+  const { height: screenHeight } = useWindowDimensions()
   const { showToast } = useToast()
   const { id } = useLocalSearchParams<{ id?: string }>()
   const isEdit = !!id
@@ -98,14 +100,14 @@ export default function BankAccountFormScreen() {
         canDone={canSave && isValid}
       />
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.content}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps='handled'
-          >
+      <KeyboardAwareScrollView
+        style={[styles.scrollView, { height: screenHeight - HEADER_HEIGHT }]}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps='handled'
+        enableOnAndroid
+        extraHeight={150}
+      >
             <View style={styles.section}>
               <View style={styles.fields}>
                 <FormSelectField
@@ -156,9 +158,7 @@ export default function BankAccountFormScreen() {
                 />
               </View>
             </View>
-          </ScrollView>
-        </TouchableWithoutFeedback>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   )
 }
