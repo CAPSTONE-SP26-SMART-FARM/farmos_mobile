@@ -1,8 +1,8 @@
 import { useMemo, useRef, useState } from 'react'
 import {
-  View, ScrollView, StyleSheet, KeyboardAvoidingView, Platform,
-  Keyboard, TouchableWithoutFeedback, TouchableOpacity, Image,
+  View, StyleSheet, TouchableOpacity, Image, useWindowDimensions,
 } from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import * as ImagePicker from 'expo-image-picker'
 import { Stack, useRouter } from 'expo-router'
@@ -33,6 +33,10 @@ const SEVERITY_OPTIONS = (Object.keys(SEVERITY_META) as IncidentSeverity[]).map(
 
 const MAX_IMAGES = 3
 
+// Phần cố định phía trên vùng scroll (grabber + SheetHeader) mà formSheet không phủ.
+// Trừ khỏi screenHeight để KeyboardAwareScrollView biết đúng vùng scrollable trong sheet.
+const HEADER_HEIGHT = 160
+
 // Map field paths backend có thể trả về → input mặc định ở form.
 type FieldErrors = {
   categoryConfigId?: string
@@ -45,6 +49,7 @@ type FieldErrors = {
 
 export default function CreateIncidentScreen() {
   const router = useRouter()
+  const { height: screenHeight } = useWindowDimensions()
   const { showToast } = useToast()
   const { mutate, isPending } = useCreateIncident()
   const { data: milestones = [], isLoading: isLoadingMilestones } = useMyMilestones()
@@ -214,14 +219,14 @@ export default function CreateIncidentScreen() {
           canDone={canSubmit && !isLoading}
         />
 
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <ScrollView
-              style={styles.scrollView}
-              contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps='handled'
-            >
+        <KeyboardAwareScrollView
+          style={[styles.scrollView, { height: screenHeight - HEADER_HEIGHT }]}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps='handled'
+          enableOnAndroid
+          extraHeight={150}
+        >
               {serverError ? (
                 <View style={styles.errorBanner}>
                   <MaterialIcons name='error-outline' size={18} color='#B91C1C' />
@@ -408,9 +413,7 @@ export default function CreateIncidentScreen() {
                   </View>
                 </View>
               </View>
-            </ScrollView>
-          </TouchableWithoutFeedback>
-        </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
       </SafeAreaView>
     </View>
   )

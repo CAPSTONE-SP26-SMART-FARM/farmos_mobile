@@ -1,7 +1,5 @@
-import {
-  View, ScrollView, StyleSheet, KeyboardAvoidingView, Platform,
-  Keyboard, TouchableWithoutFeedback,
-} from 'react-native'
+import { View, StyleSheet, useWindowDimensions, Keyboard } from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Stack, useRouter } from 'expo-router'
 import { useForm } from 'react-hook-form'
@@ -25,8 +23,12 @@ type FormData = {
   doctorNote?: string
 }
 
+// Phần cố định phía trên vùng scroll (grabber + SheetHeader) trong formSheet.
+const HEADER_HEIGHT = 160
+
 export default function WithdrawalNewScreen() {
   const router = useRouter()
+  const { height: screenHeight } = useWindowDimensions()
   const { showToast } = useToast()
   const { data: accounts = [] } = useBankAccountList()
   const { data: summary } = useDoctorWalletSummary()
@@ -109,14 +111,14 @@ export default function WithdrawalNewScreen() {
           <Text style={styles.noBankHint}>Thêm tài khoản trước khi tạo yêu cầu rút</Text>
         </View>
       ) : (
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <ScrollView
-              style={styles.scroll}
-              contentContainerStyle={styles.content}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps='handled'
-            >
+        <KeyboardAwareScrollView
+          style={[styles.scroll, { height: screenHeight - HEADER_HEIGHT }]}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps='handled'
+          enableOnAndroid
+          extraHeight={150}
+        >
               <View style={styles.section}>
                 <View style={styles.balanceRow}>
                   <Text style={styles.balanceLabel}>Số dư khả dụng</Text>
@@ -174,9 +176,7 @@ export default function WithdrawalNewScreen() {
                 * Số tiền từ {formatVnd(WD_MIN_AMOUNT)} đến {formatVnd(WD_MAX_AMOUNT)}.{'\n'}
                 * Yêu cầu sẽ được admin duyệt trong vòng 24h.
               </Text>
-            </ScrollView>
-          </TouchableWithoutFeedback>
-        </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
       )}
     </SafeAreaView>
   )

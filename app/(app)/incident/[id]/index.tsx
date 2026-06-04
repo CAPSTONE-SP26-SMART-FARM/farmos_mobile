@@ -16,6 +16,7 @@ import { useIncidentDetail, useCancelIncident } from '@/hooks/useIncident'
 import { useCloseTicket, useRateTicket, useAbandonResolution, useTicketFull } from '@/hooks/useTicketLifecycle'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
+import { useDoctorTicketRemoved } from '@/hooks/useDoctorTicketRemoved'
 import { socketService } from '@/services/socket/socketService'
 import { useActiveTicketStore } from '@/stores/activeTicketStore'
 import { queryKeys } from '@/constants/queryKeys'
@@ -28,7 +29,7 @@ import { CloseRateModal } from '@/components/features/incident/CloseRateModal'
 import { AiProcessingBanner } from '@/components/features/incident/AiProcessingBanner'
 import { useAiProcessingStore } from '@/stores/aiProcessingStore'
 import { useAddAddendum } from '@/hooks/useTicketLifecycle'
-import { getErrorMessage } from '@/utils/error'
+import { extractApiError, getErrorMessage } from '@/utils/error'
 import type { CreatePrescriptionBody } from '@/types/prescription'
 import type { AbandonResolution } from '@/types/ticketLifecycle'
 
@@ -66,6 +67,11 @@ export default function IncidentDetailScreen() {
   const [addendumContent, setAddendumContent] = useState('')
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
   const [showSlaInfo, setShowSlaInfo] = useState(false)
+
+  // Doctor: nếu ticket đang xem bị gỡ khỏi pool (CANCELLED bởi farmer / ACCEPTED
+  // bởi BS khác / AI_PROCESSING / AI_RESOLVED / REFUNDED / AUTO_REFUNDED) →
+  // toast theo reason + back về list. Subscribe `ticket.broadcast.removed`.
+  useDoctorTicketRemoved(id)
 
   const { mutate: cancelIncident, isPending: isCancelling } = useCancelIncident()
   const { mutate: closeTicket, isPending: isClosing } = useCloseTicket(id)
@@ -195,6 +201,9 @@ export default function IncidentDetailScreen() {
     // `useGlobalIncidentRealtime` — listener đó tự invalidate detail/full key của
     // ticket này nên detail screen sẽ re-fetch và useEffect(pendingFallbackChoice)
     // mở dialog khi cần (cho cả live event + offline recovery).
+    //
+    // NOTE: `ticket.broadcast.removed` được handle bởi `useDoctorTicketRemoved`
+    // (toast + back về list) — gọi ở đầu component.
     const listeners = [
       ['ticket.resolved', onResolved],
       ['ticket.closed', onClosed],
@@ -304,7 +313,23 @@ export default function IncidentDetailScreen() {
   const handleAcceptIncident = () => {
     acceptIncident(id, {
       onSuccess: () => { showToast.success({ message: 'Tiếp nhận sự cố thành công!' }); refetch() },
-      onError: (err) => showToast.error({ message: getErrorMessage(err, 'Tiếp nhận thất bại') }),
+      onError: (err) => {
+        // BE trả 422 với errors[0].path = 'ticketId' | 'assignedTo' khi ticket
+        // đã không còn khả dụng (cancelled / ended / already assigned). Trường
+        // hợp này race với listener `ticket.broadcast.removed` chưa kịp fire —
+        // tự back ra list ngay thay vì để user retry vô ích.
+        const ex = extractApiError(err)
+        const errPath = ex.errors[0]?.path
+        const isStale =
+          ex.statusCode === 422 && (errPath === 'ticketId' || errPath === 'assignedTo')
+        const message = getErrorMessage(err, 'Tiếp nhận thất bại')
+        if (isStale) {
+          showToast.error({ message })
+          if (router.canGoBack()) router.back()
+          return
+        }
+        showToast.error({ message })
+      },
     })
   }
 

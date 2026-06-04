@@ -238,15 +238,11 @@ export default function IncidentsScreen() {
   useFocusEffect(useCallback(() => { refetch() }, [refetch]))
 
   useEffect(() => {
-    const onBroadcast = () => {
-      if (!isDoctor) return
-      qc.invalidateQueries({ queryKey: queryKeys.broadcast.pending })
-      showToast.success({ message: 'Có yêu cầu sự cố mới!' })
-    }
-    const onCreated = () => {
-      if (!isDoctor) return
-      qc.invalidateQueries({ queryKey: queryKeys.incident.doctorList() })
-    }
+    // Doctor-specific events (`ticket.broadcast`, `ticket.incident.created`,
+    // `ticket.broadcast.removed`) đã được đăng ký global qua
+    // `useGlobalDoctorRealtime` ở root layout — đảm bảo doctor nhận thông báo
+    // ngay cả khi chưa từng mở tab này (Expo tabs lazy-mount).
+    // Ở đây giữ lại các handler chỉ cho farmer.
     const onResolved = () => {
       if (isDoctor) return
       qc.invalidateQueries({ queryKey: queryKeys.incident.list() })
@@ -262,13 +258,9 @@ export default function IncidentsScreen() {
     // NOTE: `ticket.ai.fallback.offered`, `ticket.fallback-required`, `ticket.abandon.auto_refunded`
     // được đăng ký ở root layout qua `useGlobalIncidentRealtime` — tránh bug
     // popup không hiện khi tab Incidents chưa mount (Expo tabs lazy-mount).
-    socketService.on('ticket.broadcast', onBroadcast)
-    socketService.on('ticket.incident.created', onCreated)
     socketService.on('ticket.resolved', onResolved)
     socketService.on('ticket.ai.resolved', onAiResolved)
     return () => {
-      socketService.off('ticket.broadcast', onBroadcast)
-      socketService.off('ticket.incident.created', onCreated)
       socketService.off('ticket.resolved', onResolved)
       socketService.off('ticket.ai.resolved', onAiResolved)
     }
