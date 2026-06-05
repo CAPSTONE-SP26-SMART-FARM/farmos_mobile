@@ -9,6 +9,13 @@ export function useTicketFull(ticketId: string, enabled = true) {
     queryKey: queryKeys.ticketFull(ticketId),
     queryFn: () => ticketLifecycleApi.getFull(ticketId),
     enabled: enabled && !!ticketId,
+    // Defense-in-depth: BE round 4 đã emit `ticket.rated` realtime với
+    // stakeholder audience → primary sync qua listener trong detail screen.
+    // Polling 30s chỉ cover edge case socket disconnect / event miss.
+    refetchInterval: (query) => {
+      const status = (query.state.data?.ticket as { status?: string } | undefined)?.status
+      return status === 'resolved' ? 30000 : false
+    },
   })
 }
 

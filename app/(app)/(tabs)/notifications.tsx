@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { MaterialIcons } from '@expo/vector-icons'
 import { Text, TopBar, EmptyState } from '@/components/ui'
-import { useNotifications, useMarkNotificationRead } from '@/hooks/useNotification'
+import { useNotifications, useMarkNotificationRead, useUnreadNotificationCount } from '@/hooks/useNotification'
 import { formatRelativeTime } from '@/utils/date'
 import { resolveNotificationIcon } from '@/utils/notification'
 import { icons } from '@/constants/icon'
@@ -61,7 +61,12 @@ export default function NotificationsScreen() {
   const { mutate: markRead } = useMarkNotificationRead()
 
   const notifications = data?.data ?? []
-  const unreadCount = notifications.filter((n) => !n.isRead).length
+  // Source unread count từ endpoint riêng (BE round 5, field `unreadCount`).
+  // Trong lúc query loading lần đầu (data undefined) → fallback đếm theo page
+  // hiện tại để badge không nhấp nháy về 0.
+  const { data: unread } = useUnreadNotificationCount()
+  const unreadCount =
+    unread?.unreadCount ?? notifications.filter((n) => !n.isRead).length
 
   const handlePress = (item: Notification) => {
     if (!item.isRead) markRead(item.id)
@@ -129,8 +134,8 @@ const styles = StyleSheet.create({
   itemTime: { fontSize: 11, color: '#9CA3AF', fontFamily: 'Inter_400Regular', flexShrink: 0 },
   itemBody: { fontSize: 13, color: '#6B7280', fontFamily: 'Inter_400Regular', lineHeight: 18 },
   unreadDot: {
-    width: 8, height: 8, borderRadius: 4,
-    backgroundColor: '#15803D', marginTop: 4, flexShrink: 0,
+    width: 10, height: 10, borderRadius: 5,
+    backgroundColor: '#DC2626', marginTop: 4, flexShrink: 0,
   },
   separator: { height: 1, backgroundColor: '#F3F4F6' },
   emptyBox: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 8 },

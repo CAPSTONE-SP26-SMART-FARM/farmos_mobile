@@ -55,6 +55,7 @@ export const queryKeys = {
   ticketFull: (ticketId: string) => ['ticket-full', ticketId] as const,
   notifications: {
     list: (page?: number) => ['notifications', 'list', page] as const,
+    unreadCount: () => ['notifications', 'unread-count'] as const,
   },
   alerts: {
     list: (page?: number) => ['alerts', 'list', page] as const,

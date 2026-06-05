@@ -224,6 +224,13 @@ export default function IncidentDetailScreen() {
       if (router.canGoBack()) router.back()
       else router.replace('/(app)/(tabs)/incidents')
     })
+    // BE Round 4 R9 — multi-device rate sync. Payload:
+    //   { ticketId, stars, ratedBy, ratedAt }
+    // Audience: user:{creatorId} + user:{assignedTo} + ticket:{ticketId}.
+    const onRated = onlyThisTicket(() => {
+      invalidateDetail()
+      qc.invalidateQueries({ queryKey: queryKeys.ticketFull(id) })
+    })
 
     // NOTE: `ticket.ai.fallback.offered`, `ticket.fallback-required`,
     // `ticket.abandon.auto_refunded` đăng ký ở root layout qua
@@ -246,6 +253,8 @@ export default function IncidentDetailScreen() {
       ['ticket.addendum.created', onAddendumCreated],
       // R5 — multi-device delete sync
       ['ticket.deleted', onDeleted],
+      // Issue 2 — multi-device rate sync (BE round 4 cần emit)
+      ['ticket.rated', onRated],
     ] as const
 
     listeners.forEach(([event, handler]) => socketService.on(event, handler))
@@ -270,7 +279,13 @@ export default function IncidentDetailScreen() {
   const canAccept = isDoctor && status === 'open' && !data?.assignee
   const isClosed = CLOSED_STATUSES.includes(status as any)
   const canCancel = isCreator && status === 'open'
-  const canClose = isCreator && status === 'resolved'
+  // Defensive multi-device guard (issue 2): nếu /full.rating !== null
+  // (device khác đã rate) → ẩn nút close+rate.
+  // BE round 4: `ticket.closed`/`ticket.rated` đã emit realtime với stakeholder
+  // audience → listener invalidate cache nhanh. Guard này vẫn cần làm UX-first
+  // (hide button trước khi user click), cộng với polling 30s defense-in-depth.
+  const alreadyRated = !!ticketFullQuery.data?.rating
+  const canClose = isCreator && status === 'resolved' && !alreadyRated
   const canResolve = isAssignee && PRESCRIBABLE_STATUSES.includes(status as any)
   const canAddAddendum = isAssignee && (status === 'resolved' || status === 'closed')
   // Chỉ creator + status='cancelled' mới được xoá (BE cũng enforce, đây là UI gate).
@@ -319,6 +334,17 @@ export default function IncidentDetailScreen() {
   }
 
   const handleCloseSubmit = (stars: number, feedback: string) => {
+    // UX-first defensive (issue 2): nếu cache local đã thấy device khác close /
+    // rate → đóng modal + báo, KHÔNG gửi mutation (tiết kiệm round-trip + tránh
+    // BE 422/409 noise). BE-side guard (round 4 R10) là last-line nếu cache
+    // chưa kịp sync.
+    if (alreadyRated || status === 'closed') {
+      setCloseModalVisible(false)
+      showToast.info({ message: 'Sự cố đã được đóng ở thiết bị khác' })
+      refetch()
+      ticketFullQuery.refetch()
+      return
+    }
     closeTicket(undefined, {
       onSuccess: () => {
         if (stars > 0) {
@@ -329,9 +355,20 @@ export default function IncidentDetailScreen() {
                 showToast.success({ message: 'Đã đóng và đánh giá sự cố' })
                 setCloseModalVisible(false)
               },
-              onError: () => {
-                showToast.success({ message: 'Đã đóng sự cố' })
+              onError: (err) => {
+                // BE round 4 R10: rate trả 409 `TicketRatingAlreadyExists` nếu
+                // device khác đã rate. Lúc đó close thành công nhưng rate fail
+                // — show context cụ thể thay vì silent "đã đóng sự cố".
+                const ex = extractApiError(err)
+                if (ex.statusCode === 409) {
+                  showToast.info({
+                    message: ex.message ?? 'Đã có đánh giá cho yêu cầu hỗ trợ này.',
+                  })
+                } else {
+                  showToast.success({ message: 'Đã đóng sự cố' })
+                }
                 setCloseModalVisible(false)
+                ticketFullQuery.refetch()
               },
             }
           )
@@ -340,7 +377,22 @@ export default function IncidentDetailScreen() {
           setCloseModalVisible(false)
         }
       },
-      onError: (err) => showToast.error({ message: getErrorMessage(err, 'Đóng sự cố thất bại') }),
+      onError: (err) => {
+        // BE round 4 R10: close trả 422 `TicketCloseState` nếu status không
+        // còn 'resolved' (device khác đã đóng). Convert sang toast info friendly
+        // + refetch để UI sync.
+        const ex = extractApiError(err)
+        if (ex.statusCode === 422) {
+          setCloseModalVisible(false)
+          showToast.info({
+            message: ex.message ?? 'Sự cố đã được đóng ở thiết bị khác.',
+          })
+          refetch()
+          ticketFullQuery.refetch()
+          return
+        }
+        showToast.error({ message: getErrorMessage(err, 'Đóng sự cố thất bại') })
+      },
     })
   }
 

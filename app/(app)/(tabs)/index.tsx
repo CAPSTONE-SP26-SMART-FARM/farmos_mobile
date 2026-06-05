@@ -3,7 +3,8 @@ import { View, ScrollView, StyleSheet, TouchableOpacity, Image } from 'react-nat
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
-import { Text } from '@/components/ui'
+import { NotificationBadge, Text } from '@/components/ui'
+import { useUnreadNotificationCount } from '@/hooks/useNotification'
 import { useAuth } from '@/hooks/useAuth'
 import { icons } from '@/constants/icon'
 import { getDefaultAvatar } from '@/constants/user'
@@ -119,6 +120,8 @@ export default function HomeScreen() {
   const { user } = useAuth()
   const isDoctor = user?.role === 'doctor'
   const userName = user?.fullName ?? 'FarmOS'
+  const { data: unread } = useUnreadNotificationCount()
+  const unreadCount = unread?.unreadCount ?? 0
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
@@ -143,6 +146,7 @@ export default function HomeScreen() {
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <NotiIcon width={36} height={36} />
+          <NotificationBadge count={unreadCount} style={styles.notiBadge} />
         </TouchableOpacity>
       </View>
 
@@ -171,6 +175,13 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // Badge offset top-right của bell icon. Negative margins để overlap nhẹ ra
+  // ngoài viền nút.
+  notiBadge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
   },
   scroll: { paddingHorizontal: 16, paddingTop: 8 },
   bottomSpacer: { height: 24 },

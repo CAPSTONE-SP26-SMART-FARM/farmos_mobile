@@ -118,15 +118,20 @@ export function NotificationBanner() {
       pointerEvents='box-none'
     >
       <TouchableOpacity
-        style={[styles.card, { borderLeftWidth: 4, borderLeftColor: meta.color }]}
+        style={[
+          styles.card,
+          // Banner sáng + có nhận diện: bg tinted theo meta.bg, accent border
+          // dày hơn, không còn xám flat. Title đậm, subtitle đủ contrast.
+          { backgroundColor: meta.bg, borderColor: meta.color },
+        ]}
         onPress={handlePress}
-        activeOpacity={0.92}
+        activeOpacity={0.88}
       >
-        <View style={[styles.icon, { backgroundColor: meta.bg }]}>
-          <MaterialIcons name={meta.icon} size={20} color={meta.color} />
+        <View style={[styles.icon, { backgroundColor: '#FFFFFF' }]}>
+          <MaterialIcons name={meta.icon} size={22} color={meta.color} />
         </View>
         <View style={styles.body}>
-          <Text style={styles.title} numberOfLines={1}>
+          <Text style={[styles.title, { color: meta.color }]} numberOfLines={1}>
             {capitalize(shortAlertTitle(notif.title))}
           </Text>
           <Text style={styles.sub} numberOfLines={1}>
@@ -139,20 +144,33 @@ export function NotificationBanner() {
 }
 
 const styles = StyleSheet.create({
-  container: { position: 'absolute', left: 16, right: 16, zIndex: 9999 },
+  container: { position: 'absolute', left: 12, right: 12, zIndex: 9999 },
   card: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#FFFFFF', borderRadius: 16,
-    paddingHorizontal: 14, paddingVertical: 12, gap: 12,
-    borderWidth: 1, borderColor: '#E5E7EB',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08, shadowRadius: 16, elevation: 10,
+    borderRadius: 18,
+    paddingHorizontal: 14, paddingVertical: 14, gap: 12,
+    borderWidth: 1.5,
+    // Shadow đậm hơn để banner nổi rõ trên mọi background — đặc biệt trên list
+    // / screen có nhiều card khác.
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.22,
+    shadowRadius: 20,
+    elevation: 14,
   },
   icon: {
-    width: 36, height: 36, borderRadius: 18,
+    width: 40, height: 40, borderRadius: 20,
     justifyContent: 'center', alignItems: 'center',
+    // White circle có shadow nhẹ — pop khỏi tinted background
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   body: { flex: 1 },
-  title: { fontSize: 14, lineHeight: 20, color: '#111827', fontFamily: 'Inter_600SemiBold' },
-  sub: { fontSize: 12, lineHeight: 16, color: '#6B7280', fontFamily: 'Inter_400Regular', marginTop: 2 },
+  // Title dùng accent color của type (vd đỏ cho alert, xanh cho ticket) →
+  // tăng nhận diện. Subtitle dùng màu tối (#1F2937) thay vì xám flat #6B7280.
+  title: { fontSize: 14, lineHeight: 20, fontFamily: 'Inter_700Bold' },
+  sub: { fontSize: 13, lineHeight: 18, color: '#1F2937', fontFamily: 'Inter_500Medium', marginTop: 2 },
 })

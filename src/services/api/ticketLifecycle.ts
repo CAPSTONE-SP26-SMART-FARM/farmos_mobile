@@ -27,12 +27,23 @@ export type TicketAddendum = {
   createdAt: string
 }
 
+export type TicketRating = {
+  id: string
+  ticketId: string
+  stars: number       // 1..5
+  feedback: string | null
+  ratedBy: string     // creatorId
+  createdAt: string
+}
+
 export type TicketFullRes = {
   ticket: unknown
   solution: TicketSolution | null
   prescription: PrescriptionFull | null
   addenda: TicketAddendum[]
-  rating: unknown
+  /** null = chưa rate. Mobile defensive đọc field này để disable close+rate
+   *  button nếu đã rate ở device khác (xem issue 2). */
+  rating: TicketRating | null
   broadcasts: unknown[]
   abandonLogs: unknown[]
   // BE flag P2-2: true khi worker abandon-detect đã reset ticket nhưng owner chưa chọn

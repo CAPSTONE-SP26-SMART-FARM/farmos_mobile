@@ -17,8 +17,17 @@ export function useIncidentDetail(ticketId: string) {
     queryKey: queryKeys.incident.detail(ticketId),
     queryFn: () => incidentApi.detail(ticketId),
     enabled: !!ticketId,
-    refetchInterval: (query) =>
-      query.state.data?.status === 'open' ? 5000 : false,
+    // Polling khi status còn "active":
+    //   - 'open': 5s (chờ doctor accept — UX feel live).
+    //   - 'resolved': 30s defense-in-depth. BE round 4 đã emit
+    //     `ticket.closed`/`ticket.rated` realtime → primary sync; polling chỉ
+    //     làm safety net khi socket disconnected / event miss.
+    refetchInterval: (query) => {
+      const status = query.state.data?.status
+      if (status === 'open') return 5000
+      if (status === 'resolved') return 30000
+      return false
+    },
   })
 }
 
