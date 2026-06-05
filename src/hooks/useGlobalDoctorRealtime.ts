@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { useToast } from '@/hooks/useToast'
 import { useAuth } from '@/hooks/useAuth'
 import { socketService } from '@/services/socket/socketService'
 import { queryKeys } from '@/constants/queryKeys'
@@ -19,7 +18,6 @@ import { queryKeys } from '@/constants/queryKeys'
 export function useGlobalDoctorRealtime() {
   const { user } = useAuth()
   const qc = useQueryClient()
-  const { showToast } = useToast()
 
   const isDoctor = user?.role === 'doctor'
 
@@ -31,9 +29,11 @@ export function useGlobalDoctorRealtime() {
       qc.invalidateQueries({ queryKey: queryKeys.incident.doctorList() })
     }
 
+    // Cross-user event (farmer tạo sự cố mới) — BE đã gửi `notification.created`
+    // tới doctor pool → banner tự render qua NotificationBanner. KHÔNG showToast
+    // để tránh duplicate (xem policy `useToast.ts`).
     const onBroadcast = () => {
       invalidatePool()
-      showToast.success({ message: 'Có yêu cầu sự cố mới!' })
     }
 
     const onIncidentCreated = () => {
@@ -60,5 +60,5 @@ export function useGlobalDoctorRealtime() {
       socketService.off('ticket.incident.created', onIncidentCreated)
       socketService.off('ticket.broadcast.removed', onBroadcastRemoved)
     }
-  }, [isDoctor, qc, showToast])
+  }, [isDoctor, qc])
 }

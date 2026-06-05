@@ -38,6 +38,15 @@ export const incidentApi = {
       .post<{ data: IncidentTicket }>(`/tickets/${ticketId}/cancel`, { reason })
       .then((r) => r.data.data),
 
+  /**
+   * Xoá sự cố đã huỷ khỏi danh sách của farmer (xem BE doc round 3 issue 1).
+   * BE enforce: chỉ creator + chỉ ticket `status='cancelled'` mới được xoá.
+   * Endpoint trả 204 No Content khi success, 404 nếu không tồn tại / không
+   * thuộc về caller, 422 nếu status khác cancelled.
+   */
+  remove: (ticketId: string) =>
+    apiClient.delete<void>(`/tickets/${ticketId}`).then(() => undefined),
+
   myMilestones: () =>
     apiClient
       .get<{ data: { data: FarmerMyMilestone[] } }>('/production-milestone/farmer/my-milestones')

@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/constants/queryKeys'
 import { withdrawalApi } from '@/services/api/withdrawal'
 import { socketService } from '@/services/socket/socketService'
-import { useToast } from '@/hooks/useToast'
 import type {
   WithdrawalStatus,
   CreateWithdrawalBody,
@@ -76,26 +75,18 @@ export function useReportWithdrawalNotReceived(id: string) {
 
 export function useWithdrawalListeners() {
   const qc = useQueryClient()
-  const { showToast } = useToast()
 
   useEffect(() => {
-    const onApproved = (payload: { withdrawalId?: string }) => {
+    // Admin → doctor cross-user events. BE đã gửi `notification.created` cho
+    // mỗi event → render qua NotificationBanner. Mobile chỉ invalidate cache
+    // để screen rút tiền refresh tự động (xem policy `useToast.ts`).
+    const invalidateOne = (withdrawalId?: string) => {
       qc.invalidateQueries({ queryKey: queryKeys.withdrawal.list() })
-      if (payload?.withdrawalId) qc.invalidateQueries({ queryKey: queryKeys.withdrawal.detail(payload.withdrawalId) })
-      showToast.success({ message: 'Yêu cầu rút đã được duyệt' })
+      if (withdrawalId) qc.invalidateQueries({ queryKey: queryKeys.withdrawal.detail(withdrawalId) })
     }
-    const onPaid = (payload: { withdrawalId?: string; transferReference?: string }) => {
-      qc.invalidateQueries({ queryKey: queryKeys.withdrawal.list() })
-      if (payload?.withdrawalId) qc.invalidateQueries({ queryKey: queryKeys.withdrawal.detail(payload.withdrawalId) })
-      const ref = payload?.transferReference || 'N/A'
-      showToast.success({ message: `Đã chuyển khoản: ${ref}` })
-    }
-    const onRejected = (payload: { withdrawalId?: string; rejectReason?: string }) => {
-      qc.invalidateQueries({ queryKey: queryKeys.withdrawal.list() })
-      if (payload?.withdrawalId) qc.invalidateQueries({ queryKey: queryKeys.withdrawal.detail(payload.withdrawalId) })
-      const reason = payload?.rejectReason || 'Không rõ'
-      showToast.error({ message: `Từ chối: ${reason}` })
-    }
+    const onApproved = (payload: { withdrawalId?: string }) => invalidateOne(payload?.withdrawalId)
+    const onPaid = (payload: { withdrawalId?: string }) => invalidateOne(payload?.withdrawalId)
+    const onRejected = (payload: { withdrawalId?: string }) => invalidateOne(payload?.withdrawalId)
     socketService.on('withdrawal.approved', onApproved)
     socketService.on('withdrawal.paid', onPaid)
     socketService.on('withdrawal.rejected', onRejected)
@@ -104,5 +95,5 @@ export function useWithdrawalListeners() {
       socketService.off('withdrawal.paid', onPaid)
       socketService.off('withdrawal.rejected', onRejected)
     }
-  }, [qc, showToast])
+  }, [qc])
 }

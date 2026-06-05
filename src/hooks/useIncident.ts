@@ -51,6 +51,23 @@ export function useCancelIncident() {
   })
 }
 
+/**
+ * Xoá sự cố đã huỷ khỏi danh sách của farmer. Optimistic: remove khỏi list
+ * cache ngay để UX feel snappy. Rollback nếu BE reject (vd ticket không
+ * `cancelled` hoặc race condition).
+ */
+export function useDeleteIncident() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (ticketId: string) => incidentApi.remove(ticketId),
+    onSuccess: (_data, ticketId) => {
+      qc.invalidateQueries({ queryKey: ['incident', 'list'] })
+      qc.invalidateQueries({ queryKey: queryKeys.incident.detail(ticketId) })
+      qc.invalidateQueries({ queryKey: queryKeys.ticketFull(ticketId) })
+    },
+  })
+}
+
 export function useMyMilestones() {
   return useQuery({
     queryKey: queryKeys.productionMilestone.myMilestones,

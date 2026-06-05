@@ -71,10 +71,29 @@ export function NotificationBanner() {
 
   const handlePress = () => {
     dismiss()
-    if (notif?.redirectUrl) {
-      const m = notif.redirectUrl.match(/\/tickets\/([^/]+)/)
-      if (m?.[1]) {
-        router.push(`/(app)/incident/${m[1]}` as any)
+    // BE convention (round 3): redirect URL là path tuyệt đối mobile-friendly:
+    //   /tickets/<id>                      → incident detail
+    //   /wallet                            → doctor wallet
+    //   /wallet/withdrawal/<id>            → withdrawal detail
+    //   /alerts/<id>                       → alert (chưa có detail screen, route về tab Alerts)
+    const url = notif?.redirectUrl ?? ''
+    if (url) {
+      const ticketMatch = url.match(/^\/tickets\/([^/]+)/)
+      if (ticketMatch?.[1]) {
+        router.push(`/(app)/incident/${ticketMatch[1]}` as any)
+        return
+      }
+      const withdrawalMatch = url.match(/^\/wallet\/withdrawal\/([^/]+)/)
+      if (withdrawalMatch?.[1]) {
+        router.push(`/(app)/withdrawal/${withdrawalMatch[1]}` as any)
+        return
+      }
+      if (url === '/wallet' || url.startsWith('/wallet')) {
+        router.push('/(app)/wallet' as any)
+        return
+      }
+      if (url.startsWith('/alerts')) {
+        router.push('/(app)/(tabs)/alerts')
         return
       }
     }

@@ -3,12 +3,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { prescriptionApi } from '@/services/api/prescription'
 import { socketService } from '@/services/socket/socketService'
 import { queryKeys } from '@/constants/queryKeys'
-import { useToast } from '@/hooks/useToast'
 import type { CreatePrescriptionBody } from '@/types/prescription'
 
 export function usePrescriptions(ticketId: string, enabled = true) {
   const qc = useQueryClient()
-  const { showToast } = useToast()
 
   const query = useQuery({
     queryKey: queryKeys.prescriptions.list(ticketId),
@@ -19,37 +17,18 @@ export function usePrescriptions(ticketId: string, enabled = true) {
 
   useEffect(() => {
     if (!ticketId) return
-    // Payload spec (BE doc `BE--Fix-issue-prescription`):
-    //   { created: { ticketId, prescriptionId, authorId, source }, reissued? }
-    //   - source: 'DOCTOR' khi bác sĩ kê đơn, 'AI' khi AI fallback gen đơn (BR-70)
-    //   - reissued chỉ có ở doctor v2 path (true = kê lại đơn cũ)
-    const handler = (payload: {
-      created: {
-        ticketId: string
-        prescriptionId: string
-        authorId: string
-        source: 'DOCTOR' | 'AI'
-      }
-      reissued?: boolean
-    }) => {
+    // Payload BE: `{ created: { ticketId, prescriptionId, authorId, source }, reissued? }`.
+    // Cross-user event (doctor/AI tạo đơn → farmer nhận) — chỉ invalidate cache.
+    // KHÔNG showToast: BE đã gửi `notification.created` để render banner (xem
+    // policy ở `useToast.ts`). Tránh duplicate (banner + toast cùng nội dung).
+    const handler = (payload: { created: { ticketId: string } }) => {
       if (payload.created.ticketId !== ticketId) return
       qc.invalidateQueries({ queryKey: queryKeys.prescriptions.list(ticketId) })
-      // Cũng invalidate ticket /full vì /full.prescription = latest prescription
-      // — doctor reissue / AI gen mới thì /full cũng đổi.
       qc.invalidateQueries({ queryKey: queryKeys.ticketFull(ticketId) })
-      const isAi = payload.created.source === 'AI'
-      const isReissue = !!payload.reissued
-      showToast.success({
-        message: isAi
-          ? 'AI đã tạo đơn thuốc gợi ý'
-          : isReissue
-            ? 'Bác sĩ đã cập nhật đơn thuốc!'
-            : 'Bác sĩ vừa kê đơn thuốc mới!',
-      })
     }
     socketService.on('prescription.incident.created', handler)
     return () => socketService.off('prescription.incident.created', handler)
-  }, [ticketId, qc, showToast])
+  }, [ticketId, qc])
 
   return query
 }

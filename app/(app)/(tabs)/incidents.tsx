@@ -20,7 +20,8 @@ import { Text, EmptyState, PillTabs } from '@/components/ui'
 import type { PillTabItem } from '@/components/ui'
 import { IncidentCard } from '@/components/features/incident/IncidentCard'
 import { IncidentStatusFilter } from '@/components/features/incident/IncidentStatusFilter'
-import { useIncidentList } from '@/hooks/useIncident'
+import { useDeleteIncident, useIncidentList } from '@/hooks/useIncident'
+import { useConfirm } from '@/components/ui'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { useActiveTicketCategories } from '@/hooks/useTicketCategory'
 import { useDoctorProfile, useUpdateDoctorOnlineStatus } from '@/hooks/useDoctor'
@@ -183,7 +184,28 @@ export default function IncidentsScreen() {
   const { user } = useAuth()
   const { showToast } = useToast()
   const qc = useQueryClient()
+  const confirm = useConfirm()
+  const { mutate: deleteIncident } = useDeleteIncident()
   const isDoctor = user?.role === 'doctor'
+
+  // Long-press card → confirm xoá nếu ticket đã huỷ. Mobile-only fix issue 1.
+  const handleLongPressCard = async (item: { id: string; status: string; title: string }) => {
+    if (item.status !== 'cancelled') return
+    const choice = await confirm.show({
+      title: 'Xoá sự cố',
+      message: `Xoá vĩnh viễn sự cố "${item.title}" khỏi danh sách? Hành động không thể hoàn tác.`,
+      icon: 'warning',
+      actions: [
+        { key: 'DELETE', label: 'Xoá', variant: 'destructive' },
+        { key: 'CANCEL', label: 'Huỷ', variant: 'cancel' },
+      ],
+    })
+    if (choice !== 'DELETE') return
+    deleteIncident(item.id, {
+      onSuccess: () => showToast.success({ message: 'Đã xoá sự cố' }),
+      onError: (err) => showToast.error({ message: getErrorMessage(err, 'Xoá thất bại') }),
+    })
+  }
 
   const [doctorView, setDoctorView] = useState<DoctorView>('broadcasts')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
@@ -243,17 +265,17 @@ export default function IncidentsScreen() {
     // `useGlobalDoctorRealtime` ở root layout — đảm bảo doctor nhận thông báo
     // ngay cả khi chưa từng mở tab này (Expo tabs lazy-mount).
     // Ở đây giữ lại các handler chỉ cho farmer.
+    // Cross-user / system events — BE gửi notification.created riêng để render
+    // banner top-of-screen. Mobile chỉ invalidate list cache (xem policy
+    // `useToast.ts`). KHÔNG showToast để tránh duplicate.
     const onResolved = () => {
       if (isDoctor) return
       qc.invalidateQueries({ queryKey: queryKeys.incident.list() })
-      showToast.success({ message: 'Bác sĩ vừa giải quyết một sự cố' })
     }
     const onAiResolved = (payload: { ticketId: string }) => {
       if (isDoctor) return
-      // Khi AI xong → clear processing flag (an toàn dù user đang ở list hay detail).
       useAiProcessingStore.getState().stop(payload.ticketId)
       qc.invalidateQueries({ queryKey: queryKeys.incident.list() })
-      showToast.success({ message: 'AI đã xử lý xong sự cố' })
     }
     // Status-transition events: invalidate list nhưng KHÔNG toast (tránh spam
     // — đã có toast cho action specific từ doctor / farmer khác).
@@ -270,6 +292,10 @@ export default function IncidentsScreen() {
     socketService.on('ticket.in_progress', invalidateList)
     socketService.on('ticket.cancelled', invalidateList)
     socketService.on('ticket.closed', invalidateList)
+    // R5 — multi-device delete sync (BE Round 3): farmer xoá ticket trên device
+    // A → device B (cùng tài khoản) nhận event, list refresh tự động.
+    // Audience: `user:{creatorId}` → mọi device của creator.
+    socketService.on('ticket.deleted', invalidateList)
     return () => {
       socketService.off('ticket.resolved', onResolved)
       socketService.off('ticket.ai.resolved', onAiResolved)
@@ -277,8 +303,9 @@ export default function IncidentsScreen() {
       socketService.off('ticket.in_progress', invalidateList)
       socketService.off('ticket.cancelled', invalidateList)
       socketService.off('ticket.closed', invalidateList)
+      socketService.off('ticket.deleted', invalidateList)
     }
-  }, [isDoctor, qc, showToast])
+  }, [isDoctor, qc])
 
   // Broadcasts endpoint không support search param → filter client-side theo title / description / ticketNumber.
   // Dataset broadcasts thường nhỏ (chỉ pending) nên cost OK.
@@ -445,6 +472,7 @@ export default function IncidentsScreen() {
                   item.categoryConfigId ? categoryMap[item.categoryConfigId] : undefined
                 }
                 onPress={() => router.push(`/(app)/incident/${item.id}`)}
+                onLongPress={!isDoctor ? () => handleLongPressCard(item) : undefined}
               />
             )}
           />

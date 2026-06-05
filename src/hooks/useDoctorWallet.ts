@@ -3,26 +3,26 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/constants/queryKeys'
 import { doctorWalletApi } from '@/services/api/doctorWallet'
 import { socketService } from '@/services/socket/socketService'
-import { useToast } from '@/hooks/useToast'
 import type { DoctorWalletTransactionType } from '@/types/doctorWallet'
 
 export function useDoctorWalletSummary() {
   const qc = useQueryClient()
-  const { showToast } = useToast()
   const query = useQuery({
     queryKey: queryKeys.doctorWallet.summary,
     queryFn: () => doctorWalletApi.summary(),
   })
 
   useEffect(() => {
+    // System-triggered event (commission auto-credit) — BE đã gửi
+    // `notification.created` để render banner top-of-screen (xem policy
+    // `useToast.ts`). Mobile chỉ invalidate cache.
     const handler = () => {
       qc.invalidateQueries({ queryKey: queryKeys.doctorWallet.summary })
       qc.invalidateQueries({ queryKey: ['doctor-wallet', 'transactions'] })
-      showToast.success({ message: 'Bạn đã nhận được tiền từ một ca sự cố!' })
     }
     socketService.on('doctor.wallet.credited', handler)
     return () => socketService.off('doctor.wallet.credited', handler)
-  }, [qc, showToast])
+  }, [qc])
 
   return query
 }

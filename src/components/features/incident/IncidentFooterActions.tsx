@@ -18,6 +18,10 @@ interface IncidentFooterActionsProps {
   onClose?: () => void
   canResolve?: boolean
   onResolve?: () => void
+  /** Hiện nút xoá khi user là creator của ticket đã huỷ (issue 1). */
+  canDelete?: boolean
+  isDeleting?: boolean
+  onDelete?: () => void
 }
 
 export function IncidentFooterActions({
@@ -27,6 +31,7 @@ export function IncidentFooterActions({
   canCancel, isCancelling, onCancel,
   canClose, onClose,
   canResolve, onResolve,
+  canDelete, isDeleting, onDelete,
 }: IncidentFooterActionsProps) {
   if (isClosed) {
     // Phân biệt đóng (Hoàn tất) vs huỷ — text "đã đóng" generic gây confusion
@@ -34,10 +39,21 @@ export function IncidentFooterActions({
     const label =
       closedReason === 'cancelled' ? 'Sự cố đã huỷ' : 'Sự cố đã hoàn tất'
     return (
-      <View style={styles.wrap}>
-        <View style={[styles.btn, styles.btnDisabled]}>
+      <View style={canDelete ? [styles.wrap, styles.wrapRow] : styles.wrap}>
+        <View style={[styles.btn, styles.btnDisabled, canDelete && { flex: 1 }]}>
           <Text style={[styles.btnText, { color: '#6B7280' }]}>{label}</Text>
         </View>
+        {canDelete ? (
+          <TouchableOpacity
+            style={[styles.btn, styles.btnCancel, { flex: 1 }]}
+            onPress={onDelete}
+            disabled={isDeleting}
+          >
+            <Text style={[styles.btnText, { color: '#DC2626' }]}>
+              {isDeleting ? 'Đang xoá...' : 'Xoá sự cố'}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
     )
   }

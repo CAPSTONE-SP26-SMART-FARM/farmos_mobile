@@ -98,9 +98,8 @@ export function useGlobalIncidentRealtime() {
       qc.invalidateQueries({ queryKey: queryKeys.ticketBalance })
       // Auto-refund cũng đồng nghĩa pending fallback dialog đã không còn relevant.
       confirm.dismiss(fallbackDialogTag(payload.ticketId))
-      showToast.warning({
-        message: 'Sự cố đã được tự động hoàn vì bạn chưa kịp phản hồi.',
-      })
+      // KHÔNG showToast — system event đã được BE gửi notification.created
+      // tới owner, render qua NotificationBanner (xem policy `useToast.ts`).
     }
 
     // Multi-device sync: device khác (cùng tài khoản farmer) chọn xong fallback

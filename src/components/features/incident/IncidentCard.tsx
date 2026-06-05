@@ -9,14 +9,21 @@ interface Props {
   item: IncidentTicket
   categoryName?: string
   onPress: () => void
+  onLongPress?: () => void
 }
 
-export function IncidentCard({ item, categoryName, onPress }: Props) {
+export function IncidentCard({ item, categoryName, onPress, onLongPress }: Props) {
   const severity = SEVERITY_META[item.severity]
   const dateStr = new Date(item.createdAt).toLocaleDateString('vi-VN')
 
   return (
-    <TouchableOpacity style={styles.card} activeOpacity={0.7} onPress={onPress}>
+    <TouchableOpacity
+      style={styles.card}
+      activeOpacity={0.7}
+      onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={400}
+    >
       <View style={styles.top}>
         <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
         <IncidentStatusBadge status={item.status} />

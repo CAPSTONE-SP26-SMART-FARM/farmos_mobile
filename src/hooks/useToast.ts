@@ -1,4 +1,20 @@
 /**
+ * Toast vs Notification policy (issue 2, 2026-06-05):
+ *
+ * ✅ Toast — DÙNG khi:
+ *   - User's own action TRÊN CHÍNH SCREEN của họ thành công/thất bại
+ *     (mutation onSuccess / onError, form validation error).
+ *   - Network state change (offline / online).
+ *   - Permission denied (image picker, camera, ...).
+ *
+ * ❌ Toast — KHÔNG dùng cho:
+ *   - Cross-user event qua socket (vd doctor kê đơn → farmer nhận event).
+ *     Các trường hợp này BE đã gửi `notification.created` → mobile render qua
+ *     `<NotificationBanner>` (top of screen, có redirect_url).
+ *   - System / worker event (auto-refund, AI resolved). Cũng đi qua notification.
+ *
+ * Mọi socket event handler chỉ nên `invalidateQueries`, KHÔNG `showToast`.
+ *
  * @example
  * const { showToast } = useToast()
  * showToast.success({ message: 'Lưu thành công!' })

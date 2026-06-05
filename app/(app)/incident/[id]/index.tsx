@@ -12,7 +12,7 @@ import dayjs from 'dayjs'
 import { Text, EmptyState, TopBar, BottomSheet, PrimaryButton, TextField, useConfirm } from '@/components/ui'
 import { usePrescriptions, useCreatePrescription } from '@/hooks/usePrescription'
 import { useAcceptIncident, useDoctorIncidentDetail } from '@/hooks/useDoctor'
-import { useIncidentDetail, useCancelIncident } from '@/hooks/useIncident'
+import { useIncidentDetail, useCancelIncident, useDeleteIncident } from '@/hooks/useIncident'
 import { useCloseTicket, useRateTicket, useAbandonResolution, useTicketFull } from '@/hooks/useTicketLifecycle'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
@@ -74,6 +74,7 @@ export default function IncidentDetailScreen() {
   useDoctorTicketRemoved(id)
 
   const { mutate: cancelIncident, isPending: isCancelling } = useCancelIncident()
+  const { mutate: deleteIncident, isPending: isDeleting } = useDeleteIncident()
   const { mutate: closeTicket, isPending: isClosing } = useCloseTicket(id)
   const { mutate: rateTicket, isPending: isRating } = useRateTicket(id)
   const { mutate: abandonResolution } = useAbandonResolution(id)
@@ -162,12 +163,14 @@ export default function IncidentDetailScreen() {
     try { await Promise.all([refetch(), refetchRx()]) } finally { setIsRefreshing(false) }
   }, [refetch, refetchRx])
 
-  // Subscribe ticket and setup WS listeners
+  // Subscribe ticket room NGAY khi mount (URL param, không chờ data.id) — tránh
+  // race window. Sau BE Round 3 R7, status events đã emit cả tới `user:{userId}`
+  // → subscribe ticket room không còn bắt buộc cho stakeholder. Vẫn giữ để:
+  //   - Defense-in-depth nếu BE forget audience trong event mới.
+  //   - Nhận events chỉ emit tới ticket room (vd debug events / admin watcher).
   useEffect(() => {
-    if (data?.id) {
-      socketService.subscribeTicket(data.id)
-    }
-  }, [data?.id])
+    if (id) socketService.subscribeTicket(id)
+  }, [id])
 
   useEffect(() => {
     // Mọi handler đều chỉ chạy cho ticket đang xem + invalidate cùng tập query.
@@ -183,24 +186,21 @@ export default function IncidentDetailScreen() {
       if (ticketId === id) fn()
     }
 
+    // Cross-user / system events — BE đã gửi `notification.created` để render
+    // banner top-of-screen + redirect_url. Mobile chỉ invalidate cache, KHÔNG
+    // showToast để tránh duplicate (xem policy `useToast.ts`).
     const onResolved = onlyThisTicket(() => {
       invalidateDetail()
       qc.invalidateQueries({ queryKey: queryKeys.prescriptions.list(id) })
-      showToast.success({ message: 'Sự cố đã được giải quyết' })
     })
     const onClosed = onlyThisTicket(invalidateDetail)
     const onAiResolved = onlyThisTicket(() => {
       useAiProcessingStore.getState().stop(id)
       invalidateDetail()
-      // KHÔNG invalidate prescriptions list ở đây — BE giờ emit
-      // `prescription.incident.created` (source: 'AI') trước event này (xem
-      // BE doc C3), handler trong usePrescriptions đã invalidate giúp.
-      showToast.success({ message: 'AI đã xử lý xong sự cố' })
     })
     const onAbandonRefunded = onlyThisTicket(() => {
       invalidateDetail()
       qc.invalidateQueries({ queryKey: queryKeys.ticketBalance })
-      showToast.success({ message: 'Sự cố đã được hoàn lại' })
     })
     // Status transition events — đảm bảo badge / footer / actions update ngay
     // mà không cần user reload screen. Payload BE:
@@ -215,6 +215,14 @@ export default function IncidentDetailScreen() {
     //   { ticketId, addendumId, type, authorId }
     const onAddendumCreated = onlyThisTicket(() => {
       qc.invalidateQueries({ queryKey: queryKeys.ticketFull(id) })
+    })
+    // R5 — device A xoá ticket → device B (đang mở detail của ticket đó) phải
+    // back ra list ngay (data không còn tồn tại). Audience: `user:{creatorId}`.
+    const onDeleted = onlyThisTicket(() => {
+      qc.invalidateQueries({ queryKey: queryKeys.incident.list() })
+      qc.invalidateQueries({ queryKey: queryKeys.incident.detail(id) })
+      if (router.canGoBack()) router.back()
+      else router.replace('/(app)/(tabs)/incidents')
     })
 
     // NOTE: `ticket.ai.fallback.offered`, `ticket.fallback-required`,
@@ -236,11 +244,13 @@ export default function IncidentDetailScreen() {
       ['ticket.cancelled', onCancelled],
       // R3 — addendum realtime
       ['ticket.addendum.created', onAddendumCreated],
+      // R5 — multi-device delete sync
+      ['ticket.deleted', onDeleted],
     ] as const
 
     listeners.forEach(([event, handler]) => socketService.on(event, handler))
     return () => listeners.forEach(([event, handler]) => socketService.off(event, handler))
-  }, [id, qc, showToast])
+  }, [id, qc, router])
 
   useEffect(() => {
     const isAssignee = isDoctor && data?.assignee?.id === user?.id
@@ -263,6 +273,8 @@ export default function IncidentDetailScreen() {
   const canClose = isCreator && status === 'resolved'
   const canResolve = isAssignee && PRESCRIBABLE_STATUSES.includes(status as any)
   const canAddAddendum = isAssignee && (status === 'resolved' || status === 'closed')
+  // Chỉ creator + status='cancelled' mới được xoá (BE cũng enforce, đây là UI gate).
+  const canDelete = isCreator && status === 'cancelled'
 
   const handleAddAddendum = () => {
     if (!addendumContent.trim()) return
@@ -287,6 +299,23 @@ export default function IncidentDetailScreen() {
         onError: (err) => showToast.error({ message: getErrorMessage(err, 'Hủy thất bại') }),
       }
     )
+  }
+
+  const handleDelete = async () => {
+    const choice = await confirm.show({
+      title: 'Xoá sự cố',
+      message: 'Xoá vĩnh viễn sự cố này khỏi danh sách? Hành động không thể hoàn tác.',
+      icon: 'warning',
+      actions: [
+        { key: 'DELETE', label: 'Xoá', variant: 'destructive' },
+        { key: 'CANCEL', label: 'Huỷ', variant: 'cancel' },
+      ],
+    })
+    if (choice !== 'DELETE') return
+    deleteIncident(id, {
+      onSuccess: () => { showToast.success({ message: 'Đã xoá sự cố' }); router.back() },
+      onError: (err) => showToast.error({ message: getErrorMessage(err, 'Xoá thất bại') }),
+    })
   }
 
   const handleCloseSubmit = (stars: number, feedback: string) => {
@@ -541,6 +570,9 @@ export default function IncidentDetailScreen() {
         onClose={() => setCloseModalVisible(true)}
         canResolve={canResolve}
         onResolve={() => router.push(`/(app)/incident/${id}/resolve`)}
+        canDelete={canDelete}
+        isDeleting={isDeleting}
+        onDelete={handleDelete}
       />
 
       <Modal visible={!!previewUrl} transparent animationType='fade' onRequestClose={() => setPreviewUrl(null)}>
