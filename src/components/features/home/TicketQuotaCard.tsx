@@ -1,10 +1,10 @@
-import { useMemo } from 'react'
-import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native'
-import Animated, { FadeInDown } from 'react-native-reanimated'
-import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons'
-import { router } from 'expo-router'
 import { Text } from '@/components/ui'
 import { useTicketBalance } from '@/hooks/useIncident'
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
+import { router } from 'expo-router'
+import { useMemo } from 'react'
+import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from 'react-native'
+import Animated, { FadeInDown } from 'react-native-reanimated'
 
 interface Props {
   delay?: number
@@ -39,7 +39,7 @@ export function TicketQuotaCard({ delay = 120 }: Props) {
           <View style={styles.headerIcon}>
             <MaterialCommunityIcons name='ticket-confirmation' size={18} color='#15803D' />
           </View>
-          <Text style={styles.headerTitle}>Quota sự cố</Text>
+          <Text style={styles.headerTitle}>Hạn mức vé sự cố</Text>
         </View>
 
         <View style={[styles.totalBadge, allOut && styles.totalBadgeEmpty]}>
