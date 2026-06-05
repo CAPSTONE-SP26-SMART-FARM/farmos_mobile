@@ -54,6 +54,8 @@ export function useDoctorTicketRemoved(ticketId: string | undefined) {
   showToastRef.current = showToast
   const qcRef = useRef(qc)
   qcRef.current = qc
+  const userIdRef = useRef(user?.id)
+  userIdRef.current = user?.id
 
   useEffect(() => {
     if (!isDoctor) return
@@ -71,6 +73,19 @@ export function useDoctorTicketRemoved(ticketId: string | undefined) {
         )
       }
       if (!currentTicketId || payload?.ticketId !== currentTicketId) return
+
+      // BE đã exclude socket của doctor accept (C4 Option A) — về lý thuyết
+      // event này không tới chính người accept. Vẫn giữ check `acceptedBy ===
+      // user.id` làm defense-in-depth (cost ~3 dòng) cho edge case multi-device.
+      if (
+        payload.reason === 'ACCEPTED' &&
+        payload.acceptedBy &&
+        userIdRef.current &&
+        payload.acceptedBy === userIdRef.current
+      ) {
+        if (IS_DEV) console.log('[useDoctorTicketRemoved] self-accept → skip toast/back')
+        return
+      }
 
       qcRef.current.invalidateQueries({ queryKey: queryKeys.broadcast.pending })
       qcRef.current.invalidateQueries({ queryKey: queryKeys.incident.detail(currentTicketId) })

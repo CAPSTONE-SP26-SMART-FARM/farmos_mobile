@@ -188,6 +188,9 @@ export default function IncidentDetailScreen() {
     const onAiResolved = onlyThisTicket(() => {
       useAiProcessingStore.getState().stop(id)
       invalidateDetail()
+      // KHÔNG invalidate prescriptions list ở đây — BE giờ emit
+      // `prescription.incident.created` (source: 'AI') trước event này (xem
+      // BE doc C3), handler trong usePrescriptions đã invalidate giúp.
       showToast.success({ message: 'AI đã xử lý xong sự cố' })
     })
     const onAbandonRefunded = onlyThisTicket(() => {
@@ -461,15 +464,28 @@ export default function IncidentDetailScreen() {
           <AiSolutionSection solution={ticketFullQuery.data.solution} />
         )}
 
-        {status !== 'open' && (
-          <PrescriptionSection
-            prescriptions={prescriptions}
-            isLoading={rxLoading}
-            canPrescribe={false}
-            onAdd={() => setRxModalVisible(true)}
-            onPressItem={() => router.push(`/(app)/incident/${id}/prescription`)}
-          />
-        )}
+        {/* AI-resolved ticket có thể chỉ tư vấn không kê đơn (xem BE doc C1
+           edge case). Trong case này, AiSolutionSection đã hiển thị đầy đủ —
+           ẩn PrescriptionSection để tránh card "Chưa có đơn thuốc" gây nhiễu. */}
+        {status !== 'open' &&
+          !(
+            ticketFullQuery.data?.solution?.source === 'AI' &&
+            !rxLoading &&
+            prescriptions.length === 0
+          ) && (
+            <PrescriptionSection
+              prescriptions={prescriptions}
+              isLoading={rxLoading}
+              canPrescribe={false}
+              onAdd={() => setRxModalVisible(true)}
+              onPressItem={(rx) =>
+                router.push({
+                  pathname: '/(app)/incident/[id]/prescription',
+                  params: { id, rxId: rx.id },
+                })
+              }
+            />
+          )}
 
         {/* D3 — Addendum button for doctor after resolved */}
         {canAddAddendum && (

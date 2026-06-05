@@ -41,14 +41,14 @@ export const STATUS_META: Record<
   },
   closed: {
     label: 'Hoàn tất',
-    color: '#6B7280',
-    bg: '#F3F4F6',
+    color: '#047857',
+    bg: '#D1FAE5',
     desc: 'Người tạo đã xác nhận hoàn tất',
   },
   cancelled: {
     label: 'Đã huỷ',
-    color: '#9CA3AF',
-    bg: '#F9FAFB',
+    color: '#B91C1C',
+    bg: '#FEE2E2',
     desc: 'Sự cố đã bị huỷ',
   },
 }

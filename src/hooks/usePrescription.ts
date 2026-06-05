@@ -19,10 +19,33 @@ export function usePrescriptions(ticketId: string, enabled = true) {
 
   useEffect(() => {
     if (!ticketId) return
-    const handler = (_payload: { created: { ticketId: string } }) => {
-      if (_payload.created.ticketId !== ticketId) return
+    // Payload spec (BE doc `BE--Fix-issue-prescription`):
+    //   { created: { ticketId, prescriptionId, authorId, source }, reissued? }
+    //   - source: 'DOCTOR' khi bác sĩ kê đơn, 'AI' khi AI fallback gen đơn (BR-70)
+    //   - reissued chỉ có ở doctor v2 path (true = kê lại đơn cũ)
+    const handler = (payload: {
+      created: {
+        ticketId: string
+        prescriptionId: string
+        authorId: string
+        source: 'DOCTOR' | 'AI'
+      }
+      reissued?: boolean
+    }) => {
+      if (payload.created.ticketId !== ticketId) return
       qc.invalidateQueries({ queryKey: queryKeys.prescriptions.list(ticketId) })
-      showToast.success({ message: 'Bác sĩ vừa kê đơn thuốc mới!' })
+      // Cũng invalidate ticket /full vì /full.prescription = latest prescription
+      // — doctor reissue / AI gen mới thì /full cũng đổi.
+      qc.invalidateQueries({ queryKey: queryKeys.ticketFull(ticketId) })
+      const isAi = payload.created.source === 'AI'
+      const isReissue = !!payload.reissued
+      showToast.success({
+        message: isAi
+          ? 'AI đã tạo đơn thuốc gợi ý'
+          : isReissue
+            ? 'Bác sĩ đã cập nhật đơn thuốc!'
+            : 'Bác sĩ vừa kê đơn thuốc mới!',
+      })
     }
     socketService.on('prescription.incident.created', handler)
     return () => socketService.off('prescription.incident.created', handler)
