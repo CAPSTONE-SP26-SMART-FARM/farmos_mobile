@@ -45,10 +45,21 @@ export interface ConfirmDialogOptions {
   cancelable?: boolean
   /** Tự pick icon theo loại dialog — chỉ dùng cho rich mode. */
   icon?: 'warning' | 'info' | 'question' | 'success' | 'error'
+  /**
+   * Optional tag để có thể dismiss programmatic. Ví dụ:
+   * `fallback:<ticketId>` → khi socket báo ticket đó đã có quyết định,
+   * gọi `dismiss('fallback:<ticketId>')` để đóng dialog (multi-device sync).
+   */
+  tag?: string
 }
 
 interface ConfirmContextValue {
   show: (options: ConfirmDialogOptions) => Promise<string | null>
+  /**
+   * Dismiss dialog đang mở. Nếu `tag` truyền vào, chỉ dismiss khi dialog hiện
+   * tại match tag đó (tránh dismiss nhầm dialog khác). Không match → no-op.
+   */
+  dismiss: (tag?: string) => void
 }
 
 const ConfirmContext = createContext<ConfirmContextValue | null>(null)
@@ -69,10 +80,12 @@ interface DialogState {
 export function ConfirmProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<DialogState>({ options: null, visible: false })
   const resolverRef = useRef<((value: string | null) => void) | null>(null)
+  const currentTagRef = useRef<string | undefined>(undefined)
 
   const resolveAndClose = useCallback((value: string | null) => {
     const r = resolverRef.current
     resolverRef.current = null
+    currentTagRef.current = undefined
     setState((prev) => ({ ...prev, visible: false }))
     if (r) r(value)
   }, [])
@@ -84,6 +97,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
         resolverRef.current(null)
         resolverRef.current = null
       }
+      currentTagRef.current = options.tag
       return new Promise<string | null>((resolve) => {
         resolverRef.current = resolve
         setState({ options, visible: true })
@@ -92,8 +106,18 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
     [],
   )
 
+  const dismiss = useCallback(
+    (tag?: string) => {
+      // Nếu tag specified → chỉ dismiss khi match dialog hiện tại.
+      if (tag && currentTagRef.current !== tag) return
+      if (!resolverRef.current) return
+      resolveAndClose(null)
+    },
+    [resolveAndClose],
+  )
+
   return (
-    <ConfirmContext.Provider value={{ show }}>
+    <ConfirmContext.Provider value={{ show, dismiss }}>
       {children}
       <ConfirmDialog
         visible={state.visible}

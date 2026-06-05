@@ -1,4 +1,6 @@
-export type IncidentSeverity = 'low' | 'medium' | 'high' | 'critical'
+// Severity của support_ticket được tách khỏi enum severity của Alert (low|medium|high|critical).
+// Support_ticket chỉ cần 2 mức: bình thường vs khẩn cấp.
+export type IncidentSeverity = 'normal' | 'urgent'
 export type TicketStatus = 'open' | 'assigned' | 'in_progress' | 'resolved' | 'closed' | 'cancelled'
 export type TicketPriority = 'low' | 'normal' | 'high' | 'urgent'
 export type TicketSource = 'SUBSCRIPTION_GRANT' | 'PURCHASED' | 'ADMIN_GIFT'

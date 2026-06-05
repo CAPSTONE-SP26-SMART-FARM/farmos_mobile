@@ -54,7 +54,7 @@ export function PrescriptionCard({ item, onPress }: Props) {
       </View>
       {isAi ? (
         <Text style={styles.aiNotice} numberOfLines={2}>
-          ⚠️ Đơn gợi ý bởi AI — không thay thế chỉ định của bác sĩ thú y có giấy phép.
+          ⚠️ Đơn gợi ý bởi AI — không thay thế chỉ định của bác sĩ có giấy phép.
         </Text>
       ) : null}
     </Wrapper>

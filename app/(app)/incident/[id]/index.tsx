@@ -27,6 +27,7 @@ import { IncidentInfoList } from '@/components/features/incident/IncidentInfoLis
 import { IncidentFooterActions } from '@/components/features/incident/IncidentFooterActions'
 import { CloseRateModal } from '@/components/features/incident/CloseRateModal'
 import { AiProcessingBanner } from '@/components/features/incident/AiProcessingBanner'
+import { AddendaSection } from '@/components/features/incident/AddendaSection'
 import { useAiProcessingStore } from '@/stores/aiProcessingStore'
 import { useAddAddendum } from '@/hooks/useTicketLifecycle'
 import { extractApiError, getErrorMessage } from '@/utils/error'
@@ -37,10 +38,9 @@ const CLOSED_STATUSES = ['closed', 'cancelled'] as const
 const PRESCRIBABLE_STATUSES = ['assigned', 'in_progress'] as const
 
 const INACTIVITY_LIMIT_MS: Record<string, number> = {
-  critical: 60 * 60 * 1000,
-  high: 45 * 60 * 1000,
-  medium: 30 * 60 * 1000,
-  low: 30 * 60 * 1000,
+  // Sau khi tách severity (issue 5) — 2 mức:
+  urgent: 60 * 60 * 1000,
+  normal: 30 * 60 * 1000,
 }
 
 function formatCountdown(ms: number) {
@@ -84,9 +84,10 @@ export default function IncidentDetailScreen() {
   const doctorQuery = useDoctorIncidentDetail(isDoctor ? id : '')
   const { data, isLoading, isError, refetch } = isDoctor ? doctorQuery : farmerQuery
 
-  // Farmer-only: gọi /full để đọc pendingFallbackChoice — auto-open dialog nếu
-  // owner mở screen mà worker đã reset ticket (offline → mất WS event).
-  const ticketFullQuery = useTicketFull(id, !isDoctor)
+  // Cả farmer + doctor: /full trả về solution, addenda, prescription… cần
+  // cho mọi role. Riêng `pendingFallbackChoice` chỉ farmer dùng (xem useEffect
+  // bên dưới đã gate `!isDoctor`).
+  const ticketFullQuery = useTicketFull(id)
 
   // Mở dialog "Bác sĩ chưa phản hồi" qua ConfirmDialog global.
   // Dùng ref guard để tránh re-show liên tục khi pendingFallbackChoice vẫn true sau dismiss.
@@ -99,6 +100,9 @@ export default function IncidentDetailScreen() {
       message: 'Bác sĩ đã tiếp nhận sự cố nhưng không phản hồi. Bạn muốn xử lý thế nào?',
       icon: 'warning',
       cancelable: false,
+      // Cho phép socket listener (useGlobalIncidentRealtime) dismiss dialog
+      // này khi device khác cùng tài khoản đã chọn xong (multi-device sync).
+      tag: `fallback:${id}`,
       actions: [
         {
           key: 'FALLBACK_AI',
@@ -198,6 +202,20 @@ export default function IncidentDetailScreen() {
       qc.invalidateQueries({ queryKey: queryKeys.ticketBalance })
       showToast.success({ message: 'Sự cố đã được hoàn lại' })
     })
+    // Status transition events — đảm bảo badge / footer / actions update ngay
+    // mà không cần user reload screen. Payload BE:
+    //   - ticket.accepted: { ticketId, acceptedBy, assignedAt }
+    //   - ticket.in_progress: { ticketId } (doctor gửi message đầu tiên — atomic)
+    //   - ticket.cancelled: { ticketId, reason: string | null }
+    const onAccepted = onlyThisTicket(invalidateDetail)
+    const onInProgress = onlyThisTicket(invalidateDetail)
+    const onCancelled = onlyThisTicket(invalidateDetail)
+    // R3 — doctor add addendum, farmer đang xem detail nhận event này → /full
+    // refetch + AddendaSection render ngay. Payload:
+    //   { ticketId, addendumId, type, authorId }
+    const onAddendumCreated = onlyThisTicket(() => {
+      qc.invalidateQueries({ queryKey: queryKeys.ticketFull(id) })
+    })
 
     // NOTE: `ticket.ai.fallback.offered`, `ticket.fallback-required`,
     // `ticket.abandon.auto_refunded` đăng ký ở root layout qua
@@ -212,6 +230,12 @@ export default function IncidentDetailScreen() {
       ['ticket.closed', onClosed],
       ['ticket.ai.resolved', onAiResolved],
       ['ticket.abandon.refunded', onAbandonRefunded],
+      // R2 — status transition (BE Option A: per-event explicit)
+      ['ticket.accepted', onAccepted],
+      ['ticket.in_progress', onInProgress],
+      ['ticket.cancelled', onCancelled],
+      // R3 — addendum realtime
+      ['ticket.addendum.created', onAddendumCreated],
     ] as const
 
     listeners.forEach(([event, handler]) => socketService.on(event, handler))
@@ -487,6 +511,11 @@ export default function IncidentDetailScreen() {
             />
           )}
 
+        {/* Hiển thị các addendum đã thêm (cho cả doctor + farmer xem). */}
+        {ticketFullQuery.data?.addenda && ticketFullQuery.data.addenda.length > 0 ? (
+          <AddendaSection addenda={ticketFullQuery.data.addenda} />
+        ) : null}
+
         {/* D3 — Addendum button for doctor after resolved */}
         {canAddAddendum && (
           <TouchableOpacity style={styles.addendumBtn} onPress={() => setAddendumVisible(true)}>
@@ -497,6 +526,7 @@ export default function IncidentDetailScreen() {
 
       <IncidentFooterActions
         isClosed={isClosed}
+        closedReason={status === 'cancelled' ? 'cancelled' : 'closed'}
         canAccept={canAccept}
         canClose={canClose}
         canChat={isAssignee || !isDoctor}

@@ -1,25 +1,29 @@
-import { useMemo, useRef, useState } from 'react'
-import {
-  View, StyleSheet, TouchableOpacity, Image, useWindowDimensions,
-} from 'react-native'
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import * as ImagePicker from 'expo-image-picker'
-import { Stack, useRouter } from 'expo-router'
-import { MaterialIcons } from '@expo/vector-icons'
-import { Text, TextField, SelectField } from '@/components/ui'
 import { SheetHeader } from '@/components/features/incident/SheetHeader'
-import { useCreateIncident, useMyMilestones, useTicketBalance } from '@/hooks/useIncident'
-import { useActiveTicketCategories } from '@/hooks/useTicketCategory'
-import type { TicketCategory } from '@/types/ticketCategory'
-import { useToast } from '@/hooks/useToast'
-import { extractApiError, getErrorMessage } from '@/utils/error'
-import { uploadImageToCloudinary } from '@/utils/cloudinary'
-import { usePreventUnsavedChanges } from '@/hooks/usePreventUnsavedChanges'
-import { SEVERITY_META } from '@/constants/incident'
+import { SelectField, Text, TextField } from '@/components/ui'
 import { icons } from '@/constants/icon'
+import { SEVERITY_META } from '@/constants/incident'
+import { useCreateIncident, useMyMilestones, useTicketBalance } from '@/hooks/useIncident'
+import { usePreventUnsavedChanges } from '@/hooks/usePreventUnsavedChanges'
+import { useActiveTicketCategories } from '@/hooks/useTicketCategory'
+import { useToast } from '@/hooks/useToast'
 import type { IncidentSeverity } from '@/types/incident'
 import type { FarmerMyMilestone } from '@/types/production'
+import type { TicketCategory } from '@/types/ticketCategory'
+import { uploadImageToCloudinary } from '@/utils/cloudinary'
+import { extractApiError, getErrorMessage } from '@/utils/error'
+import { MaterialIcons } from '@expo/vector-icons'
+import * as ImagePicker from 'expo-image-picker'
+import { Stack, useRouter } from 'expo-router'
+import { useMemo, useRef, useState } from 'react'
+import
+    {
+        Image,
+        StyleSheet, TouchableOpacity,
+        useWindowDimensions,
+        View,
+    } from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
+import { SafeAreaView } from 'react-native-safe-area-context'
 
 const CloseIcon = icons.closeSvg
 const PlusIcon = icons.plusSvg
@@ -60,7 +64,7 @@ export default function CreateIncidentScreen() {
 
   const [milestone, setMilestone] = useState<FarmerMyMilestone | null>(null)
   const [category, setCategory] = useState<TicketCategory | null>(null)
-  const [severity, setSeverity] = useState<IncidentSeverity>('medium')
+  const [severity, setSeverity] = useState<IncidentSeverity>('normal')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [imageUris, setImageUris] = useState<string[]>([])
@@ -273,7 +277,7 @@ export default function CreateIncidentScreen() {
                     />
                     {!fieldErrors.categoryConfigId && (
                       <Text style={styles.hint}>
-                        Ví dụ: Sâu bệnh, Dịch hại, Thiết bị hỏng…
+                        Chọn loại sự cố từ hạn mức gói của bạn
                       </Text>
                     )}
                   </View>

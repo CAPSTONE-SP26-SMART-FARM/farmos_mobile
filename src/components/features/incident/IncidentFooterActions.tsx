@@ -3,6 +3,7 @@ import { Text } from '@/components/ui'
 
 interface IncidentFooterActionsProps {
   isClosed: boolean
+  closedReason?: 'closed' | 'cancelled'
   canAccept: boolean
   canChat: boolean
   waitingForDoctor: boolean
@@ -20,7 +21,7 @@ interface IncidentFooterActionsProps {
 }
 
 export function IncidentFooterActions({
-  isClosed, canAccept, canChat, waitingForDoctor,
+  isClosed, closedReason, canAccept, canChat, waitingForDoctor,
   isDoctor, isAccepting,
   onAccept, onOpenChat,
   canCancel, isCancelling, onCancel,
@@ -28,10 +29,14 @@ export function IncidentFooterActions({
   canResolve, onResolve,
 }: IncidentFooterActionsProps) {
   if (isClosed) {
+    // Phân biệt đóng (Hoàn tất) vs huỷ — text "đã đóng" generic gây confusion
+    // khi user xem ticket đã huỷ (list hiển thị "Đã huỷ" mà detail nói "đã đóng").
+    const label =
+      closedReason === 'cancelled' ? 'Sự cố đã huỷ' : 'Sự cố đã hoàn tất'
     return (
       <View style={styles.wrap}>
         <View style={[styles.btn, styles.btnDisabled]}>
-          <Text style={[styles.btnText, { color: '#6B7280' }]}>Sự cố đã đóng</Text>
+          <Text style={[styles.btnText, { color: '#6B7280' }]}>{label}</Text>
         </View>
       </View>
     )

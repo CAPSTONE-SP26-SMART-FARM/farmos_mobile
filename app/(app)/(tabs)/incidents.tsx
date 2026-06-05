@@ -255,14 +255,28 @@ export default function IncidentsScreen() {
       qc.invalidateQueries({ queryKey: queryKeys.incident.list() })
       showToast.success({ message: 'AI đã xử lý xong sự cố' })
     }
+    // Status-transition events: invalidate list nhưng KHÔNG toast (tránh spam
+    // — đã có toast cho action specific từ doctor / farmer khác).
+    const invalidateList = () => {
+      qc.invalidateQueries({ queryKey: queryKeys.incident.list() })
+      qc.invalidateQueries({ queryKey: queryKeys.incident.doctorList() })
+    }
     // NOTE: `ticket.ai.fallback.offered`, `ticket.fallback-required`, `ticket.abandon.auto_refunded`
     // được đăng ký ở root layout qua `useGlobalIncidentRealtime` — tránh bug
     // popup không hiện khi tab Incidents chưa mount (Expo tabs lazy-mount).
     socketService.on('ticket.resolved', onResolved)
     socketService.on('ticket.ai.resolved', onAiResolved)
+    socketService.on('ticket.accepted', invalidateList)
+    socketService.on('ticket.in_progress', invalidateList)
+    socketService.on('ticket.cancelled', invalidateList)
+    socketService.on('ticket.closed', invalidateList)
     return () => {
       socketService.off('ticket.resolved', onResolved)
       socketService.off('ticket.ai.resolved', onAiResolved)
+      socketService.off('ticket.accepted', invalidateList)
+      socketService.off('ticket.in_progress', invalidateList)
+      socketService.off('ticket.cancelled', invalidateList)
+      socketService.off('ticket.closed', invalidateList)
     }
   }, [isDoctor, qc, showToast])
 

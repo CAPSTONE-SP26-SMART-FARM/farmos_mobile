@@ -3,10 +3,8 @@ import type { IncidentSeverity, TicketStatus } from '@/types/incident'
 export const SEVERITY_META: Record<IncidentSeverity, {
   label: string; color: string; bg: string; desc: string
 }> = {
-  low:      { label: 'Thấp',         color: '#16A34A', bg: '#F0FDF4', desc: 'Ảnh hưởng nhỏ, không cấp bách' },
-  medium:   { label: 'Trung bình',   color: '#CA8A04', bg: '#FEF9C3', desc: 'Cần xử lý sớm trong ngày' },
-  high:     { label: 'Cao',          color: '#EA580C', bg: '#FFF7ED', desc: 'Ảnh hưởng lớn, cần xử lý ngay' },
-  critical: { label: 'Nghiêm trọng', color: '#DC2626', bg: '#FEF2F2', desc: 'Khẩn cấp, nguy hiểm trực tiếp' },
+  normal: { label: 'Bình thường', color: '#15803D', bg: '#DCFCE7', desc: 'Cần xử lý sớm, không khẩn cấp' },
+  urgent: { label: 'Nghiêm trọng', color: '#DC2626', bg: '#FEE2E2', desc: 'Khẩn cấp, cần xử lý ngay lập tức' },
 }
 
 // Label + màu sắc cho từng status — dùng chung cho badge (IncidentStatusBadge) + filter dropdown.

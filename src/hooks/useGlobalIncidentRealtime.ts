@@ -42,6 +42,8 @@ export function useGlobalIncidentRealtime() {
       qc.invalidateQueries({ queryKey: queryKeys.ticketFull(ticketId) })
     }
 
+    const fallbackDialogTag = (ticketId: string) => `fallback:${ticketId}`
+
     const onFallbackOffer = async (payload: FallbackPayload) => {
       invalidateForTicket(payload.ticketId)
       // Detail screen tự handle dialog của chính nó qua pendingFallbackChoice useEffect.
@@ -52,6 +54,7 @@ export function useGlobalIncidentRealtime() {
         message: `Sự cố${payload.title ? ` "${payload.title}"` : ''} vẫn chưa có bác sĩ nào tiếp nhận. Bạn muốn xử lý thế nào?`,
         icon: 'question',
         cancelable: false,
+        tag: fallbackDialogTag(payload.ticketId),
         actions: [
           {
             key: 'FALLBACK_AI',
@@ -67,6 +70,8 @@ export function useGlobalIncidentRealtime() {
           },
         ],
       })
+      // choice === null khi device khác đã chọn xong → confirm.dismiss được gọi
+      // bởi handler `onFallbackResolved` bên dưới.
       if (choice !== 'FALLBACK_AI' && choice !== 'REFUND_TICKET') return
 
       if (choice === 'FALLBACK_AI') {
@@ -91,18 +96,31 @@ export function useGlobalIncidentRealtime() {
       useAiProcessingStore.getState().stop(payload.ticketId)
       invalidateForTicket(payload.ticketId)
       qc.invalidateQueries({ queryKey: queryKeys.ticketBalance })
+      // Auto-refund cũng đồng nghĩa pending fallback dialog đã không còn relevant.
+      confirm.dismiss(fallbackDialogTag(payload.ticketId))
       showToast.warning({
         message: 'Sự cố đã được tự động hoàn vì bạn chưa kịp phản hồi.',
       })
     }
 
+    // Multi-device sync: device khác (cùng tài khoản farmer) chọn xong fallback
+    // → BE emit `ticket.fallback.resolved` ngay sau khi abandon API commit
+    // (trước cả khi AI worker chạy). Device này dismiss popup đang hang.
+    // Payload BE: `{ ticketId, resolution: 'FALLBACK_AI' | 'REFUND_TICKET' }`.
+    const onFallbackResolved = (payload: { ticketId: string }) => {
+      invalidateForTicket(payload.ticketId)
+      confirm.dismiss(fallbackDialogTag(payload.ticketId))
+    }
+
     socketService.on('ticket.ai.fallback.offered', onFallbackOffer)
     socketService.on('ticket.fallback-required', onFallbackOffer)
     socketService.on('ticket.abandon.auto_refunded', onAutoRefunded)
+    socketService.on('ticket.fallback.resolved', onFallbackResolved)
     return () => {
       socketService.off('ticket.ai.fallback.offered', onFallbackOffer)
       socketService.off('ticket.fallback-required', onFallbackOffer)
       socketService.off('ticket.abandon.auto_refunded', onAutoRefunded)
+      socketService.off('ticket.fallback.resolved', onFallbackResolved)
     }
   }, [isOwner, confirm, showToast, qc, router])
 }

@@ -17,11 +17,21 @@ export type TicketSolution = {
   createdAt: string
 }
 
+export type TicketAddendum = {
+  id: string
+  ticketId: string
+  type: 'SOLUTION_NOTE' | 'PRESCRIPTION_NOTE' | 'CORRECTION'
+  content: string
+  authorId: string
+  author?: { id: string; fullName: string; avatarUrl: string | null } | null
+  createdAt: string
+}
+
 export type TicketFullRes = {
   ticket: unknown
   solution: TicketSolution | null
   prescription: PrescriptionFull | null
-  addenda: unknown[]
+  addenda: TicketAddendum[]
   rating: unknown
   broadcasts: unknown[]
   abandonLogs: unknown[]

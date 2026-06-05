@@ -23,7 +23,7 @@ const PRIORITY_META: Record<TicketPriority, { label: string; color: string; bg: 
 }
 
 const STATUS_ORDER: TicketStatus[] = ['open', 'assigned', 'in_progress', 'resolved', 'closed', 'cancelled']
-const SEVERITY_ORDER: IncidentSeverity[] = ['critical', 'high', 'medium', 'low']
+const SEVERITY_ORDER: IncidentSeverity[] = ['urgent', 'normal']
 const PRIORITY_ORDER: TicketPriority[] = ['urgent', 'high', 'normal', 'low']
 
 function sumBreakdown<K extends string>(map: Record<K, number>): number {

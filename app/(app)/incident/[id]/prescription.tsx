@@ -75,7 +75,7 @@ function PrescriptionBlock({ prescription, showHeader }: { prescription: Prescri
           </View>
           <Text style={styles.aiBannerBody}>
             Đây là đơn thuốc do AI sinh ra dựa trên mô tả sự cố — KHÔNG thay thế chỉ định của
-            bác sĩ thú y có giấy phép. Vui lòng đối chiếu với chuyên gia trước khi sử dụng.
+            bác sĩ có giấy phép. Vui lòng đối chiếu với chuyên gia trước khi sử dụng.
           </Text>
         </View>
       ) : null}
