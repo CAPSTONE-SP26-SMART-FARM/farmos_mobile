@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { View, Image, Pressable, StyleSheet } from 'react-native'
+import { View, Image, Pressable, Modal, StyleSheet } from 'react-native'
 import { Text } from '@/components/ui'
 import { formatTime } from '@/utils/date'
 import { getDefaultAvatar } from '@/constants/user'
@@ -19,7 +19,11 @@ const AVATAR_GAP = 8
 
 export function MessageBubble({ msg, isMe, showAvatar, isFirstInGroup, isLastInGroup, senderRole }: Props) {
   const [showTime, setShowTime] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const time = formatTime(msg.createdAt)
+  const attachments = msg.attachments ?? []
+  const hasText = !!msg.message?.trim()
+  const hasAttachments = attachments.length > 0
 
   // Bo góc kiểu cụm tin: góc phía "đuôi" của cụm bo nhỏ lại.
   const bubbleRadius = isMe
@@ -40,15 +44,47 @@ export function MessageBubble({ msg, isMe, showAvatar, isFirstInGroup, isLastInG
       )}
 
       <View style={[styles.bubbleWrap, isMe ? styles.alignRight : styles.alignLeft]}>
-        <Pressable onPress={() => setShowTime((v) => !v)}>
-          <View style={[styles.bubble, isMe ? styles.mine : styles.theirs, bubbleRadius]}>
-            <Text style={[styles.text, isMe && styles.textMine]}>{msg.message}</Text>
+        {/* Attachments grid - render trên bubble text (giống Messenger) */}
+        {hasAttachments ? (
+          <View style={[styles.attachGrid, isMe ? styles.alignRight : styles.alignLeft]}>
+            {attachments.map((att) => (
+              <Pressable
+                key={att.id}
+                onPress={() => setPreviewUrl(att.url)}
+                style={({ pressed }) => [styles.attachThumbWrap, pressed && { opacity: 0.7 }]}
+              >
+                <Image source={{ uri: att.url }} style={styles.attachThumb} />
+              </Pressable>
+            ))}
           </View>
-        </Pressable>
+        ) : null}
+
+        {hasText ? (
+          <Pressable onPress={() => setShowTime((v) => !v)}>
+            <View style={[styles.bubble, isMe ? styles.mine : styles.theirs, bubbleRadius]}>
+              <Text style={[styles.text, isMe && styles.textMine]}>{msg.message}</Text>
+            </View>
+          </Pressable>
+        ) : null}
+
         {showTime && time ? (
           <Text style={[styles.time, isMe ? styles.timeRight : styles.timeLeft]}>{time}</Text>
         ) : null}
       </View>
+
+      {/* Full-screen image preview overlay */}
+      <Modal
+        visible={!!previewUrl}
+        transparent
+        animationType='fade'
+        onRequestClose={() => setPreviewUrl(null)}
+      >
+        <Pressable style={styles.previewOverlay} onPress={() => setPreviewUrl(null)}>
+          {previewUrl ? (
+            <Image source={{ uri: previewUrl }} style={styles.previewImg} resizeMode='contain' />
+          ) : null}
+        </Pressable>
+      </Modal>
     </View>
   )
 }
@@ -73,4 +109,23 @@ const styles = StyleSheet.create({
   time: { fontSize: 10, color: '#9CA3AF', marginTop: 3, marginHorizontal: 4 },
   timeLeft: { textAlign: 'left' },
   timeRight: { textAlign: 'right' },
+
+  // Attachments grid: tối đa 3/row, mỗi thumb 120×120. Tile pack tự nhiên qua flex-wrap.
+  attachGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    marginBottom: 4,
+    maxWidth: 380,
+  },
+  attachThumbWrap: { borderRadius: 12, overflow: 'hidden' },
+  attachThumb: { width: 120, height: 120, backgroundColor: '#E5E7EB' },
+
+  previewOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.92)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  previewImg: { width: '100%', height: '85%' },
 })

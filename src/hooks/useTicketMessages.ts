@@ -14,6 +14,14 @@ type MessageSocketPayload = {
   message: string
   createdAt: string
   isInternal: boolean
+  // Round 6 BE: payload nay include attachments full → mobile setQueryData
+  // trực tiếp, không cần refetch.
+  attachments?: {
+    id: string
+    url: string
+    uploadedBy: string
+    createdAt: string
+  }[]
 }
 
 export function useTicketMessages(ticketId: string) {
@@ -58,7 +66,8 @@ export function useTicketMessages(ticketId: string) {
             message: payload.message,
             isInternal: payload.isInternal,
             createdAt: payload.createdAt,
-            attachments: [],
+            // Round 6: payload đã có attachments inline (không cần refetch).
+            attachments: payload.attachments ?? [],
           }
           return { ...old, data: [...old.data, newMsg] }
         }
@@ -75,9 +84,10 @@ export function useTicketMessages(ticketId: string) {
 export function useSendMessage(ticketId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (message: string) =>
+    mutationFn: ({ message, attachments }: { message: string; attachments?: { url: string }[] }) =>
       ticketMessageApi.send(ticketId, {
         message,
+        ...(attachments && attachments.length > 0 ? { attachments } : {}),
         clientMessageId: `${ticketId}-${Date.now()}`,
       }),
     onSuccess: () => {

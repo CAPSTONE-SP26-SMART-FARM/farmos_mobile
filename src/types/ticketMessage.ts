@@ -17,6 +17,11 @@ export type TicketMessage = {
 
 export type CreateTicketMessageBody = {
   message: string
+  /**
+   * Attachment URL đã upload Cloudinary (round 6 BE handoff).
+   * BE tự tạo `TicketAttachment` rows + link vào message. Trả về với UUID đầy đủ.
+   */
+  attachments?: { url: string }[]
   clientMessageId?: string
 }
 

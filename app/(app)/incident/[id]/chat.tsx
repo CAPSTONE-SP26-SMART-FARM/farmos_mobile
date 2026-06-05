@@ -13,11 +13,16 @@ import { useIncidentDetail } from '@/hooks/useIncident'
 import { useDoctorIncidentDetail } from '@/hooks/useDoctor'
 import { useAuth } from '@/hooks/useAuth'
 import { useTicketMessages, useSendMessage } from '@/hooks/useTicketMessages'
+import { useImagePicker } from '@/hooks/useImagePicker'
+import { useToast } from '@/hooks/useToast'
 import { useAuthStore } from '@/stores/authStore'
 import { MessageBubble } from '@/components/features/incident/MessageBubble'
 import { ChatDaySeparator } from '@/components/features/incident/ChatDaySeparator'
 import { toDateKey } from '@/utils/date'
+import { uploadImageToCloudinary } from '@/utils/cloudinary'
 import type { TicketMessage } from '@/types/ticketMessage'
+
+const MAX_ATTACHMENTS = 5
 
 // Gợi ý mở đầu hội thoại — khác nhau theo vai trò người dùng.
 const DOCTOR_QUICK_REPLIES = [
@@ -56,6 +61,15 @@ export default function IncidentChatScreen() {
   const { data } = isDoctor ? doctorQuery : farmerQuery
   const { data: messagesData, isLoading } = useTicketMessages(id)
   const { mutate: sendMessage, isPending: isSending } = useSendMessage(id)
+  const { showToast } = useToast()
+  const {
+    imageUris: attachUris,
+    pick: pickAttachments,
+    remove: removeAttachment,
+    reset: resetAttachments,
+    canAdd: canAddAttachment,
+  } = useImagePicker({ max: MAX_ATTACHMENTS })
+  const [isUploading, setIsUploading] = useState(false)
 
   // Người đối thoại: doctor đang chat thì thấy farmer (creator), và ngược lại.
   const peer = isDoctor ? data?.creator : data?.assignee
@@ -116,16 +130,51 @@ export default function IncidentChatScreen() {
     }
   }, [messages.length])
 
-  const handleSend = () => {
+  const hasAttachments = attachUris.length > 0
+  const canSend = (input.trim().length > 0 || hasAttachments) && !isSending && !isUploading
+
+  const handleSend = async () => {
     const text = input.trim()
-    if (!text || isSending) return
+    if (!canSend) return
+
+    // Snapshot rồi clear UI sớm để input không hold input/attachments khi mất mạng
+    // — nếu upload fail, restore lại bằng cách throw + warn user.
+    const localUris = [...attachUris]
     setInput('')
-    sendMessage(text)
+    resetAttachments()
+
+    let attachments: { url: string }[] | undefined
+    if (localUris.length > 0) {
+      setIsUploading(true)
+      try {
+        const urls = await Promise.all(localUris.map(uploadImageToCloudinary))
+        attachments = urls.map((url) => ({ url }))
+      } catch {
+        showToast.error({ message: 'Upload ảnh thất bại. Vui lòng thử lại.' })
+        setInput(text)
+        // Note: không restore attachments vì useImagePicker không expose set —
+        // user phải pick lại. Acceptable trade-off cho retry path hiếm gặp.
+        setIsUploading(false)
+        return
+      } finally {
+        setIsUploading(false)
+      }
+    }
+
+    sendMessage(
+      { message: text || ' ', attachments },
+      {
+        onError: () => {
+          showToast.error({ message: 'Gửi tin nhắn thất bại. Vui lòng thử lại.' })
+          setInput(text)
+        },
+      },
+    )
   }
 
   const handleQuickReply = (text: string) => {
-    if (isSending) return
-    sendMessage(text)
+    if (isSending || isUploading) return
+    sendMessage({ message: text })
   }
 
   const quickReplies = isDoctor ? DOCTOR_QUICK_REPLIES : FARMER_QUICK_REPLIES
@@ -215,7 +264,48 @@ export default function IncidentChatScreen() {
           </ScrollView>
         )}
 
+        {/* Attachment preview row (chỉ hiện khi user đã pick ảnh) */}
+        {hasAttachments ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyboardShouldPersistTaps='always'
+            style={styles.attachStrip}
+            contentContainerStyle={styles.attachStripContent}
+          >
+            {attachUris.map((uri) => (
+              <View key={uri} style={styles.attachItem}>
+                <Image source={{ uri }} style={styles.attachItemImg} />
+                <Pressable
+                  style={styles.attachRemove}
+                  onPress={() => removeAttachment(uri)}
+                  hitSlop={6}
+                >
+                  <MaterialIcons name='close' size={14} color='#FFFFFF' />
+                </Pressable>
+                {isUploading ? (
+                  <View style={styles.attachUploadOverlay}>
+                    <ActivityIndicator size='small' color='#FFFFFF' />
+                  </View>
+                ) : null}
+              </View>
+            ))}
+          </ScrollView>
+        ) : null}
+
         <View style={styles.inputRow}>
+          <TouchableOpacity
+            style={[styles.attachBtn, !canAddAttachment && styles.attachBtnDisabled]}
+            onPress={pickAttachments}
+            disabled={!canAddAttachment || isUploading || isSending}
+            hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+          >
+            <MaterialIcons
+              name='add-photo-alternate'
+              size={26}
+              color={canAddAttachment ? '#15803D' : '#9CA3AF'}
+            />
+          </TouchableOpacity>
           <TextInput
             style={styles.chatInput}
             placeholder="Nhắn tin..."
@@ -224,16 +314,16 @@ export default function IncidentChatScreen() {
             onChangeText={setInput}
             onSubmitEditing={handleSend}
             returnKeyType="send"
-            editable={!isSending}
+            editable={!isSending && !isUploading}
             multiline={false}
           />
           <TouchableOpacity
-            style={[styles.sendBtn, (!hasText || isSending) && styles.sendBtnDisabled]}
+            style={[styles.sendBtn, !canSend && styles.sendBtnDisabled]}
             onPress={handleSend}
-            disabled={!hasText || isSending}
+            disabled={!canSend}
             activeOpacity={0.85}
           >
-            {isSending ? (
+            {isSending || isUploading ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
               <Animated.View style={sendIconStyle}>
@@ -310,4 +400,42 @@ const styles = StyleSheet.create({
   },
   sendBtnDisabled: { backgroundColor: '#A7D7B9' },
   sendIcon: { transform: [{ scaleX: -1 }] },
+
+  // Attach button trong input row (góc trái input)
+  attachBtn: {
+    width: 40, height: 40,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  attachBtnDisabled: { opacity: 0.5 },
+
+  // Strip thumbnails preview phía trên input row
+  attachStrip: {
+    flexGrow: 0,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  attachStripContent: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  attachItem: { position: 'relative' },
+  attachItemImg: {
+    width: 64, height: 64, borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+  },
+  attachRemove: {
+    position: 'absolute', top: -6, right: -6,
+    width: 20, height: 20, borderRadius: 10,
+    backgroundColor: '#111827',
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, borderColor: '#FFFFFF',
+  },
+  attachUploadOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    alignItems: 'center', justifyContent: 'center',
+  },
 })
