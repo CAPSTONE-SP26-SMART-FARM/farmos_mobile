@@ -25,6 +25,7 @@ import { NotificationBanner } from '@/components/features/notification/Notificat
 import { ChatNotificationBanner } from '@/components/features/incident/ChatNotificationBanner'
 import { useGlobalIncidentRealtime } from '@/hooks/useGlobalIncidentRealtime'
 import { useGlobalDoctorRealtime } from '@/hooks/useGlobalDoctorRealtime'
+import { useDoctorOnlineNudge } from '@/hooks/useDoctorOnlineNudge'
 
 LogBox.ignoreLogs(['SafeAreaView has been deprecated'])
 SplashScreen.preventAutoHideAsync()
@@ -36,6 +37,7 @@ registerUnauthorizedHandler(() => {
 function GlobalRealtimeBridge() {
   useGlobalIncidentRealtime()
   useGlobalDoctorRealtime()
+  useDoctorOnlineNudge()
   return null
 }
 

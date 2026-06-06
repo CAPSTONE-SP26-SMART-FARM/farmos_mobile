@@ -21,7 +21,7 @@ export function IncidentInfoList({ ticket, isDoctor }: IncidentInfoListProps) {
   return (
     <View style={styles.box}>
       {isDoctor && ticket.creator && (
-        <Row label='Farmer báo cáo' value={ticket.creator.fullName} />
+        <Row label='Người báo cáo' value={ticket.creator.fullName} />
       )}
       {!isDoctor && ticket.assignee && (
         <Row label='Bác sĩ phụ trách' value={ticket.assignee.fullName} />

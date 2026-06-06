@@ -3,7 +3,7 @@ import { View, StyleSheet, type LayoutChangeEvent } from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { BottomSheet, Text, PrimaryButton } from '@/components/ui'
 import { WindowBanner } from './WindowBanner'
-import { isWithinDailyLogWindow } from '@/utils/dailyLogWindow'
+import { useDailyLogWindow } from '@/hooks/useDailyLog'
 import { getProgressColor } from '@/utils/progressColor'
 
 interface Props {
@@ -26,16 +26,12 @@ export function ProgressUpdateSheet({
 }: Props) {
   const [value, setValue] = useState(clamp(initialValue))
   const [trackWidth, setTrackWidth] = useState(0)
-  const [inWindow, setInWindow] = useState(isWithinDailyLogWindow())
   const trackWidthRef = useRef(0)
+  // Window snapshot từ BE — useDailyLogWindow đã tự tick 30s.
+  const { isOpen: inWindow } = useDailyLogWindow()
 
   useEffect(() => {
-    if (visible) {
-      setValue(clamp(initialValue))
-      setInWindow(isWithinDailyLogWindow())
-      const id = setInterval(() => setInWindow(isWithinDailyLogWindow()), 60_000)
-      return () => clearInterval(id)
-    }
+    if (visible) setValue(clamp(initialValue))
   }, [visible, initialValue])
 
   const dirty = value !== clamp(initialValue)

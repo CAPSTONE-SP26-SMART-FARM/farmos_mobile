@@ -85,6 +85,7 @@ export const queryKeys = {
       ] as const,
     myLogs: (taskId?: string, search?: string) =>
       ['daily-log', 'my-logs', taskId ?? null, search ?? ''] as const,
+    window: () => ['daily-log', 'window'] as const,
   },
   doctorWallet: {
     summary: ['doctor-wallet', 'summary'] as const,

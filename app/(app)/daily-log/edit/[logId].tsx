@@ -15,8 +15,9 @@ import { useToast } from '@/hooks/useToast'
 import { usePreventUnsavedChanges } from '@/hooks/usePreventUnsavedChanges'
 import { useImagePicker } from '@/hooks/useImagePicker'
 import { uploadImageToCloudinary } from '@/utils/cloudinary'
-import { isWithinDailyLogWindow } from '@/utils/dailyLogWindow'
-import { extractApiError, getDailyLogErrorMessage } from '@/utils/error'
+import { getWindowLabel } from '@/utils/dailyLogWindow'
+import { useDailyLogWindow } from '@/hooks/useDailyLog'
+import { extractApiError, getDailyLogErrorMessage, isOutOfWindowError } from '@/utils/error'
 import type { AttachmentItem, DailyLog, MyDailyLogsRes } from '@/types/dailyLog'
 
 const MAX_IMAGES = 5
@@ -78,11 +79,9 @@ export default function DailyLogEditScreen() {
   const newImageMax = Math.max(0, MAX_IMAGES - keptAttachments.length)
   const { imageUris, pick, remove, canAdd } = useImagePicker({ max: newImageMax })
 
-  const [inWindow, setInWindow] = useState(isWithinDailyLogWindow())
-  useEffect(() => {
-    const id = setInterval(() => setInWindow(isWithinDailyLogWindow()), 60_000)
-    return () => clearInterval(id)
-  }, [])
+  // Window snapshot từ BE (auto-tick 30s).
+  const { window: dailyWindow, isOpen: inWindow, refreshWindow } = useDailyLogWindow()
+  const windowLabel = getWindowLabel(dailyWindow)
 
   // Khi cache đến muộn (vd cold-open edit screen từ deep link) — sync state.
   useEffect(() => {
@@ -115,7 +114,7 @@ export default function DailyLogEditScreen() {
 
   const handleSubmit = async () => {
     if (!inWindow) {
-      const msg = 'Ngoài khung giờ làm việc. Chỉ chỉnh sửa nhật ký trong 07:00–17:00.'
+      const msg = `Ngoài khung giờ làm việc. Chỉ chỉnh sửa nhật ký trong ${windowLabel}.`
       setServerError(msg)
       showToast.error({ message: msg })
       return
@@ -185,6 +184,7 @@ export default function DailyLogEditScreen() {
         },
         onError: (err) => {
           const ex = extractApiError(err)
+          if (isOutOfWindowError(err)) refreshWindow()
           if (ex.fieldErrors.activities) setActivitiesError(ex.fieldErrors.activities)
           if (ex.fieldErrors.notes) setNotesError(ex.fieldErrors.notes)
 

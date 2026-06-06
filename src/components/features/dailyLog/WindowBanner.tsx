@@ -1,37 +1,28 @@
-import { useEffect, useState } from 'react'
 import { View, StyleSheet } from 'react-native'
 import { MaterialIcons } from '@expo/vector-icons'
 import { Text } from '@/components/ui'
-import {
-  getWindowLabel,
-  isWithinDailyLogWindow,
-} from '@/utils/dailyLogWindow'
+import { useDailyLogWindow } from '@/hooks/useDailyLog'
+import { getWindowLabel } from '@/utils/dailyLogWindow'
 
 interface Props {
-  /** Auto re-check mỗi phút để banner đổi trạng thái khi qua 17:00. */
-  pollIntervalMs?: number
   compact?: boolean
 }
 
-export function WindowBanner({ pollIntervalMs = 60_000, compact }: Props) {
-  const [inWindow, setInWindow] = useState(isWithinDailyLogWindow())
-
-  useEffect(() => {
-    const id = setInterval(() => setInWindow(isWithinDailyLogWindow()), pollIntervalMs)
-    return () => clearInterval(id)
-  }, [pollIntervalMs])
-
-  const label = getWindowLabel()
+export function WindowBanner({ compact }: Props) {
+  // Window snapshot + isOpen (auto-tick 30s) lấy từ useDailyLogWindow — không
+  // còn hard-code 07-17 hay tự interval ở banner. Re-fetch khi 422 OutOfWindow.
+  const { window, isOpen } = useDailyLogWindow()
+  const label = getWindowLabel(window)
 
   return (
-    <View style={[styles.row, inWindow ? styles.inOk : styles.outBad, compact && styles.compact]}>
+    <View style={[styles.row, isOpen ? styles.inOk : styles.outBad, compact && styles.compact]}>
       <MaterialIcons
-        name={inWindow ? 'schedule' : 'lock-clock'}
+        name={isOpen ? 'schedule' : 'lock-clock'}
         size={16}
-        color={inWindow ? '#15803D' : '#B45309'}
+        color={isOpen ? '#15803D' : '#B45309'}
       />
-      <Text style={[styles.text, { color: inWindow ? '#15803D' : '#B45309' }]}>
-        {inWindow
+      <Text style={[styles.text, { color: isOpen ? '#15803D' : '#B45309' }]}>
+        {isOpen
           ? `Đang trong giờ làm việc (${label})`
           : `Ngoài giờ làm việc — chỉ thao tác trong ${label}`}
       </Text>

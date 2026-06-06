@@ -15,12 +15,13 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { useUpdateTaskProgress } from '@/hooks/useEmployeeTask'
 import { useToast } from '@/hooks/useToast'
 import type { DailyLog } from '@/types/dailyLog'
-import { isWithinDailyLogWindow } from '@/utils/dailyLogWindow'
-import { getDailyLogErrorMessage, getErrorMessage } from '@/utils/error'
+import { getWindowLabel } from '@/utils/dailyLogWindow'
+import { useDailyLogWindow } from '@/hooks/useDailyLog'
+import { getDailyLogErrorMessage, getErrorMessage, isOutOfWindowError } from '@/utils/error'
 import { getProgressColor } from '@/utils/progressColor'
 import { Ionicons } from '@expo/vector-icons'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import
     {
         ActivityIndicator,
@@ -98,12 +99,9 @@ export default function EmployeeTaskDetailScreen() {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage()
   }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
-  // Window state — re-check mỗi phút để label đổi khi qua 17:00
-  const [inWindow, setInWindow] = useState(isWithinDailyLogWindow())
-  useEffect(() => {
-    const id = setInterval(() => setInWindow(isWithinDailyLogWindow()), 60_000)
-    return () => clearInterval(id)
-  }, [])
+  // Window snapshot từ BE — useDailyLogWindow tự fetch + tick 30s.
+  const { window: dailyWindow, isOpen: inWindow, refreshWindow } = useDailyLogWindow()
+  const windowLabel = getWindowLabel(dailyWindow)
 
   // Progress edit
   const [isProgressSheetOpen, setProgressSheetOpen] = useState(false)
@@ -119,6 +117,9 @@ export default function EmployeeTaskDetailScreen() {
       setProgressSheetOpen(false)
       showToast.success({ message: `Đã cập nhật tiến độ: ${next}%` })
     } catch (err) {
+      // BE 422 OutOfWindow → re-fetch window snapshot (admin có thể đã đổi giờ
+      // hoặc clock skew). UI tự update khi useDailyLogWindow nhận data mới.
+      if (isOutOfWindowError(err)) refreshWindow()
       const msg =
         getDailyLogErrorMessage(err) ?? getErrorMessage(err, 'Không thể cập nhật tiến độ')
       showToast.error({ message: msg })
@@ -149,9 +150,9 @@ export default function EmployeeTaskDetailScreen() {
   )
   const handleDeleteLog = useCallback(
     async (log: DailyLog) => {
-      if (!isWithinDailyLogWindow()) {
+      if (!inWindow) {
         showToast.error({
-          message: 'Ngoài khung giờ làm việc. Chỉ xóa nhật ký trong 07:00–17:00.',
+          message: `Ngoài khung giờ làm việc. Chỉ xóa nhật ký trong ${windowLabel}.`,
         })
         return
       }
@@ -321,7 +322,7 @@ export default function EmployeeTaskDetailScreen() {
 
       <SafeAreaView edges={['bottom']} style={styles.fabWrap}>
         <PrimaryButton
-          title={inWindow ? 'Tạo nhật ký' : 'Ngoài giờ làm việc (07:00–17:00)'}
+          title={inWindow ? 'Tạo nhật ký' : `Ngoài giờ làm việc (${windowLabel})`}
           onPress={handleCreateLog}
           disabled={!inWindow || isDeleting}
           style={styles.fab}

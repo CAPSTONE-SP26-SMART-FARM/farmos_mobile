@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react'
 import {
   useInfiniteQuery,
   useMutation,
@@ -6,7 +7,9 @@ import {
 } from '@tanstack/react-query'
 import { queryKeys } from '@/constants/queryKeys'
 import { dailyLogApi } from '@/services/api/dailyLog'
+import { FALLBACK_WINDOW, isWithinWindow } from '@/utils/dailyLogWindow'
 import type {
+  DailyLogWindow,
   SubmitDailyLogBody,
   TodayTasksFilter,
   UpdateDailyLogBody,
@@ -15,10 +18,61 @@ import type {
 const MY_LOGS_PAGE_SIZE = 10
 
 export function useTodayTasks(filter: TodayTasksFilter = {}, page = 1) {
-  return useQuery({
+  const qc = useQueryClient()
+  const query = useQuery({
     queryKey: queryKeys.dailyLog.todayTasks(page, filter.milestoneId, filter.hasLoggedToday),
     queryFn: () => dailyLogApi.todayTasks(page, 20, filter),
   })
+
+  // Embed `window` từ /today response vào cache window key (đỡ 1 round-trip
+  // cho `useDailyLogWindow` đang mount cùng screen). Snapshot luôn fresher hơn
+  // standalone `/daily-log/window` cache nếu user vừa fetch /today.
+  useEffect(() => {
+    const w = query.data?.window
+    if (w) {
+      qc.setQueryData<DailyLogWindow>(queryKeys.dailyLog.window(), w)
+    }
+  }, [query.data?.window, qc])
+
+  return query
+}
+
+/**
+ * Snapshot khung giờ + tự tick mỗi phút để re-evaluate `isOpen` từ clock local.
+ *
+ * Trả về `{ window, isOpen, label }` — UI dùng `isOpen` để disable button,
+ * `label` để render "Chỉ thao tác trong khung 07:00 – 17:00".
+ *
+ * Fallback: nếu BE chưa response → dùng FALLBACK_WINDOW (07-17 VN). isOpen
+ * tự tính từ clock local, không lệ thuộc BE.
+ */
+export function useDailyLogWindow() {
+  const qc = useQueryClient()
+  const query = useQuery({
+    queryKey: queryKeys.dailyLog.window(),
+    queryFn: () => dailyLogApi.getWindow(),
+    staleTime: 5 * 60_000, // BE cache 5 phút — mobile align
+    gcTime: 30 * 60_000,
+  })
+
+  const window = query.data ?? FALLBACK_WINDOW
+
+  // Tick mỗi 30s để re-evaluate isOpen từ clock local (snapshot startHour/endHour
+  // không đổi giữa các tick). 30s đủ smooth UX countdown gần biên giờ.
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30_000)
+    return () => clearInterval(id)
+  }, [])
+
+  const isOpen = useMemo(() => isWithinWindow(now, window), [now, window])
+
+  // Refetch khi user nhận 422 OutOfWindow — gọi từ screen catch error.
+  const refreshWindow = () => {
+    qc.invalidateQueries({ queryKey: queryKeys.dailyLog.window() })
+  }
+
+  return { window, isOpen, refreshWindow, isLoading: query.isLoading }
 }
 
 /** Badge count "cần ghi hôm nay" cho Home — tasks chưa log hôm nay. */

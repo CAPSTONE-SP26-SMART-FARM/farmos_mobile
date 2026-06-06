@@ -77,6 +77,25 @@ export function getErrorMessage(err: unknown, fallback: string): string {
 }
 
 /**
+ * Detect 422 OutOfWindow để screen có thể refresh window snapshot.
+ * Match cả message `OutOfWindow` (error code) và keyword tiếng Việt.
+ */
+export function isOutOfWindowError(err: unknown): boolean {
+  const ex = extractApiError(err)
+  const haystacks = [
+    ex.message ?? '',
+    ...ex.errors.map((e) => e?.message ?? ''),
+    ...ex.errors.map((e) => e?.code ?? ''),
+  ]
+  return haystacks.some(
+    (h) =>
+      h.toLowerCase().includes('outofwindow') ||
+      h.toLowerCase().includes('khung giờ') ||
+      h.toLowerCase().includes('ngoài giờ'),
+  )
+}
+
+/**
  * Map error code daily-log / employee-task progress thành message tiếng Việt
  * thân thiện cho toast. Trả `null` nếu không match — caller fallback `getErrorMessage`.
  *
@@ -94,7 +113,7 @@ export function getDailyLogErrorMessage(err: unknown): string | null {
     haystacks.some((h) => h.toLowerCase().includes(needle.toLowerCase()))
 
   if (has('OutOfWindow') || has('khung giờ') || has('ngoài giờ')) {
-    return 'Ngoài khung giờ làm việc. Chỉ thao tác từ 07:00 đến 17:00.'
+    return 'Ngoài khung giờ làm việc. Chỉ thao tác trong khung giờ làm việc cho phép.'
   }
   if (has('NotOwner')) {
     return 'Bạn chỉ có thể chỉnh sửa hoặc xóa nhật ký của chính mình.'

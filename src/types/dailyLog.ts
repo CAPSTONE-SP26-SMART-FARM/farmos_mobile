@@ -44,9 +44,25 @@ export type AttachmentRes = AttachmentItem & {
   createdAt: string
 }
 
+/**
+ * Khung giờ làm việc cho daily-log + task progress (BE driven, không hard-code).
+ * - `startHour` inclusive, `endHour` exclusive (16:59 OK, 17:00 không).
+ * - `tzOffsetHours` để client convert UTC → local trước khi compare.
+ * - `isOpen` server snapshot lúc request; client tick lại từ `nowIso` + clock local.
+ */
+export type DailyLogWindow = {
+  startHour: number
+  endHour: number
+  tzOffsetHours: number
+  isOpen: boolean
+  nowIso: string
+}
+
 export type TasksForDailyLogRes = {
   data: TaskForDailyLog[]
   meta: { page: number; limit: number; totalItems: number; totalPages: number }
+  /** BE đính kèm window snapshot vào response /today — đỡ 1 round-trip. */
+  window?: DailyLogWindow
 }
 
 export type SubmitDailyLogBody = {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import {
   View, StyleSheet, useWindowDimensions,
 } from 'react-native'
@@ -9,9 +9,9 @@ import { MaterialIcons } from '@expo/vector-icons'
 import { Text, TextField, ImagePickerGrid } from '@/components/ui'
 import { SheetHeader } from '@/components/features/incident/SheetHeader'
 import { WindowBanner } from '@/components/features/dailyLog/WindowBanner'
-import { useSubmitDailyLog } from '@/hooks/useDailyLog'
-import { extractApiError, getDailyLogErrorMessage } from '@/utils/error'
-import { isWithinDailyLogWindow } from '@/utils/dailyLogWindow'
+import { useSubmitDailyLog, useDailyLogWindow } from '@/hooks/useDailyLog'
+import { extractApiError, getDailyLogErrorMessage, isOutOfWindowError } from '@/utils/error'
+import { getWindowLabel } from '@/utils/dailyLogWindow'
 import { useToast } from '@/hooks/useToast'
 import { usePreventUnsavedChanges } from '@/hooks/usePreventUnsavedChanges'
 import { useImagePicker } from '@/hooks/useImagePicker'
@@ -40,11 +40,9 @@ export default function DailyLogSubmitScreen() {
   const [isUploading, setIsUploading] = useState(false)
   const { imageUris, pick, remove, canAdd, reset: resetImages } = useImagePicker({ max: MAX_IMAGES })
 
-  const [inWindow, setInWindow] = useState(isWithinDailyLogWindow())
-  useEffect(() => {
-    const id = setInterval(() => setInWindow(isWithinDailyLogWindow()), 60_000)
-    return () => clearInterval(id)
-  }, [])
+  // Window snapshot từ BE (auto-tick 30s) — không hard-code 07-17.
+  const { window: dailyWindow, isOpen: inWindow, refreshWindow } = useDailyLogWindow()
+  const windowLabel = getWindowLabel(dailyWindow)
 
   const canSubmit = activities.trim().length > 0 && inWindow
   const isLoading = isPending || isUploading
@@ -65,7 +63,7 @@ export default function DailyLogSubmitScreen() {
 
   const handleSubmit = async () => {
     if (!inWindow) {
-      const msg = 'Ngoài khung giờ làm việc. Chỉ tạo nhật ký trong 07:00–17:00.'
+      const msg = `Ngoài khung giờ làm việc. Chỉ tạo nhật ký trong ${windowLabel}.`
       setServerError(msg)
       showToast.error({ message: msg })
       return
@@ -105,6 +103,8 @@ export default function DailyLogSubmitScreen() {
         },
         onError: (err) => {
           const ex = extractApiError(err)
+          // Re-fetch window khi BE từ chối vì OutOfWindow (clock skew / admin đổi giờ).
+          if (isOutOfWindowError(err)) refreshWindow()
 
           // Map field errors về đúng input
           if (ex.fieldErrors.activities) {

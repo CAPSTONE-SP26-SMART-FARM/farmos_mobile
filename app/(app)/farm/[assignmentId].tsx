@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import {
   View, ScrollView, StyleSheet, ActivityIndicator, RefreshControl,
 } from 'react-native'
@@ -8,6 +8,18 @@ import { Text, TopBar, EmptyState } from '@/components/ui'
 import { SensorCard } from '@/components/features/sensor/SensorCard'
 import { useSensorReadings } from '@/hooks/useSensorReadings'
 import { useFarmerMilestoneAssignments } from '@/hooks/useFarmerMilestones'
+
+// Thứ tự semantic cố định cho sensor card — giữ vị trí ổn định kể cả khi BE
+// trả lại data theo timestamp desc (sensor vừa có reading mới sẽ nhảy lên đầu).
+// Sensor type không nằm trong list này → đẩy về cuối, tiebreaker theo sensorId.
+const SENSOR_TYPE_ORDER: Record<string, number> = {
+  air_temperature: 1,
+  air_humidity: 2,
+  soil_moisture: 3,
+  soil_temperature: 4,
+  soil_ph: 5,
+  light_intensity: 6,
+}
 
 export default function AssignmentDetailScreen() {
   const { assignmentId, milestoneId } = useLocalSearchParams<{
@@ -19,7 +31,17 @@ export default function AssignmentDetailScreen() {
   const assignment = assignmentsRes?.data.find((a) => a.assignmentId === assignmentId)
 
   const { data, isLoading, refetch } = useSensorReadings(assignmentId ?? '')
-  const readings = data?.data ?? []
+  // Sort theo stable key (sensorType ưu tiên, fallback sensorId) — tránh card
+  // nhảy thứ tự mỗi khi reading mới về (issue 3).
+  const readings = useMemo(() => {
+    const list = data?.data ?? []
+    return [...list].sort((a, b) => {
+      const orderA = SENSOR_TYPE_ORDER[a.sensorType] ?? 999
+      const orderB = SENSOR_TYPE_ORDER[b.sensorType] ?? 999
+      if (orderA !== orderB) return orderA - orderB
+      return a.sensorId.localeCompare(b.sensorId)
+    })
+  }, [data?.data])
 
   const [isRefreshing, setIsRefreshing] = useState(false)
   const handleRefresh = useCallback(async () => {

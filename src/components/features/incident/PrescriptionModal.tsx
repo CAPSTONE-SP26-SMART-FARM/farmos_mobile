@@ -69,7 +69,7 @@ export function PrescriptionModal({
               <Text style={styles.label}>Tên thuốc *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="VD: Bordeaux mixture"
+                placeholder="VD: Mancozeb 80WP"
                 placeholderTextColor="#9CA3AF"
                 value={form.medicineName}
                 onChangeText={set('medicineName')}

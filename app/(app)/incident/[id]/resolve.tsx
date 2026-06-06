@@ -20,7 +20,7 @@ const FIELD_LABELS = [
   {
     key: 'rootCause' as const,
     label: 'Vấn đề gốc rễ',
-    hint: 'Mô tả vấn đề chính cây/vật nuôi đang gặp. Ví dụ: "Nấm đốm lá do độ ẩm cao".',
+    hint: 'Mô tả vấn đề chính cây trồng đang gặp. Ví dụ: "Nấm đốm lá do độ ẩm cao".',
   },
   {
     key: 'rootCauseReason' as const,

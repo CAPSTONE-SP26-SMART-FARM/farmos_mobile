@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import {
   View,
   TextInput,
@@ -19,8 +19,9 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { useToast } from '@/hooks/useToast'
 import { icons } from '@/constants/icon'
 import type { DailyLog } from '@/types/dailyLog'
-import { isWithinDailyLogWindow } from '@/utils/dailyLogWindow'
-import { getDailyLogErrorMessage, getErrorMessage } from '@/utils/error'
+import { getWindowLabel } from '@/utils/dailyLogWindow'
+import { useDailyLogWindow } from '@/hooks/useDailyLog'
+import { getDailyLogErrorMessage, getErrorMessage, isOutOfWindowError } from '@/utils/error'
 
 export default function DailyLogHistoryScreen() {
   const router = useRouter()
@@ -28,11 +29,8 @@ export default function DailyLogHistoryScreen() {
   const confirm = useConfirm()
   const { taskId, title } = useLocalSearchParams<{ taskId: string; title?: string }>()
 
-  const [inWindow, setInWindow] = useState(isWithinDailyLogWindow())
-  useEffect(() => {
-    const id = setInterval(() => setInWindow(isWithinDailyLogWindow()), 60_000)
-    return () => clearInterval(id)
-  }, [])
+  const { window: dailyWindow, isOpen: inWindow, refreshWindow } = useDailyLogWindow()
+  const windowLabel = getWindowLabel(dailyWindow)
 
   const [searchText, setSearchText] = useState('')
   const debouncedSearch = useDebouncedValue(searchText.trim(), 400)
@@ -82,9 +80,9 @@ export default function DailyLogHistoryScreen() {
   )
   const handleDelete = useCallback(
     async (log: DailyLog) => {
-      if (!isWithinDailyLogWindow()) {
+      if (!inWindow) {
         showToast.error({
-          message: 'Ngoài khung giờ làm việc. Chỉ xóa nhật ký trong 07:00–17:00.',
+          message: `Ngoài khung giờ làm việc. Chỉ xóa nhật ký trong ${windowLabel}.`,
         })
         return
       }
@@ -102,6 +100,7 @@ export default function DailyLogHistoryScreen() {
         await deleteLog(log.id)
         showToast.success({ message: 'Đã xoá nhật ký' })
       } catch (err) {
+        if (isOutOfWindowError(err)) refreshWindow()
         const msg =
           getDailyLogErrorMessage(err) ??
           getErrorMessage(err, 'Không thể xoá nhật ký')

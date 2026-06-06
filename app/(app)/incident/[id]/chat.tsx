@@ -75,6 +75,11 @@ export default function IncidentChatScreen() {
   const peer = isDoctor ? data?.creator : data?.assignee
   const peerName = peer?.fullName ?? 'Trao đổi'
   const peerRoleLabel = peer ? (ROLE_LABEL[peer.role] ?? peer.role) : ''
+  // Sự cố đã đóng (farmer Close + Rate) hoặc bị huỷ → chat chuyển sang view-only.
+  // Cả farmer + doctor đều không được gửi thêm tin nhắn.
+  const isConversationEnded = data?.status === 'closed' || data?.status === 'cancelled'
+  const endedReason: 'closed' | 'cancelled' | null =
+    data?.status === 'closed' ? 'closed' : data?.status === 'cancelled' ? 'cancelled' : null
   const currentUserId = useAuthStore((s) => s.user?.id)
   const [input, setInput] = useState('')
   const flatListRef = useRef<FlatList<ChatItem>>(null)
@@ -131,11 +136,17 @@ export default function IncidentChatScreen() {
   }, [messages.length])
 
   const hasAttachments = attachUris.length > 0
-  const canSend = (input.trim().length > 0 || hasAttachments) && !isSending && !isUploading
+  const canSend =
+    (input.trim().length > 0 || hasAttachments) && !isSending && !isUploading && !isConversationEnded
 
   const handleSend = async () => {
     const text = input.trim()
     if (!canSend) return
+    // Race guard: socket `ticket.closed` có thể tới giữa lúc user gõ — chặn ở mutation entry.
+    if (isConversationEnded) {
+      showToast.info({ message: 'Sự cố đã đóng. Không thể gửi tin nhắn mới.' })
+      return
+    }
 
     // Snapshot rồi clear UI sớm để input không hold input/attachments khi mất mạng
     // — nếu upload fail, restore lại bằng cách throw + warn user.
@@ -173,12 +184,12 @@ export default function IncidentChatScreen() {
   }
 
   const handleQuickReply = (text: string) => {
-    if (isSending || isUploading) return
+    if (isSending || isUploading || isConversationEnded) return
     sendMessage({ message: text })
   }
 
   const quickReplies = isDoctor ? DOCTOR_QUICK_REPLIES : FARMER_QUICK_REPLIES
-  const showQuickReplies = !isLoading && messages.length === 0
+  const showQuickReplies = !isLoading && messages.length === 0 && !isConversationEnded
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -265,7 +276,7 @@ export default function IncidentChatScreen() {
         )}
 
         {/* Attachment preview row (chỉ hiện khi user đã pick ảnh) */}
-        {hasAttachments ? (
+        {hasAttachments && !isConversationEnded ? (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -293,45 +304,56 @@ export default function IncidentChatScreen() {
           </ScrollView>
         ) : null}
 
-        <View style={styles.inputRow}>
-          <TouchableOpacity
-            style={[styles.attachBtn, !canAddAttachment && styles.attachBtnDisabled]}
-            onPress={pickAttachments}
-            disabled={!canAddAttachment || isUploading || isSending}
-            hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-          >
-            <MaterialIcons
-              name='add-photo-alternate'
-              size={26}
-              color={canAddAttachment ? '#15803D' : '#9CA3AF'}
+        {isConversationEnded ? (
+          <View style={styles.endedBanner}>
+            <MaterialIcons name='lock-outline' size={18} color='#6B7280' />
+            <Text style={styles.endedBannerText}>
+              {endedReason === 'cancelled'
+                ? 'Sự cố đã huỷ. Không thể gửi tin nhắn mới.'
+                : 'Sự cố đã đóng. Không thể gửi tin nhắn mới.'}
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.inputRow}>
+            <TouchableOpacity
+              style={[styles.attachBtn, !canAddAttachment && styles.attachBtnDisabled]}
+              onPress={pickAttachments}
+              disabled={!canAddAttachment || isUploading || isSending}
+              hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+            >
+              <MaterialIcons
+                name='add-photo-alternate'
+                size={26}
+                color={canAddAttachment ? '#15803D' : '#9CA3AF'}
+              />
+            </TouchableOpacity>
+            <TextInput
+              style={styles.chatInput}
+              placeholder="Nhắn tin..."
+              placeholderTextColor="#9CA3AF"
+              value={input}
+              onChangeText={setInput}
+              onSubmitEditing={handleSend}
+              returnKeyType="send"
+              editable={!isSending && !isUploading}
+              multiline={false}
             />
-          </TouchableOpacity>
-          <TextInput
-            style={styles.chatInput}
-            placeholder="Nhắn tin..."
-            placeholderTextColor="#9CA3AF"
-            value={input}
-            onChangeText={setInput}
-            onSubmitEditing={handleSend}
-            returnKeyType="send"
-            editable={!isSending && !isUploading}
-            multiline={false}
-          />
-          <TouchableOpacity
-            style={[styles.sendBtn, !canSend && styles.sendBtnDisabled]}
-            onPress={handleSend}
-            disabled={!canSend}
-            activeOpacity={0.85}
-          >
-            {isSending || isUploading ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Animated.View style={sendIconStyle}>
-                <MaterialIcons name="reply" size={24} color="#fff" style={styles.sendIcon} />
-              </Animated.View>
-            )}
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity
+              style={[styles.sendBtn, !canSend && styles.sendBtnDisabled]}
+              onPress={handleSend}
+              disabled={!canSend}
+              activeOpacity={0.85}
+            >
+              {isSending || isUploading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Animated.View style={sendIconStyle}>
+                  <MaterialIcons name="reply" size={24} color="#fff" style={styles.sendIcon} />
+                </Animated.View>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   )
@@ -437,5 +459,25 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: 'rgba(0, 0, 0, 0.45)',
     alignItems: 'center', justifyContent: 'center',
+  },
+
+  // Banner thay thế input row khi ticket đã closed / cancelled — view-only mode.
+  endedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 18,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
+  },
+  endedBannerText: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontFamily: 'Inter_500Medium',
+    textAlign: 'center',
   },
 })

@@ -1,6 +1,7 @@
 import { apiClient } from './client'
 import type {
   DailyLog,
+  DailyLogWindow,
   MyDailyLogsFilter,
   MyDailyLogsRes,
   SubmitDailyLogBody,
@@ -10,6 +11,12 @@ import type {
 } from '@/types/dailyLog'
 
 export const dailyLogApi = {
+  /** Fetch khung giờ làm việc daily-log từ BE (admin có thể đổi qua /admin). */
+  getWindow: () =>
+    apiClient
+      .get<{ data: DailyLogWindow }>('/daily-log/window')
+      .then((r) => r.data.data),
+
   todayTasks: (page = 1, limit = 20, filter: TodayTasksFilter = {}) => {
     const q = new URLSearchParams({ page: String(page), limit: String(limit) })
     if (filter.milestoneId) q.set('milestoneId', filter.milestoneId)

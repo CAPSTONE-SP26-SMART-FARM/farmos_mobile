@@ -1,4 +1,5 @@
 import { View, TouchableOpacity, StyleSheet } from 'react-native'
+import { MaterialIcons } from '@expo/vector-icons'
 import { Text } from '@/components/ui'
 
 interface IncidentFooterActionsProps {
@@ -38,12 +39,22 @@ export function IncidentFooterActions({
     // khi user xem ticket đã huỷ (list hiển thị "Đã huỷ" mà detail nói "đã đóng").
     const label =
       closedReason === 'cancelled' ? 'Sự cố đã huỷ' : 'Sự cố đã hoàn tất'
-    return (
-      <View style={canDelete ? [styles.wrap, styles.wrapRow] : styles.wrap}>
-        <View style={[styles.btn, styles.btnDisabled, canDelete && { flex: 1 }]}>
-          <Text style={[styles.btnText, { color: '#6B7280' }]}>{label}</Text>
-        </View>
-        {canDelete ? (
+    const showChat = canChat
+    // Layout 3 nhánh:
+    //   - Có canDelete (cancelled + creator) → label + Delete (cũ).
+    //   - Có canChat (closed) → chat icon button + label fill.
+    //   - Còn lại → label disabled full width.
+    if (canDelete) {
+      return (
+        <View style={[styles.wrap, styles.wrapRow]}>
+          {showChat ? (
+            <TouchableOpacity style={styles.chatIconBtn} onPress={onOpenChat}>
+              <MaterialIcons name='chat-bubble-outline' size={22} color='#15803D' />
+            </TouchableOpacity>
+          ) : null}
+          <View style={[styles.btn, styles.btnDisabled, { flex: 1 }]}>
+            <Text style={[styles.btnText, { color: '#6B7280' }]}>{label}</Text>
+          </View>
           <TouchableOpacity
             style={[styles.btn, styles.btnCancel, { flex: 1 }]}
             onPress={onDelete}
@@ -53,7 +64,19 @@ export function IncidentFooterActions({
               {isDeleting ? 'Đang xoá...' : 'Xoá sự cố'}
             </Text>
           </TouchableOpacity>
+        </View>
+      )
+    }
+    return (
+      <View style={showChat ? [styles.wrap, styles.wrapRow] : styles.wrap}>
+        {showChat ? (
+          <TouchableOpacity style={styles.chatIconBtn} onPress={onOpenChat}>
+            <MaterialIcons name='chat-bubble-outline' size={22} color='#15803D' />
+          </TouchableOpacity>
         ) : null}
+        <View style={[styles.btn, styles.btnDisabled, showChat && { flex: 1 }]}>
+          <Text style={[styles.btnText, { color: '#6B7280' }]}>{label}</Text>
+        </View>
       </View>
     )
   }
@@ -79,7 +102,7 @@ export function IncidentFooterActions({
       <View style={[styles.wrap, styles.wrapRow]}>
         {canChat && (
           <TouchableOpacity style={[styles.btn, styles.btnOutline, styles.btnChat]} onPress={onOpenChat}>
-            <Text style={[styles.btnText, { color: '#15803D' }]}>Chat</Text>
+            <Text style={[styles.btnText, { color: '#15803D' }]}>Nhắn tin</Text>
           </TouchableOpacity>
         )}
         <TouchableOpacity style={[styles.btn, styles.btnResolve]} onPress={onResolve}>
@@ -91,8 +114,16 @@ export function IncidentFooterActions({
 
   if (canClose) {
     return (
-      <View style={styles.wrap}>
-        <TouchableOpacity style={[styles.btn, { backgroundColor: '#10B981' }]} onPress={onClose}>
+      <View style={[styles.wrap, styles.wrapRow]}>
+        {canChat && (
+          <TouchableOpacity style={styles.chatIconBtn} onPress={onOpenChat}>
+            <MaterialIcons name='chat-bubble-outline' size={22} color='#15803D' />
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          style={[styles.btn, { backgroundColor: '#10B981', flex: 1 }]}
+          onPress={onClose}
+        >
           <Text style={styles.btnText}>Đóng & Đánh giá</Text>
         </TouchableOpacity>
       </View>
@@ -124,7 +155,7 @@ export function IncidentFooterActions({
           disabled={waitingForDoctor}
         >
           <Text style={styles.btnText}>
-            {waitingForDoctor ? 'Chờ bác sĩ tiếp nhận...' : isDoctor ? 'Chat với Farmer' : 'Chat với Bác sĩ'}
+            {waitingForDoctor ? 'Chờ bác sĩ tiếp nhận...' : isDoctor ? 'Nhắn với nông dân' : 'Nhắn với bác sĩ'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -159,4 +190,13 @@ const styles = StyleSheet.create({
     borderColor: '#15803D',
   },
   btnChat: { paddingHorizontal: 24 },
+  // Icon-only chat button — dùng khi footer có action chính khác (Close/Disabled).
+  // Vẫn cho user truy cập history chat sau khi ticket resolved/closed/cancelled.
+  chatIconBtn: {
+    width: 52, height: 52,
+    borderRadius: 26,
+    borderWidth: 1.5, borderColor: '#15803D',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center', justifyContent: 'center',
+  },
 })
