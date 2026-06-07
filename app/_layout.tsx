@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useState } from 'react'
-import { LogBox } from 'react-native'
+import { LogBox, AppState, type AppStateStatus, Platform } from 'react-native'
 import { Stack } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
 import {
@@ -11,7 +11,8 @@ import {
   Inter_700Bold,
   useFonts,
 } from '@expo-google-fonts/inter'
-import { QueryClientProvider } from '@tanstack/react-query'
+import { focusManager, onlineManager, QueryClientProvider } from '@tanstack/react-query'
+import NetInfo from '@react-native-community/netinfo'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { queryClient } from '@/lib/queryClient'
@@ -33,6 +34,20 @@ SplashScreen.preventAutoHideAsync()
 registerUnauthorizedHandler(() => {
   socketService.disconnect()
   useAuthStore.getState().logout()
+})
+
+// Bridge React Query focusManager với AppState — RN không có `window.focus`,
+// nên `refetchOnWindowFocus` mặc định không bao giờ kick. Sau bridge này, mọi
+// query stale sẽ refetch khi app từ background → foreground (vd farmer mở app
+// lại sau khi manager đã tạo task).
+function onAppStateChange(status: AppStateStatus) {
+  if (Platform.OS !== 'web') focusManager.setFocused(status === 'active')
+}
+
+// Bridge online status — query bị paused offline sẽ tự resume khi mạng trở lại.
+onlineManager.setEventListener((setOnline) => {
+  const sub = NetInfo.addEventListener((state) => setOnline(!!state.isConnected))
+  return () => sub()
 })
 
 function GlobalRealtimeBridge() {
@@ -61,6 +76,11 @@ export default function RootLayout() {
   useEffect(() => {
     fetchMe().finally(() => setAuthChecked(true))
   }, [fetchMe])
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', onAppStateChange)
+    return () => sub.remove()
+  }, [])
 
   useEffect(() => {
     if (isAuthenticated) {

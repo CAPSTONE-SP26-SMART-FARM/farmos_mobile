@@ -1,7 +1,8 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { View, ScrollView, StyleSheet, TouchableOpacity, Image } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
+import { useFocusEffect } from '@react-navigation/native'
 import * as WebBrowser from 'expo-web-browser'
 import { NotificationBadge, Text } from '@/components/ui'
 import { useUnreadNotificationCount } from '@/hooks/useNotification'
@@ -44,9 +45,18 @@ function DoctorHome() {
 }
 
 function FarmerHome() {
-  const { data } = useIncidentList()
+  const { data, refetch: refetchIncidents } = useIncidentList()
   const tickets = data?.data ?? []
-  const { data: tasksData } = useTasksForDailyLog()
+  const { data: tasksData, refetch: refetchTasks } = useTasksForDailyLog()
+
+  // Refetch khi user quay lại tab Home — bypass staleTime để badge "cần ghi"
+  // luôn fresh sau khi manager tạo task hoặc farmer log xong từ screen khác.
+  useFocusEffect(
+    useCallback(() => {
+      refetchTasks()
+      refetchIncidents()
+    }, [refetchTasks, refetchIncidents]),
+  )
 
   // Hook đã filter hasLoggedToday=false. Loại thêm task đã hoàn thành (progress=100).
   const pendingTasks = useMemo(

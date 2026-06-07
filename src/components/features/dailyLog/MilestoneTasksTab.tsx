@@ -8,6 +8,7 @@ import {
   RefreshControl,
 } from 'react-native'
 import { useRouter } from 'expo-router'
+import { useFocusEffect } from '@react-navigation/native'
 import { MaterialIcons } from '@expo/vector-icons'
 import { Text, EmptyState } from '@/components/ui'
 import type { PillTabItem } from '@/components/ui'
@@ -108,6 +109,16 @@ export function MilestoneTasksTab({ milestoneId }: { milestoneId: string }) {
     hasLoggedToday: filterToHasLogged(filter),
   })
   const allTasks = data?.data ?? []
+
+  // Refetch khi user navigate vào lại screen — bypass staleTime 5 phút.
+  // Manager có thể đã tạo / assign / complete task trong khi user ở screen khác.
+  // Socket + focusManager cover live + foreground; useFocusEffect cover
+  // navigation-back trong cùng phiên app.
+  useFocusEffect(
+    useCallback(() => {
+      refetch()
+    }, [refetch]),
+  )
 
   // BE chưa expose ?search cho /daily-log/farmer/today — filter client-side theo title/description.
   const tasks = useMemo(() => {

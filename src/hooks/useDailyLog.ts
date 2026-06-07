@@ -22,6 +22,11 @@ export function useTodayTasks(filter: TodayTasksFilter = {}, page = 1) {
   const query = useQuery({
     queryKey: queryKeys.dailyLog.todayTasks(page, filter.milestoneId, filter.hasLoggedToday),
     queryFn: () => dailyLogApi.todayTasks(page, 20, filter),
+    // Override default 5 phút — task assignment có thể đổi bất kỳ lúc nào từ
+    // manager web. 30s đủ benefit cache (tab switch / scroll) nhưng vẫn fresh
+    // khi user thực sự cần. Socket + focusManager + useFocusEffect cover các
+    // tình huống force-refresh; staleTime ngắn là safety net cuối.
+    staleTime: 30_000,
   })
 
   // Embed `window` từ /today response vào cache window key (đỡ 1 round-trip
