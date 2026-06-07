@@ -5,12 +5,18 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
+import { useQueryClient } from '@tanstack/react-query'
 import { MaterialIcons } from '@expo/vector-icons'
 import { Text, TextField, ImagePickerGrid } from '@/components/ui'
 import { SheetHeader } from '@/components/features/incident/SheetHeader'
 import { WindowBanner } from '@/components/features/dailyLog/WindowBanner'
 import { useSubmitDailyLog, useDailyLogWindow } from '@/hooks/useDailyLog'
-import { extractApiError, getDailyLogErrorMessage, isOutOfWindowError } from '@/utils/error'
+import {
+  extractApiError,
+  getDailyLogErrorMessage,
+  isOutOfWindowError,
+  isTaskAlreadyCompletedError,
+} from '@/utils/error'
 import { getWindowLabel } from '@/utils/dailyLogWindow'
 import { useToast } from '@/hooks/useToast'
 import { usePreventUnsavedChanges } from '@/hooks/usePreventUnsavedChanges'
@@ -29,6 +35,7 @@ export default function DailyLogSubmitScreen() {
 
   const { showToast } = useToast()
   const { mutate, isPending } = useSubmitDailyLog()
+  const qc = useQueryClient()
   const justSavedRef = useRef(false)
 
   const [activities, setActivities] = useState('')
@@ -105,6 +112,21 @@ export default function DailyLogSubmitScreen() {
           const ex = extractApiError(err)
           // Re-fetch window khi BE từ chối vì OutOfWindow (clock skew / admin đổi giờ).
           if (isOutOfWindowError(err)) refreshWindow()
+
+          // Task bị mark completed/verified/cancelled từ phía manager trong lúc
+          // farmer giữ form mở → invalidate list (task biến mất khỏi today) +
+          // dismiss form. Không giữ user trong form chết.
+          if (isTaskAlreadyCompletedError(err)) {
+            qc.invalidateQueries({ queryKey: ['daily-log'] })
+            qc.invalidateQueries({ queryKey: ['farmer-milestone'] })
+            justSavedRef.current = true // skip usePreventUnsavedChanges
+            showToast.error({ message: 'Task đã hoàn thành, không thể ghi nhật ký thêm.' })
+            setTimeout(() => {
+              justSavedRef.current = false
+              router.back()
+            }, 50)
+            return
+          }
 
           // Map field errors về đúng input
           if (ex.fieldErrors.activities) {

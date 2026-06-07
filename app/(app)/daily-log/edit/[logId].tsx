@@ -17,7 +17,12 @@ import { useImagePicker } from '@/hooks/useImagePicker'
 import { uploadImageToCloudinary } from '@/utils/cloudinary'
 import { getWindowLabel } from '@/utils/dailyLogWindow'
 import { useDailyLogWindow } from '@/hooks/useDailyLog'
-import { extractApiError, getDailyLogErrorMessage, isOutOfWindowError } from '@/utils/error'
+import {
+  extractApiError,
+  getDailyLogErrorMessage,
+  isOutOfWindowError,
+  isTaskAlreadyCompletedError,
+} from '@/utils/error'
 import type { AttachmentItem, DailyLog, MyDailyLogsRes } from '@/types/dailyLog'
 
 const MAX_IMAGES = 5
@@ -61,6 +66,7 @@ export default function DailyLogEditScreen() {
   const cached = useCachedLog(taskId, logId)
   const { showToast } = useToast()
   const { mutate, isPending } = useUpdateDailyLog()
+  const qc = useQueryClient()
   const justSavedRef = useRef(false)
 
   const [activities, setActivities] = useState(cached?.activities ?? '')
@@ -185,6 +191,21 @@ export default function DailyLogEditScreen() {
         onError: (err) => {
           const ex = extractApiError(err)
           if (isOutOfWindowError(err)) refreshWindow()
+
+          // Task bị mark completed/verified/cancelled trong lúc farmer đang edit log
+          // → invalidate cache + dismiss form.
+          if (isTaskAlreadyCompletedError(err)) {
+            qc.invalidateQueries({ queryKey: ['daily-log'] })
+            qc.invalidateQueries({ queryKey: ['farmer-milestone'] })
+            justSavedRef.current = true
+            showToast.error({ message: 'Task đã hoàn thành, không thể ghi nhật ký thêm.' })
+            setTimeout(() => {
+              justSavedRef.current = false
+              router.back()
+            }, 50)
+            return
+          }
+
           if (ex.fieldErrors.activities) setActivitiesError(ex.fieldErrors.activities)
           if (ex.fieldErrors.notes) setNotesError(ex.fieldErrors.notes)
 

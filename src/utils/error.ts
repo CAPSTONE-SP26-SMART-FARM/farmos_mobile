@@ -77,6 +77,27 @@ export function getErrorMessage(err: unknown, fallback: string): string {
 }
 
 /**
+ * Detect 422 `Error.DailyLogTaskAlreadyCompleted` — manager đã mark task xong
+ * (completed/verified/cancelled) trong lúc farmer vẫn giữ form mở. Screen
+ * dùng để invalidate cache + dismiss form thay vì giữ user trong form chết.
+ */
+export function isTaskAlreadyCompletedError(err: unknown): boolean {
+  const ex = extractApiError(err)
+  if (ex.statusCode !== 422) return false
+  const haystacks = [
+    ex.message ?? '',
+    ...ex.errors.map((e) => e?.message ?? ''),
+    ...ex.errors.map((e) => e?.code ?? ''),
+  ]
+  return haystacks.some(
+    (h) =>
+      h.includes('DailyLogTaskAlreadyCompleted') ||
+      h.includes('TaskAlreadyCompleted') ||
+      h.toLowerCase().includes('task này đã hoàn thành'),
+  )
+}
+
+/**
  * Detect 422 OutOfWindow để screen có thể refresh window snapshot.
  * Match cả message `OutOfWindow` (error code) và keyword tiếng Việt.
  */
@@ -123,6 +144,9 @@ export function getDailyLogErrorMessage(err: unknown): string | null {
   }
   if (has('AlreadySubmittedToday')) {
     return 'Bạn đã ghi nhật ký cho công việc này hôm nay rồi.'
+  }
+  if (has('DailyLogTaskAlreadyCompleted') || has('TaskAlreadyCompleted') || has('task này đã hoàn thành')) {
+    return 'Task đã hoàn thành, không thể ghi nhật ký thêm.'
   }
   if (has('TaskProgressLocked') || has('terminal')) {
     return 'Công việc đã kết thúc, không thể cập nhật tiến độ.'

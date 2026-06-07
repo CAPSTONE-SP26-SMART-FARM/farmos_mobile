@@ -25,6 +25,7 @@ import { NotificationBanner } from '@/components/features/notification/Notificat
 import { ChatNotificationBanner } from '@/components/features/incident/ChatNotificationBanner'
 import { useGlobalIncidentRealtime } from '@/hooks/useGlobalIncidentRealtime'
 import { useGlobalDoctorRealtime } from '@/hooks/useGlobalDoctorRealtime'
+import { useGlobalFarmerRealtime } from '@/hooks/useGlobalFarmerRealtime'
 import { useDoctorOnlineNudge } from '@/hooks/useDoctorOnlineNudge'
 
 LogBox.ignoreLogs(['SafeAreaView has been deprecated'])
@@ -37,6 +38,7 @@ registerUnauthorizedHandler(() => {
 function GlobalRealtimeBridge() {
   useGlobalIncidentRealtime()
   useGlobalDoctorRealtime()
+  useGlobalFarmerRealtime()
   useDoctorOnlineNudge()
   return null
 }
